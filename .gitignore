@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+.next/
+out/
+build/
+.esbuild/
+.svelte-kit/
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# misc
+.DS_Store
+.vscode/
+coverage/
+.vercel/
+.netlify/
