@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+@layer base {
+  :root {
+    --background: 222 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 163 94% 70%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 163 94% 70%;
+ 
+    --radius: 0.5rem;
+
+    /* Custom colors for dark mode */
+    --deep-navy: #0A192F;
+    --light-navy: #112240;
+    --lightest-navy: #233554;
+    --slate: #8892b0;
+    --light-slate: #a8b2d1;
+    --lightest-slate: #ccd6f6;
+    --white: #e6f1ff;
+    --green: #64FFDA;
+    --green-hover: rgba(100, 255, 218, 0.8);
+    --green-selection: rgba(100, 255, 218, 0.2);
+  }
+
+  [data-theme='light'] {
+    --background: 0 0% 100%; /* White */
+    --foreground: 220 8.9% 10.8%; /* Very dark gray for main text */
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 8.9% 10.8%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 8.9% 10.8%;
+ 
+    --primary: 222.2 47.4% 11.2%; /* Dark blue for primary */
+    --primary-foreground: 210 40% 98%; /* White text on primary */
+ 
+    --secondary: 210 40% 96.1%; /* Light gray */
+    --secondary-foreground: 220 8.9% 10.8%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 220 8.9% 10.8%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 47.4% 11.2%;
+    
+    /* Custom colors for light mode - adjusted for better contrast */
+    --deep-navy: #F0F2F5; /* Light background */
+    --light-navy: #FFFFFF; /* White cards/elements */
+    --lightest-navy: #E0E2E5; /* Lighter borders/accents */
+    --slate: #4A5568; /* Darker gray text */
+    --light-slate: #2D3748; /* Even darker gray text */
+    --lightest-slate: #1A202C; /* Very dark text, almost black */
+    --white: #000000; /* Black for contrast */
+    --green: #10B981; /* A vibrant green */
+    --green-hover: rgba(16, 185, 129, 0.8);
+    --green-selection: rgba(16, 185, 129, 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: var(--deep-navy);
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full;
+  background-color: var(--green);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--green-hover);
+}
+
+::selection {
+  background-color: var(--green-selection);
+  color: var(--green);
+}
