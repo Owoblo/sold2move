@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:prod": "NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build:prod && echo 'Build complete! Upload dist/ folder to Hostinger'",
+    "deploy:full": "./deploy.sh"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.1",
@@ -27,6 +30,8 @@
     "@stripe/stripe-js": "^3.5.0",
     "@supabase/auth-helpers-react": "^0.4.2",
     "@supabase/supabase-js": "2.30.0",
+    "@tanstack/react-query": "^5.90.2",
+    "@tanstack/react-query-devtools": "^5.90.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "cmdk": "^1.0.0",
@@ -46,15 +51,16 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^20.8.3",
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
+    "@types/node": "^20.19.17",
+    "@types/react": "^18.3.24",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.3",
+    "typescript": "^5.9.2",
     "vite": "^4.4.5"
   }
 }

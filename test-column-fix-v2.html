@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Column Name Fix V2 - Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 40px; 
+            background: #0A192F; 
+            color: #64FFDA; 
+            text-align: center;
+        }
+        .success { 
+            background: #112240; 
+            padding: 30px; 
+            border-radius: 12px; 
+            margin: 20px 0; 
+            border: 2px solid #4CAF50;
+        }
+        .info { 
+            background: #1a1a1a; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+        }
+        .button {
+            background: #64FFDA;
+            color: #0A192F;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background: #4ECDC4;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="success">
+        <h1>🔧 Column Name Fix V2 Complete! 🔧</h1>
+        <h2>✅ Fixed addressState → addressstate</h2>
+        <h2>✅ Fixed addressCity → addresscity</h2>
+        <h2>✅ Removed duplicate handleRowClick function</h2>
+    </div>
+    
+    <div class="info">
+        <h3>What Was Fixed</h3>
+        <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <li>✅ Fixed createDat → created_at (previous fix)</li>
+            <li>✅ Fixed addressState → addressstate (new fix)</li>
+            <li>✅ Fixed addressCity → addresscity (new fix)</li>
+            <li>✅ Removed duplicate handleRowClick function</li>
+            <li>✅ Updated all database queries</li>
+            <li>✅ Updated all component references</li>
+        </ul>
+    </div>
+    
+    <div>
+        <a href="http://localhost:5174" class="button">
+            🚀 Test Fixed App
+        </a>
+        <a href="http://localhost:5174/health" class="button">
+            🔍 Check Health Status
+        </a>
+    </div>
+    
+    <div class="info">
+        <h3>Expected Results</h3>
+        <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <li>✅ No more "column addressState does not exist" errors</li>
+            <li>✅ No more "column addressCity does not exist" errors</li>
+            <li>✅ No more duplicate function errors</li>
+            <li>✅ Listings should load properly</li>
+            <li>✅ All features working correctly</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🔧 Column name fix V2 complete!');
+        console.log('✅ addressState → addressstate');
+        console.log('✅ addressCity → addresscity');
+        console.log('✅ Duplicate function removed');
+        console.log('✅ All database queries updated');
+    </script>
+</body>
+</html>
+

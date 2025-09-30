@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/customSupabaseClient';
-import { fetchJustListed, fetchRevealedListings } from '@/lib/queries';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { AlertCircle, Download, Eye, Zap } from 'lucide-react';
+import { 
+  AlertCircle, 
+  Download, 
+  Eye, 
+  Zap, 
+  SortAsc, 
+  SortDesc,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Home,
+  Building,
+  RefreshCw,
+  TrendingUp,
+  Users
+} from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { Pagination } from '@/components/ui/pagination';
@@ -23,92 +36,144 @@ import { Link } from 'react-router-dom';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useAnalytics } from '@/services/analytics.jsx';
+import { useJustListedEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
+import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
+import DateFilter from '@/components/dashboard/filters/DateFilter';
+import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 
 const PAGE_SIZE = 20;
 
-const JustListed = ({ filters }) => {
+const JustListed = () => {
   const navigate = useNavigate();
-  const [pagedListings, setPagedListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { profile, loading: profileLoading, refreshProfile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [revealedIds, setRevealedIds] = useState(new Set());
-  const [isRevealing, setIsRevealing] = useState(null);
+  const [filters, setFilters] = useState({
+    city_name: profile?.city_name,
+    searchTerm: '',
+    minPrice: null,
+    maxPrice: null,
+    beds: null,
+    baths: null,
+    propertyType: null,
+    minSqft: null,
+    maxSqft: null,
+    dateRange: 'all',
+  });
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc'); // Default to newest first
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { trackAction, trackListingInteraction } = useAnalytics();
 
-  const fetchRevealedStatus = useCallback(async (listingIds) => {
-    if (!profile || listingIds.length === 0) return;
-    try {
-      const revealed = await fetchRevealedListings(profile.id, listingIds);
-      setRevealedIds(new Set(revealed.map(r => r.listing_id)));
-    } catch (err) {
-      console.error("Error fetching revealed status:", err);
-    }
-  }, [profile]);
-
-  const fetchListingsData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (!profile) {
-        if (!profileLoading) {
-            setError("Profile not loaded. Please set your service area in Settings.");
-        }
-        setLoading(false);
-        return;
-      }
-
-      const { data: runsData, error: runsError } = await supabase
-        .from('runs')
-        .select('id')
-        .order('started_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (runsError || !runsData) {
-        throw new Error(runsError?.message || 'Could not fetch the latest run ID.');
-      }
-
-      const currentRunId = runsData.id;
-      const { data, count } = await fetchJustListed(currentRunId, profile.city_name, currentPage, PAGE_SIZE, filters);
-      
-      setPagedListings(data);
-      setTotalPages(Math.ceil(count / PAGE_SIZE));
-      if (data.length > 0) {
-        await fetchRevealedStatus(data.map(l => l.id));
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [profile, profileLoading, filters, currentPage, fetchRevealedStatus]);
-
+  // Update filters when profile changes
   useEffect(() => {
-    if (!profileLoading) {
-      fetchListingsData();
+    if (profile?.city_name) {
+      setFilters(prev => ({ ...prev, city_name: profile.city_name }));
     }
-  }, [profileLoading, fetchListingsData]);
+  }, [profile?.city_name]);
+
+  // Use enhanced hooks
+  const {
+    data: listingsData,
+    isLoading: listingsLoading,
+    error: listingsError,
+    refetch: refetchListings
+  } = useJustListedEnhanced(filters, currentPage, PAGE_SIZE);
+
+  const {
+    data: revealedListings = new Set(),
+    isLoading: revealedLoading
+  } = useRevealedListingsEnhanced(profile?.id);
+
+  const revealListingMutation = useRevealListingEnhanced();
+  
+  // Local state to track immediately revealed listings
+  const [localRevealedListings, setLocalRevealedListings] = useState(new Set());
+  
+  // Combine server and local revealed listings
+  const allRevealedListings = React.useMemo(() => {
+    const combined = new Set(revealedListings || []);
+    localRevealedListings.forEach(id => combined.add(id));
+    return combined;
+  }, [revealedListings, localRevealedListings]);
+
+  // Handle filter changes
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  // Handle search changes
+  const handleSearchChange = (searchTerm) => {
+    setFilters(prev => ({ ...prev, searchTerm }));
+    setCurrentPage(1);
+  };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    trackAction('pagination', { page, section: 'just_listed' });
   };
+
+  // Sort listings client-side
+  const sortedListings = React.useMemo(() => {
+    if (!listingsData?.data) return [];
+    
+    const sorted = [...listingsData.data].sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case 'price':
+          aValue = a.unformattedprice || 0;
+          bValue = b.unformattedprice || 0;
+          break;
+        case 'beds':
+          aValue = a.beds || 0;
+          bValue = b.beds || 0;
+          break;
+        case 'area':
+          aValue = a.area || 0;
+          bValue = b.area || 0;
+          break;
+        case 'date':
+        default:
+          aValue = new Date(a.lastseenat || 0);
+          bValue = new Date(b.lastseenat || 0);
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    return sorted;
+  }, [listingsData?.data, sortBy, sortOrder]);
   
   const handleExport = () => {
-    if (pagedListings.length === 0) {
-      toast.error("Export Failed", "No listings on this page to export.");
+    if (sortedListings.length === 0) {
+      toast.error("Export Failed", "No listings to export with current filters.");
       return;
     }
-    const dataToExport = pagedListings.map(({ id, addressStreet, addressCity, price, beds, baths, area, statusText }) => ({
-      Address: revealedIds.has(id) ? addressStreet : '*****',
-      City: addressCity,
-      Price: price,
-      Beds: beds,
-      Baths: baths,
-      'Sq. Ft.': area,
-      'Property Type': statusText,
+    
+    trackAction('export', {
+      type: 'just_listed',
+      count: sortedListings.length,
+      page: currentPage,
+      filters: filters
+    });
+    
+    const dataToExport = sortedListings.map(({ id, addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
+      Address: revealedListings.has(id) ? addressStreet : '*****',
+      City: addresscity,
+      Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
+      Beds: beds || 'N/A',
+      Baths: baths || 'N/A',
+      'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
+      'Property Type': statustext || 'N/A',
     }));
     exportToCSV(dataToExport, `just-listed-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
     toast.success("Export Successful", "Your CSV file has been downloaded.");
@@ -120,36 +185,43 @@ const JustListed = ({ filters }) => {
 
   const handleReveal = async (listingId, e) => {
     e.stopPropagation();
-    if (profile?.unlimited || revealedIds.has(listingId)) {
+    if (profile?.unlimited || allRevealedListings.has(listingId)) {
         handleRowClick(listingId);
         return;
     }
 
-    setIsRevealing(listingId);
+    trackAction('listing_reveal_attempt', { 
+      listingId, 
+      page: currentPage,
+      totalListings: sortedListings.length 
+    });
+    
     try {
-      const { data, error } = await supabase.rpc('reveal_listing', { p_listing_id: listingId });
+      await revealListingMutation.mutateAsync({
+        listingId,
+        userId: profile.id,
+        creditCost: 1, // Just Listed properties cost 1 credit
+      });
       
-      if (error) throw error;
+      // Immediately add to local revealed state for instant UI update
+      setLocalRevealedListings(prev => new Set([...prev, listingId]));
       
-      if (data.ok) {
-        setRevealedIds(prev => new Set(prev).add(listingId));
-        await refreshProfile();
-        toast.success("Address Revealed!", "1 credit has been deducted.");
-        handleRowClick(listingId);
-      } else if (data.error === 'insufficient_credits') {
-        setShowUpgradeModal(true);
-      } else {
-        toast.error('Reveal Failed', 'Could not reveal address. Please try again.');
-      }
+      trackListingInteraction('reveal', listingId, {
+        page: currentPage,
+        totalListings: sortedListings.length,
+      });
+      
+      // Don't navigate immediately - let the user see the revealed address
+      // The address will be revealed in place and they can click on it
     } catch (err) {
-      toast.error('Reveal Failed', err.message || 'An error occurred during reveal.');
-    } finally {
-      setIsRevealing(null);
+      if (err.message.includes('Insufficient credits')) {
+        setShowUpgradeModal(true);
+      }
     }
   };
 
 
-  if (loading || profileLoading) {
+  if (listingsLoading || profileLoading) {
     return (
       <Card className="bg-light-navy border-border">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -165,115 +237,392 @@ const JustListed = ({ filters }) => {
     );
   }
 
-  if (error) {
+  if (listingsError) {
+    console.error('JustListed: Error state:', listingsError);
+    
+    // Determine error type and show appropriate message
+    const isColumnError = listingsError.code === 'COLUMN_NOT_FOUND' || 
+                         listingsError.message?.includes('column') ||
+                         listingsError.message?.includes('does not exist');
+    
+    const isNetworkError = listingsError.code === 'CONNECTION_FAILED' ||
+                          listingsError.message?.includes('fetch') ||
+                          listingsError.message?.includes('network');
+    
+    const isAuthError = listingsError.code === 'UNAUTHORIZED' ||
+                       listingsError.message?.includes('auth');
+    
     return (
-      <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg">
-        <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-        <p className="text-lightest-slate font-semibold">Failed to load listings</p>
-        <p className="text-slate text-sm">{error}</p>
+      <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg p-6">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-semibold text-lightest-slate mb-2">
+          {isColumnError ? 'Database Structure Issue' : 
+           isNetworkError ? 'Connection Problem' :
+           isAuthError ? 'Authentication Required' :
+           'Failed to Load Listings'}
+        </h3>
+        <p className="text-slate text-sm text-center mb-4 max-w-md">
+          {isColumnError ? 
+            'There\'s a data structure issue. Our team has been notified and will fix this shortly.' :
+            isNetworkError ?
+            'Unable to connect to our servers. Please check your internet connection and try again.' :
+            isAuthError ?
+            'Please log in again to continue.' :
+            listingsError.message || 'An unexpected error occurred. Please try again.'}
+        </p>
+        
+        {/* Error details for development */}
+        {process.env.NODE_ENV === 'development' && (
+          <details className="mb-4 w-full max-w-md">
+            <summary className="text-xs text-slate cursor-pointer hover:text-lightest-slate">
+              Technical Details (Development)
+            </summary>
+            <div className="mt-2 p-3 bg-deep-navy rounded text-xs text-slate font-mono overflow-auto">
+              <div><strong>Error Code:</strong> {listingsError.code || 'Unknown'}</div>
+              <div><strong>Message:</strong> {listingsError.message}</div>
+              {listingsError.context && (
+                <div><strong>Context:</strong> {JSON.stringify(listingsError.context, null, 2)}</div>
+              )}
+            </div>
+          </details>
+        )}
+        
+        <div className="flex gap-2">
+          <Button onClick={refetchListings} className="bg-green text-deep-navy hover:bg-green/90">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Try Again
+          </Button>
+          {isAuthError && (
+            <Button 
+              onClick={() => navigate('/login')} 
+              variant="outline"
+              className="border-green text-green hover:bg-green/10"
+            >
+              Go to Login
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+    <motion.div 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
       <Helmet>
         <title>Just Listed Properties | Sold2Move</title>
         <meta name="description" content="View the most recently listed properties to find new moving leads." />
       </Helmet>
-      <Card className="bg-light-navy border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lightest-slate">
-            Just Listed Properties {profile?.city_name && `in ${profile.city_name}`}
+
+      {/* Enhanced Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+      >
+        <div>
+          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
+            <Building className="h-6 w-6 text-green" />
+            Just Listed Properties
+            {profile?.city_name && (
+              <span className="text-slate font-normal">in {profile.city_name}</span>
+            )}
+          </h2>
+          <p className="text-slate mt-1">
+            Discover the latest properties in your service area.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExport}
+            disabled={sortedListings.length === 0}
+            variant="outline"
+            className="border-green text-green hover:bg-green/10"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export ({sortedListings.length})
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Enhanced Filters */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <AdvancedFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onSearchChange={handleSearchChange}
+          cityName={profile?.city_name}
+        />
+      </motion.div>
+
+      {/* Date Filter */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+      >
+        <DateFilter
+          value={filters.dateRange}
+          onChange={(value) => {
+            setFilters(prev => ({ ...prev, dateRange: value }));
+            setCurrentPage(1);
+          }}
+        />
+      </motion.div>
+
+      {/* Sort Controls */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex flex-col sm:flex-row gap-4 items-start sm:items-center"
+      >
+        <div className="flex gap-2">
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Date Listed</SelectItem>
+              <SelectItem value="price">Price</SelectItem>
+              <SelectItem value="beds">Bedrooms</SelectItem>
+              <SelectItem value="area">Square Footage</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {sortOrder === 'asc' ? (
+              <SortAsc className="h-4 w-4" />
+            ) : (
+              <SortDesc className="h-4 w-4" />
+            )}
+            {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Enhanced Listings Table */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Home className="h-5 w-5" />
+                Recent Listings
+                <Badge variant="secondary" className="ml-2">
+                  {sortedListings.length} results
+                </Badge>
+              </div>
+              <div className="text-sm text-slate">
+                Page {currentPage} of {listingsData?.totalPages || 1}
+              </div>
           </CardTitle>
-          <LoadingButton variant="outline" size="sm" onClick={handleExport} disabled={pagedListings.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Page to CSV
-          </LoadingButton>
         </CardHeader>
         <CardContent>
-          {pagedListings.length === 0 ? (
-            <p className="text-slate text-center py-8">No just-listed properties found matching your criteria. Make sure your service area is set in Settings.</p>
-          ) : (
-            <>
+            {sortedListings.length === 0 ? (
+              <div className="text-center py-12">
+                <Building className="h-16 w-16 text-slate mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-lightest-slate mb-2">No Listings Found</h3>
+                <p className="text-slate mb-4">
+                  {hasActiveFilters(filters, profile)
+                    ? "No listings match your current filters. Try adjusting your search criteria."
+                    : "No just-listed properties found for your service area. Make sure your service area is set in Settings."
+                  }
+                </p>
+                {hasActiveFilters(filters, profile) && (
+                  <Button 
+                    onClick={() => setFilters(clearAllFilters(profile))}
+                    variant="outline"
+                    className="border-green text-green hover:bg-green/10"
+                  >
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b-border hover:bg-transparent">
-                      <TableHead className="text-slate">Address</TableHead>
-                      <TableHead className="text-slate">City</TableHead>
-                      <TableHead className="text-slate">Price</TableHead>
-                      <TableHead className="text-slate">Beds</TableHead>
-                      <TableHead className="text-slate">Baths</TableHead>
-                      <TableHead className="text-slate">Sq. Ft.</TableHead>
-                      <TableHead className="text-slate text-center">Action</TableHead>
+                    <TableRow>
+                      <TableHead className="min-w-[300px]">Address</TableHead>
+                      <TableHead className="min-w-[120px]">Price</TableHead>
+                      <TableHead className="min-w-[80px]">Beds</TableHead>
+                      <TableHead className="min-w-[80px]">Baths</TableHead>
+                      <TableHead className="min-w-[100px]">Sq Ft</TableHead>
+                      <TableHead className="min-w-[120px]">Date Listed</TableHead>
+                      <TableHead className="min-w-[120px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pagedListings.map((listing) => {
-                      const isRevealed = revealedIds.has(listing.id) || profile?.unlimited;
+                    {sortedListings.map((listing, index) => {
+                      const isRevealed = allRevealedListings.has(listing.id) || profile?.unlimited;
+                      const isRevealing = revealListingMutation.isPending && revealListingMutation.variables?.listingId === listing.id;
+                      
                       return (
-                        <TableRow 
+                        <motion.tr
                           key={listing.id} 
-                          className="border-b-border hover:bg-lightest-navy/10"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="hover:bg-lightest-navy/5 transition-colors"
                         >
-                          <TableCell 
-                            className="font-medium text-lightest-slate"
-                            onClick={() => isRevealed && handleRowClick(listing.id)}
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-light-navy rounded-md">
+                                <Home className="h-4 w-4 text-green" />
+                              </div>
+                              <div>
+                                <div 
+                                  className={`font-medium ${
+                                    isRevealed 
+                                      ? 'text-lightest-slate cursor-pointer hover:text-green transition-colors' 
+                                      : 'text-slate'
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isRevealed) {
+                                      handleRowClick(listing.id);
+                                    }
+                                  }}
                           >
                             {isRevealed ? listing.addressStreet : '*****'}
+                                </div>
+                                <div className="text-xs text-slate">
+                                  {isRevealed 
+                                    ? `${listing.addresscity}, ${listing.addressstate}`
+                                    : 'Click Reveal to see address'
+                                  }
+                                </div>
+                              </div>
+                            </div>
                           </TableCell>
-                          <TableCell className="text-slate">{listing.addressCity}</TableCell>
-                          <TableCell className="text-slate">{listing.price}</TableCell>
-                          <TableCell className="text-slate">{listing.beds}</TableCell>
-                          <TableCell className="text-slate">{listing.baths}</TableCell>
-                          <TableCell className="text-slate">{listing.area}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell>
+                            <div className="text-green font-semibold text-lg">
+                              {isRevealed 
+                                ? (listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A')
+                                : '*****'
+                              }
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-lightest-slate">
+                              {isRevealed 
+                                ? (listing.beds !== null && listing.beds !== undefined ? listing.beds : 'N/A')
+                                : '***'
+                              }
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-lightest-slate">
+                              {isRevealed 
+                                ? (listing.baths !== null && listing.baths !== undefined ? listing.baths : 'N/A')
+                                : '***'
+                              }
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-lightest-slate">
+                              {isRevealed 
+                                ? (listing.area ? `${listing.area.toLocaleString()}` : 'N/A')
+                                : '****'
+                              }
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2 text-slate">
+                              <Calendar className="h-4 w-4" />
+                              <span className="text-sm">
+                                {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {isRevealed ? (
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRowClick(listing.id);
+                                }}
+                                size="sm"
+                                variant="outline"
+                                className="border-green text-green hover:bg-green/10"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Button>
+                            ) : (
                             <LoadingButton
-                              variant={isRevealed ? 'ghost' : 'default'}
+                                onClick={(e) => handleReveal(listing.id, e)}
+                                isLoading={isRevealing}
+                                disabled={isRevealing}
                               size="sm"
-                              onClick={(e) => handleReveal(listing.id, e)}
-                              isLoading={isRevealing === listing.id}
-                              className={isRevealed ? 'text-slate hover:text-lightest-slate' : 'bg-green text-deep-navy hover:bg-green/90'}
-                            >
-                              {isRevealed ? (
-                                  <>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      View
-                                  </>
-                              ) : (
-                                  <>
+                                className="bg-green text-deep-navy hover:bg-green/90"
+                              >
                                       <Zap className="h-4 w-4 mr-2" />
                                       Reveal (1)
-                                  </>
+                              </LoadingButton>
                               )}
-                            </LoadingButton>
                           </TableCell>
-                        </TableRow>
+                        </motion.tr>
                       );
                     })}
                   </TableBody>
                 </Table>
               </div>
-              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-            </>
+            )}
+
+            {/* Enhanced Pagination */}
+            {listingsData?.totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                <div className="text-sm text-slate">
+                  Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, listingsData.count)} of {listingsData.count} results
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={listingsData.totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
           )}
         </CardContent>
       </Card>
+      </motion.div>
+
+      {/* Upgrade Modal */}
       <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
         <DialogContent className="bg-light-navy border-lightest-navy/20 text-lightest-slate">
           <DialogHeader>
-            <DialogTitle>Out of Credits</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-green" />
+              Out of Credits
+            </DialogTitle>
             <DialogDescription>
               You don't have enough credits to reveal this address. Please purchase more credits or upgrade your plan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-start gap-2">
-            <LoadingButton asChild onClick={() => setShowUpgradeModal(false)} className="bg-green text-deep-navy hover:bg-green/90">
-              <Link to="/pricing#top-up">Buy Credits</Link>
+            <LoadingButton asChild className="bg-green text-deep-navy hover:bg-green/90">
+              <Link to="/pricing#top-up" onClick={() => setShowUpgradeModal(false)}>Buy Credits</Link>
             </LoadingButton>
-            <LoadingButton asChild variant="outline" onClick={() => setShowUpgradeModal(false)}>
-              <Link to="/pricing">Upgrade Plan</Link>
+            <LoadingButton asChild variant="outline">
+              <Link to="/pricing" onClick={() => setShowUpgradeModal(false)}>Upgrade Plan</Link>
             </LoadingButton>
           </DialogFooter>
         </DialogContent>

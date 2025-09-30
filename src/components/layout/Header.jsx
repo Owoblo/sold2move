@@ -25,6 +25,18 @@ const Header = () => {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -95,7 +107,13 @@ const Header = () => {
         </div>
 
         <div className="md:hidden">
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-green">
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)} 
+            className="text-green focus:outline-none focus:ring-2 focus:ring-green focus:ring-offset-2 focus:ring-offset-deep-navy rounded-md p-1"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
+          >
             {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
@@ -106,6 +124,9 @@ const Header = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="md:hidden absolute top-full left-0 w-full bg-light-navy shadow-xl"
+          id="mobile-menu"
+          role="navigation"
+          aria-label="Mobile navigation"
         >
           <div className="flex flex-col items-center space-y-4 p-8">
             {navItems.map((item) => (

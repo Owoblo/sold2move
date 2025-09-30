@@ -5,8 +5,7 @@ import { Toaster as ShadToaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import ErrorBoundary from '@/components/layout/ErrorBoundary';
-import ErrorFallback from '@/components/layout/ErrorFallback';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -23,7 +22,7 @@ const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
 const ProtectedRoute = lazy(() => import('@/components/layout/ProtectedRoute'));
 const PublicRoute = lazy(() => import('@/components/layout/PublicRoute'));
 const DashboardLayout = lazy(() => import('@/components/dashboard/layout/DashboardLayout'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardEnhanced'));
 const AccountHub = lazy(() => import('@/components/dashboard/pages/AccountHub'));
 const Orders = lazy(() => import('@/components/dashboard/pages/Orders'));
 const SupportTicket = lazy(() => import('@/components/dashboard/pages/SupportTicket'));
@@ -37,10 +36,13 @@ const Resources = lazy(() => import('@/components/dashboard/pages/Resources'));
 const SampleMailers = lazy(() => import('@/components/dashboard/pages/SampleMailers'));
 const VideoTutorials = lazy(() => import('@/components/dashboard/pages/VideoTutorials'));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'));
-const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
+const HealthCheck = lazy(() => import('@/pages/HealthCheck'));
+const OnboardingPage = lazy(() => import('@/pages/OnboardingEnhanced'));
 const SettingsPage = lazy(() => import('@/components/dashboard/pages/SettingsPage'));
 const PostAuthPage = lazy(() => import('@/pages/PostAuthPage'));
-const TestCheckout = lazy(() => import('@/pages/TestCheckout'));
+const TestCheckout = lazy(() => import('@/pages/TestCheckoutEnhanced'));
+const SimpleTestCheckout = lazy(() => import('@/pages/SimpleTestCheckout'));
+const PaymentSuccess = lazy(() => import('@/pages/PaymentSuccess'));
 const Success = lazy(() => import('@/pages/Success'));
 const RequestDemoPage = lazy(() => import('@/pages/RequestDemoPage'));
 const RouteGuard = lazy(() => import('@/components/layout/RouteGuard'));
@@ -60,7 +62,7 @@ function App() {
     <div className="bg-deep-navy flex flex-col min-h-screen">
       {!isDashboardRoute && <Header />}
       <main className="flex-grow">
-        <ErrorBoundary fallback={ErrorFallback}>
+        <ErrorBoundary>
           <Suspense fallback={<SuspenseFallback />}>
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
@@ -82,7 +84,10 @@ function App() {
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/post-auth" element={<PostAuthPage />} />
                 <Route path="/test-checkout" element={<TestCheckout />} />
+                <Route path="/simple-checkout" element={<SimpleTestCheckout />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/success" element={<Success />} />
+                <Route path="/health" element={<HealthCheck />} />
                 
                 <Route 
                   path="/onboarding"

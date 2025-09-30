@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Column Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Database Column Fix Verification</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Just Listed Properties API</h2>
+        <p>Testing the just_listed endpoint with corrected column names...</p>
+        <button onclick="testJustListed()">Test Just Listed</button>
+        <div id="justListedResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Sold Listings API</h2>
+        <p>Testing the sold_listings endpoint with corrected column names...</p>
+        <button onclick="testSoldListings()">Test Sold Listings</button>
+        <div id="soldListingsResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Visual Editor Config</h2>
+        <p>Testing if the visual-editor-config.js file is accessible...</p>
+        <button onclick="testVisualEditor()">Test Visual Editor</button>
+        <div id="visualEditorResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5173';
+        
+        async function testJustListed() {
+            const resultDiv = document.getElementById('justListedResult');
+            resultDiv.innerHTML = '<p class="info">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/test-just-listed`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Just Listed API test passed!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ Just Listed API test failed</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Just Listed API test failed: ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testSoldListings() {
+            const resultDiv = document.getElementById('soldListingsResult');
+            resultDiv.innerHTML = '<p class="info">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/test-sold-listings`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Sold Listings API test passed!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ Sold Listings API test failed</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Sold Listings API test failed: ${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testVisualEditor() {
+            const resultDiv = document.getElementById('visualEditorResult');
+            resultDiv.innerHTML = '<p class="info">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/plugins/visual-editor/visual-editor-config.js`);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Visual Editor Config file is accessible!</p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ Visual Editor Config file not accessible</p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Visual Editor Config test failed: ${error.message}</p>
+                `;
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.onload = function() {
+            console.log('Column Fix Test Page Loaded');
+            console.log('Testing API endpoints...');
+        };
+    </script>
+</body>
+</html>

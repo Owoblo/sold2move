@@ -10,14 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { ChevronDown, User, LogOut, Settings, CreditCard } from 'lucide-react';
+import { ChevronDown, User, LogOut, Settings, CreditCard, Menu, X } from 'lucide-react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import DashboardNotification from '@/components/dashboard/DashboardNotification';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 
 const CreditMeter = lazy(() => import('@/components/dashboard/CreditMeter'));
 
-const DashboardHeader = () => {
+const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
   const { profile, loading } = useProfile();
   const supabase = useSupabaseClient();
   const navigate = useNavigate();
@@ -29,7 +29,15 @@ const DashboardHeader = () => {
 
   return (
     <header className="bg-light-navy border-b border-lightest-navy/20 p-4 flex justify-between items-center">
-      <div>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleSidebar}
+          className="text-lightest-slate hover:bg-lightest-navy/10"
+        >
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </Button>
         <DashboardNotification />
       </div>
       <div className="flex items-center gap-4">

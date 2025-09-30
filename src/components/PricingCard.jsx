@@ -17,12 +17,8 @@ const PricingCard = ({ plan, isYearly, handleCheckout, loadingPriceId, isPaid, i
     if (plan.title === 'Free Trial' && !isPaid) {
       handleCheckout(price);
     } else if (plan.title !== 'Free Trial') {
-      // User request: "let the "choose plan" button lead to the test-checkout page.."
-      if (plan.title === 'Starter' || plan.title === 'Growth' || plan.title === 'Enterprise') {
-        navigate('/test-checkout');
-      } else {
-        handleCheckout(price);
-      }
+      // Use the working checkout system
+      handleCheckout(price);
     } else if (plan.title === 'Free Trial' && isPaid) {
       navigate('/dashboard');
     }

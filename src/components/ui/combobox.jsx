@@ -32,9 +32,11 @@ export const Combobox = ({
   }, [options, value]);
   
   const handleSelect = (currentValue) => {
-    const option = options.find(opt => opt.value.toLowerCase() === currentValue.toLowerCase());
-    onChange(option ? option.value : '');
-    setOpen(false);
+    const option = options.find(opt => opt.value === currentValue);
+    if (option) {
+      onChange(option.value);
+      setOpen(false);
+    }
   };
 
   return (

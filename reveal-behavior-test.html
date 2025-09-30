@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reveal Behavior Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 5px; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .info { color: #60a5fa; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .status.success { background: #1a4d1a; border: 1px solid #4ade80; }
+        .status.error { background: #4d1a1a; border: 1px solid #f87171; }
+        .status.info { background: #1a3a4d; border: 1px solid #60a5fa; }
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { margin: 10px 0; padding: 10px; background: #2a2a2a; border-radius: 5px; }
+        .feature-list li:before { content: "✅ "; color: #4ade80; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Reveal Behavior Test</h1>
+    
+    <div class="test-section">
+        <h2>New Reveal Behavior Features</h2>
+        <ul class="feature-list">
+            <li><strong>Step 1:</strong> Click "Reveal" button to reveal the address in place</li>
+            <li><strong>Step 2:</strong> Address becomes clickable and shows full details</li>
+            <li><strong>Step 3:</strong> Click on revealed address to go to property detail page</li>
+            <li><strong>Step 4:</strong> "View Details" button appears for revealed listings</li>
+            <li><strong>Step 5:</strong> Address shows "Click Reveal to see address" when not revealed</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 1: Just Listed Page</h2>
+        <button onclick="testJustListed()">Test Just Listed Page</button>
+        <div id="justListedResult"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Sold Listings Page</h2>
+        <button onclick="testSoldListings()">Test Sold Listings Page</button>
+        <div id="soldListingsResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5173';
+        let testResults = {
+            justListed: false,
+            soldListings: false
+        };
+        
+        async function testJustListed() {
+            const resultDiv = document.getElementById('justListedResult');
+            resultDiv.innerHTML = '<div class="status info">Testing Just Listed page...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/listings/just-listed`);
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    // Check for the new reveal behavior elements
+                    const hasRevealButton = html.includes('Reveal (1)');
+                    const hasViewDetailsButton = html.includes('View Details');
+                    const hasClickableAddress = html.includes('cursor-pointer hover:text-green');
+                    const hasRevealHint = html.includes('Click Reveal to see address');
+                    
+                    if (hasRevealButton && hasViewDetailsButton && hasClickableAddress && hasRevealHint) {
+                        resultDiv.innerHTML = '<div class="status success">✅ Just Listed page has new reveal behavior implemented</div>';
+                        testResults.justListed = true;
+                    } else {
+                        resultDiv.innerHTML = '<div class="status error">❌ Just Listed page missing some reveal behavior features</div>';
+                        resultDiv.innerHTML += '<pre>Features found: Reveal Button: ' + hasRevealButton + ', View Details: ' + hasViewDetailsButton + ', Clickable Address: ' + hasClickableAddress + ', Reveal Hint: ' + hasRevealHint + '</pre>';
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="status error">❌ Just Listed page load failed: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+            
+            updateResults();
+        }
+        
+        async function testSoldListings() {
+            const resultDiv = document.getElementById('soldListingsResult');
+            resultDiv.innerHTML = '<div class="status info">Testing Sold Listings page...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/listings/sold`);
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    
+                    // Check for the new reveal behavior elements
+                    const hasRevealButton = html.includes('Reveal (2)');
+                    const hasViewDetailsButton = html.includes('View Details');
+                    const hasClickableAddress = html.includes('cursor-pointer hover:text-green');
+                    const hasRevealHint = html.includes('Click Reveal to see address');
+                    
+                    if (hasRevealButton && hasViewDetailsButton && hasClickableAddress && hasRevealHint) {
+                        resultDiv.innerHTML = '<div class="status success">✅ Sold Listings page has new reveal behavior implemented</div>';
+                        testResults.soldListings = true;
+                    } else {
+                        resultDiv.innerHTML = '<div class="status error">❌ Sold Listings page missing some reveal behavior features</div>';
+                        resultDiv.innerHTML += '<pre>Features found: Reveal Button: ' + hasRevealButton + ', View Details: ' + hasViewDetailsButton + ', Clickable Address: ' + hasClickableAddress + ', Reveal Hint: ' + hasRevealHint + '</pre>';
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="status error">❌ Sold Listings page load failed: ${response.status}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="status error">❌ Network error: ${error.message}</div>`;
+            }
+            
+            updateResults();
+        }
+        
+        function updateResults() {
+            const resultsDiv = document.getElementById('results');
+            const passed = Object.values(testResults).filter(Boolean).length;
+            const total = Object.keys(testResults).length;
+            
+            let resultsHtml = `<h3>Test Results: ${passed}/${total} passed</h3>`;
+            resultsHtml += '<ul>';
+            resultsHtml += `<li>Just Listed Page: ${testResults.justListed ? '✅' : '❌'}</li>`;
+            resultsHtml += `<li>Sold Listings Page: ${testResults.soldListings ? '✅' : '❌'}</li>`;
+            resultsHtml += '</ul>';
+            
+            if (passed === total) {
+                resultsHtml += '<div class="status success"><strong>🎉 All tests passed! New reveal behavior is working correctly.</strong></div>';
+                resultsHtml += '<div class="status info"><strong>✅ New Behavior:</strong> Click Reveal → Address appears → Click address → Go to property details</div>';
+            } else {
+                resultsHtml += '<div class="status error"><strong>⚠️ Some tests failed. Please check the individual test results above.</strong></div>';
+            }
+            
+            resultsDiv.innerHTML = resultsHtml;
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            testJustListed();
+            testSoldListings();
+        });
+    </script>
+</body>
+</html>

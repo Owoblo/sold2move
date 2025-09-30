@@ -31,6 +31,7 @@ export const profileSchema = z.object({
   country_code: z.string().min(1, { message: "Country is required." }),
   state_code: z.string().min(1, { message: "State/Province is required." }),
   city_name: z.string().min(1, { message: "City is required." }),
+  // selected_cities: z.array(z.string()).optional().default([]), // Column doesn't exist in database
 });
 
 export const onboardingSchema = z.object({

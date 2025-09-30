@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FORCE CORRECT PORT - READ THIS!</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #ff0000; 
+            color: #ffffff; 
+            text-align: center;
+            font-size: 24px;
+        }
+        .urgent {
+            background: #000000;
+            padding: 40px;
+            border: 5px solid #ffff00;
+            border-radius: 20px;
+            margin: 20px;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0% { background: #ff0000; }
+            50% { background: #000000; }
+            100% { background: #ff0000; }
+        }
+        .button {
+            background: #00ff00;
+            color: #000000;
+            border: none;
+            padding: 30px 60px;
+            border-radius: 15px;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px;
+            text-decoration: none;
+            display: inline-block;
+            animation: pulse 0.5s infinite;
+        }
+        .button:hover {
+            background: #00cc00;
+            transform: scale(1.1);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .warning {
+            background: #ffff00;
+            color: #000000;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="urgent">
+        <h1>🚨 URGENT: WRONG PORT! 🚨</h1>
+        <h2>You are on PORT 5173 (WRONG!)</h2>
+        <h2>You need PORT 5174 (CORRECT!)</h2>
+    </div>
+    
+    <div class="warning">
+        <h3>❌ CURRENT: localhost:5173 (has errors)</h3>
+        <h3>✅ NEEDED: localhost:5174 (fixed code)</h3>
+    </div>
+    
+    <div>
+        <a href="http://localhost:5174" class="button">
+            🚀 CLICK HERE TO GO TO CORRECT PORT 🚀
+        </a>
+    </div>
+    
+    <div class="urgent">
+        <h2>STOP USING PORT 5173!</h2>
+        <h2>USE PORT 5174!</h2>
+        <h2>YOUR CODE IS FIXED ON PORT 5174!</h2>
+    </div>
+
+    <script>
+        // Auto-redirect after 3 seconds
+        setTimeout(() => {
+            window.location.href = 'http://localhost:5174';
+        }, 3000);
+        
+        console.log('🚨 URGENT: You are on the wrong port!');
+        console.log('❌ Current: localhost:5173 (WRONG)');
+        console.log('✅ Correct: localhost:5174 (RIGHT)');
+        console.log('🔄 Auto-redirecting in 3 seconds...');
+    </script>
+</body>
+</html>
+
