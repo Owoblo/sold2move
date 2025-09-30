@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Column Name Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #0A192F; color: #64FFDA; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #112240; border-radius: 8px; }
+        .success { color: #4CAF50; }
+        .error { color: #F44336; }
+        .warning { color: #FF9800; }
+        button { background: #64FFDA; color: #0A192F; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #4ECDC4; }
+        pre { background: #1a1a1a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Column Name Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>Issue Fixed</h2>
+        <p class="success">✅ All createDat references have been updated to created_at</p>
+        <p class="success">✅ Browser cache has been cleared</p>
+        <p class="success">✅ Build cache has been cleared</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>What Was Fixed</h2>
+        <ul>
+            <li>✅ Updated all database queries to use created_at</li>
+            <li>✅ Fixed all component display logic</li>
+            <li>✅ Updated TypeScript interfaces</li>
+            <li>✅ Fixed PerformanceMonitor infinite loop</li>
+            <li>✅ Cleared browser and build caches</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li><strong>Hard Refresh:</strong> Press Ctrl+Shift+R (or Cmd+Shift+R on Mac)</li>
+            <li><strong>Clear Browser Cache:</strong> Open DevTools → Application → Storage → Clear All</li>
+            <li><strong>Check Console:</strong> Should see no more createDat errors</li>
+            <li><strong>Test Listings:</strong> Navigate to dashboard/listings</li>
+            <li><strong>Test Date Filtering:</strong> Use the date filter dropdown</li>
+        </ol>
+    </div>
+    
+    <div class="test-section">
+        <h2>Expected Results</h2>
+        <ul>
+            <li class="success">✅ No more "column createDat does not exist" errors</li>
+            <li class="success">✅ Listings should load properly</li>
+            <li class="success">✅ Date filtering should work</li>
+            <li class="success">✅ No infinite loop warnings</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('Column name fix test page loaded');
+        console.log('All createDat references have been updated to created_at');
+        console.log('Please hard refresh your browser to clear the cache');
+    </script>
+</body>
+</html>

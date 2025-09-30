@@ -9,20 +9,23 @@ import '@/index.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
 import { ErrorProvider } from '@/contexts/ErrorContext';
+import { QueryProvider } from '@/providers/QueryProvider';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <SessionContextProvider supabaseClient={supabase}>
-        <HelmetProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <ErrorProvider>
-                <App />
-              </ErrorProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </HelmetProvider>
+        <QueryProvider>
+          <HelmetProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <ErrorProvider>
+                  <App />
+                </ErrorProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </HelmetProvider>
+        </QueryProvider>
       </SessionContextProvider>
     </BrowserRouter>
   </React.StrictMode>

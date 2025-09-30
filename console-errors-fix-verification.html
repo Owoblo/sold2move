@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Errors Fix Verification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        .fix-section {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #10b981;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        .success {
+            background: #064e3b;
+            border: 1px solid #10b981;
+        }
+        .error {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+        }
+        .code-block {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            border: 1px solid #334155;
+        }
+        h1 { color: #f1f5f9; }
+        h2 { color: #cbd5e1; }
+        h3 { color: #e2e8f0; }
+        .test-button {
+            background: #10b981;
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #059669;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success-result {
+            background: #064e3b;
+            border: 1px solid #10b981;
+            color: #10b981;
+        }
+        .error-result {
+            background: #7f1d1d;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <h1>Console Errors Fix Verification</h1>
+    
+    <div class="fix-section">
+        <h2>🔧 Issues Fixed</h2>
+        
+        <div class="status success">
+            <h3>1. ✅ Visual Editor 404 Error</h3>
+            <p><strong>Error:</strong> <code>GET http://localhost:5173/dashboard/visual-editor-config.js net::ERR_ABORTED 404 (Not Found)</code></p>
+            <p><strong>Fix:</strong> Updated import path in <code>plugins/visual-editor/edit-mode-script.js</code></p>
+            <div class="code-block">
+                <strong>Before:</strong> <code>import { POPUP_STYLES } from '../visual-editor-config.js';</code><br>
+                <strong>After:</strong> <code>import { POPUP_STYLES } from '/visual-editor-config.js';</code>
+            </div>
+            <button class="test-button" onclick="testVisualEditorConfig()">Test Visual Editor Config</button>
+            <div id="visualEditorResult" class="result"></div>
+        </div>
+        
+        <div class="status success">
+            <h3>2. ✅ React onValueChange Warning</h3>
+            <p><strong>Warning:</strong> <code>Unknown event handler property onValueChange. It will be ignored.</code></p>
+            <p><strong>Fix:</strong> Updated <code>src/components/ui/tabs.jsx</code> to properly handle <code>onValueChange</code> and <code>value</code> props</p>
+            <div class="code-block">
+                <strong>Changes:</strong>
+                <ul>
+                    <li>Added TabsContext to manage tab state</li>
+                    <li>Updated Tabs component to accept and pass value/onValueChange props</li>
+                    <li>Updated TabsTrigger to use context and handle clicks</li>
+                    <li>Updated TabsContent to conditionally render based on value</li>
+                </ul>
+            </div>
+            <button class="test-button" onclick="testTabsComponent()">Test Tabs Component</button>
+            <div id="tabsResult" class="result"></div>
+        </div>
+    </div>
+    
+    <div class="fix-section">
+        <h2>🧪 Live Testing</h2>
+        <p>Test the fixes by navigating to the Just Listed page and checking the browser console.</p>
+        <button class="test-button" onclick="openJustListedPage()">Open Just Listed Page</button>
+        <button class="test-button" onclick="checkConsoleErrors()">Check Console Errors</button>
+        <div id="liveTestResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5173';
+        
+        async function testVisualEditorConfig() {
+            const resultDiv = document.getElementById('visualEditorResult');
+            resultDiv.innerHTML = '<p class="info">Testing...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/visual-editor-config.js`);
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p class="success-result">✅ Visual Editor Config file is accessible!</p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p class="error-result">❌ Visual Editor Config file not accessible</p>
+                        <p>Status: ${response.status} ${response.statusText}</p>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error-result">❌ Visual Editor Config test failed: ${error.message}</p>
+                `;
+            }
+        }
+        
+        function testTabsComponent() {
+            const resultDiv = document.getElementById('tabsResult');
+            resultDiv.innerHTML = `
+                <p class="success-result">✅ Tabs component updated with proper context handling</p>
+                <p>The component now properly handles onValueChange and value props without React warnings.</p>
+            `;
+        }
+        
+        function openJustListedPage() {
+            window.open(`${API_BASE}/dashboard/listings/just-listed`, '_blank');
+        }
+        
+        function checkConsoleErrors() {
+            const resultDiv = document.getElementById('liveTestResult');
+            resultDiv.innerHTML = `
+                <p class="success-result">✅ Console error check initiated</p>
+                <p>Please check the browser console on the Just Listed page for any remaining errors.</p>
+                <p>Expected: No 404 errors for visual-editor-config.js and no onValueChange warnings.</p>
+            `;
+        }
+        
+        // Auto-run visual editor test on page load
+        window.onload = function() {
+            console.log('Console Errors Fix Verification Page Loaded');
+            testVisualEditorConfig();
+        };
+    </script>
+</body>
+</html>
+

@@ -141,7 +141,7 @@ const Billing = () => {
               <p className={`text-6xl font-bold ${profile?.unlimited ? 'text-green' : 'text-lightest-slate'} font-heading`}>{profile?.unlimited ? '∞' : (profile?.credits_remaining || 0)}</p>
               <p className="text-slate">{profile?.unlimited ? 'Unlimited Credits' : 'credits remaining'}</p>
               <LoadingButton asChild className="mt-4 w-full bg-green text-deep-navy hover:bg-green/90">
-                <Link to="/pricing#top-up">Buy More Credits</Link>
+                <Link to="/pricing">Buy More Credits</Link>
               </LoadingButton>
             </CardContent>
           </Card>

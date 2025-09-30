@@ -28,7 +28,7 @@ const PropertyDetailPage = () => {
           setDaysOnZillow(data.hdpData.homeInfo.daysOnZillow);
         }
 
-        const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
+        const photos = data?.carouselPhotos || (data?.imgsrc ? [{ url: data.imgsrc }] : []);
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
         }
@@ -43,7 +43,7 @@ const PropertyDetailPage = () => {
     getListing();
   }, [listingId]);
 
-  const photos = listing?.carouselPhotos || (listing?.imgSrc ? [{ url: listing.imgSrc }] : []);
+  const photos = listing?.carouselPhotos || (listing?.imgsrc ? [{ url: listing.imgsrc }] : []);
 
   if (loading) {
     return (
@@ -81,8 +81,8 @@ const PropertyDetailPage = () => {
   return (
     <PageWrapper>
       <Helmet>
-        <title>{listing.addressStreet} | Property Details</title>
-        <meta name="description" content={`Details for property at ${listing.addressStreet}`} />
+        <title>{listing.addressstreet} | Property Details</title>
+        <meta name="description" content={`Details for property at ${listing.addressstreet}`} />
       </Helmet>
       
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -125,10 +125,10 @@ const PropertyDetailPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-3xl text-green">{listing.price}</CardTitle>
-                <p className="text-lg text-lightest-slate">{listing.addressStreet}</p>
+                <p className="text-lg text-lightest-slate">{listing.addressstreet}</p>
                 <p className="text-md text-slate flex items-center">
                   <MapPin className="mr-2 h-4 w-4" />
-                  {listing.addressCity}, {listing.addressState} {listing.addressZipcode}
+                  {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
                 </p>
               </CardHeader>
               <CardContent>
@@ -152,7 +152,7 @@ const PropertyDetailPage = () => {
                 <div className="space-y-2 text-sm mt-6">
                   <div className="flex justify-between">
                     <span className="text-slate">Property Type:</span>
-                    <span className="font-medium text-lightest-slate">{listing.statusText || 'N/A'}</span>
+                    <span className="font-medium text-lightest-slate">{listing.statustext || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate">Zillow ID (zpid):</span>
@@ -173,9 +173,9 @@ const PropertyDetailPage = () => {
                     </span>
                   </div>
                 </div>
-                {listing.detailUrl && (
+                {listing.detailurl && (
                   <Button asChild className="w-full mt-6 bg-green text-deep-navy hover:bg-green/90">
-                    <a href={listing.detailUrl} target="_blank" rel="noopener noreferrer">
+                    <a href={listing.detailurl} target="_blank" rel="noopener noreferrer">
                       View on Zillow <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
                   </Button>

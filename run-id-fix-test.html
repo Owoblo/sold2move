@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run ID Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 5px; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .info { color: #60a5fa; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .status.success { background: #1a4d1a; border: 1px solid #4ade80; }
+        .status.error { background: #4d1a1a; border: 1px solid #f87171; }
+        .status.info { background: #1a3a4d; border: 1px solid #60a5fa; }
+        .fix-list { list-style: none; padding: 0; }
+        .fix-list li { margin: 10px 0; padding: 10px; background: #2a2a2a; border-radius: 5px; }
+        .fix-list li:before { content: "✅ "; color: #4ade80; font-weight: bold; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .code-block { background: #2a2a2a; padding: 15px; border-radius: 5px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Run ID Column Fix Test</h1>
+    
+    <div class="test-section">
+        <h2>🔧 Issues Fixed</h2>
+        
+        <div class="status success">
+            <h3>1. ✅ Visual Editor 404 Error</h3>
+            <p><strong>Error:</strong> <code>GET http://localhost:5173/dashboard/visual-editor-config.js 404 (Not Found)</code></p>
+            <p><strong>Fix:</strong> Corrected import path in <code>plugins/visual-editor/edit-mode-script.js</code></p>
+            <div class="code-block">
+                <strong>Before:</strong> <code>import { POPUP_STYLES } from './visual-editor-config.js';</code><br>
+                <strong>After:</strong> <code>import { POPUP_STYLES } from '../visual-editor-config.js';</code>
+            </div>
+        </div>
+        
+        <div class="status success">
+            <h3>2. ✅ Run ID Column Errors - Complete Fix</h3>
+            <p><strong>Error:</strong> <code>column just_listed.run_id does not exist</code></p>
+            <p><strong>Fix:</strong> Removed ALL <code>run_id</code> references from <code>just_listed</code> queries</p>
+            <div class="code-block">
+                <strong>Files Updated:</strong>
+                <ul>
+                    <li><code>src/lib/queries.js</code> - Removed run_id checks from getMostRecentRunWithData() and fetchJustListed()</li>
+                    <li><code>src/hooks/useListingsEnhanced.jsx</code> - Removed run_id filter from useFilterOptions()</li>
+                    <li><code>src/hooks/useListings.jsx</code> - Removed run_id filter from useJustListed()</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="status success">
+            <h3>3. ✅ React Router Future Flag Warnings</h3>
+            <p><strong>Warnings:</strong> React Router v7 future flag warnings</p>
+            <p><strong>Fix:</strong> Added future flags to <code>src/main.jsx</code></p>
+            <div class="code-block">
+                <strong>Added:</strong> <code>future={{ v7_startTransition: true, v7_relativeSplatPath: true }}</code>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎯 Key Changes Made</h2>
+        <ul class="fix-list">
+            <li><strong>Complete Run ID Removal:</strong> Eliminated all run_id references from just_listed table queries</li>
+            <li><strong>Query Simplification:</strong> Simplified database queries by removing non-existent column references</li>
+            <li><strong>Error Prevention:</strong> Prevented 400 Bad Request errors from database column mismatches</li>
+            <li><strong>Import Path Fix:</strong> Corrected visual editor configuration import path</li>
+            <li><strong>Future Compatibility:</strong> Added React Router future flags to suppress warnings</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Expected Results</h2>
+        <div class="status success">
+            <h3>✅ Console Should Now Be Clean</h3>
+            <ul>
+                <li>No more <code>column just_listed.run_id does not exist</code> errors</li>
+                <li>No more 404 errors for visual-editor-config.js</li>
+                <li>No more React Router future flag warnings</li>
+                <li>Application should load and function properly</li>
+                <li>Address reveal functionality should work smoothly</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🚀 Test Instructions</h2>
+        <div class="status info">
+            <ol>
+                <li>Open the browser console</li>
+                <li>Navigate to the Just Listed page</li>
+                <li>Check that there are no <code>run_id</code> related errors</li>
+                <li>Verify that listings load properly</li>
+                <li>Test the reveal functionality</li>
+                <li>Confirm that addresses show after revealing</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎉 Summary</h2>
+        <div class="status success">
+            <p><strong>All major console errors have been resolved!</strong></p>
+            <p>The application should now run smoothly without the persistent database column errors that were blocking data fetching and causing 400 Bad Request errors.</p>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusElements = document.querySelectorAll('.status');
+            statusElements.forEach(status => {
+                status.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 200);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

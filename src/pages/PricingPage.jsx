@@ -13,6 +13,10 @@ import { useActiveSubscription } from '@/hooks/useActiveSubscription.jsx';
 import { BarChart, Mail, Filter, HeartHandshake as Handshake, Loader2, Package, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 
+// PHASE 1: All plans default to $9.99 for testing
+// PHASE 2: Will use individual price IDs when provided
+const DEFAULT_TEST_PRICE_ID = 'price_1SCBwSCUfCzyitr0nf5Hu5Cg'; // $9.99 CAD
+
 const pricingPlans = [
   {
     title: 'Free Trial',
@@ -21,8 +25,8 @@ const pricingPlans = [
       monthly: { id: null, amount: 0, interval: '/30 days' },
       yearly: { id: null, amount: 0, interval: '/30 days' },
     },
-    credits: '100 Credits',
-    features: ['100 credits', 'CSV export', 'Email alerts', 'Full dashboard'],
+    credits: '500 Credits',
+    features: ['500 free credits', 'CSV export', 'Email alerts', 'Full dashboard'],
     cta: 'Get Started Free',
     popular: false,
     delay: 0,
@@ -31,11 +35,11 @@ const pricingPlans = [
     title: 'Starter',
     description: 'Perfect for small operators who just need steady leads.',
     prices: {
-      monthly: { id: 'price_1PgKAbCUfCzyitr0LwS2VTmE', amount: 99, interval: '/month' },
-      yearly: { id: 'price_1PgKAbCUfCzyitr0m8rPZ4nO', amount: 999, interval: '/year' },
+      monthly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
+      yearly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
     },
-    credits: '2,000 Credits/month',
-    features: ['2,000 credits', 'CSV export', 'Email alerts', 'Standard filters', 'Extra credits: $0.06'],
+    credits: '100 Credits/month',
+    features: ['100 credits monthly', 'CSV export', 'Email alerts', 'Standard filters', 'Extra credits available'],
     cta: 'Choose Plan',
     popular: false,
     delay: 1,
@@ -44,23 +48,23 @@ const pricingPlans = [
     title: 'Growth',
     description: 'For serious marketers who want to scale their business.',
     prices: {
-      monthly: { id: 'price_1PgKBaCUfCzyitr0o3L0Y1xP', amount: 299, interval: '/month' },
-      yearly: { id: 'price_1PgKBaCUfCzyitr02i3oW1pC', amount: 2999, interval: '/year' },
+      monthly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
+      yearly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
     },
-    credits: '10,000 Credits/month',
-    features: ['10,000 credits', 'Mover Special Listings', 'Priority Access (24 hours early)', 'Mailing discounts', 'Extra credits: $0.05'],
+    credits: '500 Credits/month',
+    features: ['500 credits monthly', 'Priority Access', 'Advanced filters', 'Mailing discounts', 'Extra credits available'],
     cta: 'Choose Plan',
     popular: true,
     delay: 2,
   },
   {
-    title: 'Enterprise',
+    title: 'Scale',
     description: 'For large teams and franchises that need it all.',
     prices: {
-      monthly: { id: 'price_1PgKCUCUfCzyitr0tA2mFfT1', amount: 999, interval: '/month' },
-      yearly: { id: 'price_1PgKCUCUfCzyitr08p8xW7E3', amount: 9999, interval: '/year' },
+      monthly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
+      yearly: { id: DEFAULT_TEST_PRICE_ID, amount: 9.99, interval: '/month', currency: 'CAD' },
     },
-    credits: 'Unlimited Credits',
+    credits: '1000 Credits/month',
     features: ['Unlimited credits', 'Vacancy AI + Furniture AI filters', 'Dedicated support', 'Biggest mailing discounts', 'API access'],
     cta: 'Choose Plan',
     popular: false,
@@ -70,18 +74,29 @@ const pricingPlans = [
 
 const topUpPacks = [
     {
-        name: 'Booster Pack',
-        credits: 200,
-        price: 120,
-        priceId: 'price_1PgfArCUfCzyitr0qW2f5Nop',
-        description: "A quick boost to get you through the month."
+        name: 'Small Pack',
+        credits: 50,
+        price: 9.99, // PHASE 1: All default to $9.99 for testing
+        priceId: DEFAULT_TEST_PRICE_ID,
+        description: "Perfect for trying out extra features",
+        currency: 'CAD'
     },
     {
-        name: 'Pro Pack',
-        credits: 1000,
-        price: 500,
-        priceId: 'price_1PgfBGCUfCzyitr0H5a2xW3E',
-        description: "Best value for high-volume mailers."
+        name: 'Medium Pack',
+        credits: 200,
+        price: 9.99, // PHASE 1: All default to $9.99 for testing
+        priceId: DEFAULT_TEST_PRICE_ID,
+        description: "Great for regular users",
+        currency: 'CAD',
+        popular: true
+    },
+    {
+        name: 'Large Pack',
+        credits: 500,
+        price: 9.99, // PHASE 1: All default to $9.99 for testing
+        priceId: DEFAULT_TEST_PRICE_ID,
+        description: "Best value for power users",
+        currency: 'CAD'
     }
 ];
 
@@ -140,9 +155,9 @@ const PricingPage = () => {
     
     if (priceId === 'free_trial') {
       try {
-        const { error } = await supabase.functions.invoke('grant-free-trial', { body: { credits: 100 } });
+        const { error } = await supabase.functions.invoke('grant-free-trial', { body: { credits: 500 } });
         if (error) throw error;
-        toast({ title: 'Free trial activated!', description: '100 credits have been added to your account.' });
+        toast({ title: 'Free trial activated!', description: '500 credits have been added to your account.' });
         navigate('/dashboard');
       } catch (e) {
         toast({ variant: 'destructive', title: 'Could not activate trial', description: e.message || 'Please try again.' });
@@ -152,14 +167,22 @@ const PricingPage = () => {
       return;
     }
 
-    const functionName = mode === 'subscription' ? 'create-checkout-session' : 'create-topup-session';
+    // Use the working checkout function
     try {
-      const { data, error } = await supabase.functions.invoke(functionName, {
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
         body: { priceId: price.id },
       });
+      
       if (error) throw error;
-      const stripe = await getStripe();
-      await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      
+      if (data.url) {
+        // Use direct URL redirect (more reliable)
+        window.location.href = data.url;
+      } else {
+        // Fallback to Stripe.js redirect
+        const stripe = await getStripe();
+        await stripe.redirectToCheckout({ sessionId: data.sessionId });
+      }
     } catch (error) {
       toast({ variant: 'destructive', title: 'Checkout Error', description: error.message || 'Could not redirect to checkout.' });
       setLoadingPriceId(null);
@@ -178,6 +201,14 @@ const PricingPage = () => {
 
   return (
     <PageWrapper title="Pricing Plans" description="Flexible, credit-based plans for your growth.">
+      {/* Phase 1 Testing Banner */}
+      <div className="bg-yellow-600 text-yellow-100 text-center py-2 px-4">
+        <div className="max-w-7xl mx-auto">
+          <span className="font-semibold">PHASE 1 TESTING:</span> All plans currently default to $9.99 CAD for testing purposes. 
+          Individual plan pricing will be activated in Phase 2.
+        </div>
+      </div>
+      
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-12">
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-4xl md:text-5xl font-bold text-lightest-slate font-heading">
