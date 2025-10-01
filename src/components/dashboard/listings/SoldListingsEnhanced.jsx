@@ -31,6 +31,7 @@ import { useAnalytics } from '@/services/analytics.jsx';
 import { useSoldListingsEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
+import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 
 const PAGE_SIZE = 20;
@@ -40,7 +41,7 @@ const SoldListingsEnhanced = () => {
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
-    city_name: profile?.city_name,
+    city_name: profile?.service_cities || (profile?.city_name ? [profile.city_name] : []),
     searchTerm: '',
     minPrice: null,
     maxPrice: null,
@@ -57,10 +58,12 @@ const SoldListingsEnhanced = () => {
 
   // Update filters when profile changes
   useEffect(() => {
-    if (profile?.city_name) {
-      setFilters(prev => ({ ...prev, city_name: profile.city_name }));
+    if (profile?.service_cities) {
+      setFilters(prev => ({ ...prev, city_name: profile.service_cities }));
+    } else if (profile?.city_name) {
+      setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
     }
-  }, [profile?.city_name]);
+  }, [profile?.service_cities, profile?.city_name]);
 
   // Use enhanced hooks
   const {
@@ -95,6 +98,28 @@ const SoldListingsEnhanced = () => {
   const handleSearchChange = (searchTerm) => {
     setFilters(prev => ({ ...prev, searchTerm }));
     setCurrentPage(1);
+  };
+
+  // Handle city changes
+  const handleCityChange = (newCity) => {
+    setFilters(prev => ({ ...prev, city_name: [newCity] }));
+    setCurrentPage(1);
+    trackAction('city_change', { 
+      newCity, 
+      previousCity: profile?.city_name,
+      section: 'sold_listings'
+    });
+  };
+
+  // Handle multiple city changes
+  const handleCitiesChange = (newCities) => {
+    setFilters(prev => ({ ...prev, city_name: newCities }));
+    setCurrentPage(1);
+    trackAction('multi_city_change', { 
+      cities: newCities,
+      cityCount: newCities.length,
+      section: 'sold_listings'
+    });
   };
 
   const handlePageChange = (page) => {
@@ -311,15 +336,36 @@ const SoldListingsEnhanced = () => {
         className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
             <CheckCircle className="h-6 w-6 text-green" />
             Recently Sold Properties
-            {profile?.city_name && (
-              <span className="text-slate font-normal">in {profile.city_name}</span>
+            {filters.city_name && filters.city_name.length > 0 && (
+              <span className="text-slate font-normal flex items-center gap-1">
+                in{' '}
+                <CitySelector
+                  currentCity={filters.city_name[0]}
+                  onCityChange={handleCityChange}
+                  selectedCities={filters.city_name}
+                  onCitiesChange={handleCitiesChange}
+                  variant="minimal"
+                  className="inline-block"
+                  showMultiCityOption={true}
+                />
+                {filters.city_name.length > 1 && (
+                  <span className="text-green text-sm ml-1">
+                    +{filters.city_name.length - 1} more
+                  </span>
+                )}
+              </span>
             )}
           </h2>
           <p className="text-slate mt-1">
             Identify high-potential moving leads from recent sales.
+            {filters.city_name && filters.city_name.length > 1 && (
+              <span className="text-green text-sm ml-2">
+                Showing listings from {filters.city_name.length} cities
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">

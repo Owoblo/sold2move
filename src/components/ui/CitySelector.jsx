@@ -1,0 +1,236 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, MapPin, Check, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import MultiCitySelector from './MultiCitySelector';
+
+const CitySelector = ({ 
+  currentCity, 
+  onCityChange, 
+  availableCities = [], 
+  className = "",
+  variant = "default", // "default", "minimal", or "multi"
+  selectedCities = [],
+  onCitiesChange,
+  showMultiCityOption = true
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Default cities if none provided
+  const cities = availableCities.length > 0 ? availableCities : [
+    'Windsor',
+    'Toronto',
+    'Vancouver',
+    'Calgary',
+    'Edmonton',
+    'Ottawa',
+    'Montreal',
+    'Quebec City',
+    'Halifax',
+    'Winnipeg'
+  ];
+
+  const handleCitySelect = (city) => {
+    onCityChange(city);
+    setIsOpen(false);
+  };
+
+  const handleMultiCityToggle = () => {
+    if (onCitiesChange) {
+      onCitiesChange(selectedCities.length > 0 ? [] : [currentCity]);
+    }
+  };
+
+  if (variant === "minimal") {
+    return (
+      <div className={cn("relative inline-block", className)} ref={dropdownRef}>
+        <motion.button
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          onClick={() => setIsOpen(!isOpen)}
+          className="group relative inline-flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-200 hover:bg-light-navy/50"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <span className="text-green font-medium group-hover:text-green/80 transition-colors">
+            {currentCity}
+          </span>
+          <motion.div
+            animate={{ 
+              rotate: isOpen ? 180 : 0,
+              opacity: isHovered ? 1 : 0.6
+            }}
+            transition={{ duration: 0.2 }}
+            className="ml-1"
+          >
+            <ChevronDown className="h-3 w-3 text-green" />
+          </motion.div>
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="absolute top-full left-0 mt-2 w-48 bg-light-navy border border-lightest-navy/20 rounded-lg shadow-xl z-50 overflow-hidden"
+            >
+              <div className="p-2">
+                {showMultiCityOption && onCitiesChange && (
+                  <motion.button
+                    onClick={handleMultiCityToggle}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all duration-150 mb-2 border-b border-slate/20",
+                      selectedCities.length > 0
+                        ? "bg-green/20 text-green"
+                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-green"
+                    )}
+                    whileHover={{ x: 4 }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-3 w-3" />
+                      <span>Select Multiple Cities</span>
+                    </div>
+                    {selectedCities.length > 0 && (
+                      <Check className="h-3 w-3 text-green" />
+                    )}
+                  </motion.button>
+                )}
+                {cities.map((city) => (
+                  <motion.button
+                    key={city}
+                    onClick={() => handleCitySelect(city)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all duration-150",
+                      currentCity === city
+                        ? "bg-green/20 text-green"
+                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-green"
+                    )}
+                    whileHover={{ x: 4 }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3" />
+                      <span>{city}</span>
+                    </div>
+                    {currentCity === city && (
+                      <Check className="h-3 w-3 text-green" />
+                    )}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative inline-block", className)} ref={dropdownRef}>
+      <motion.button
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={() => setIsOpen(!isOpen)}
+        className="group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-light-navy/30 border border-transparent hover:border-green/20"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <MapPin className="h-4 w-4 text-green" />
+        <span className="text-green font-semibold group-hover:text-green/80 transition-colors">
+          {currentCity}
+        </span>
+        <motion.div
+          animate={{ 
+            rotate: isOpen ? 180 : 0,
+            opacity: isHovered ? 1 : 0.7
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
+          <ChevronDown className="h-4 w-4 text-green" />
+        </motion.div>
+        
+        {/* Hover indicator */}
+        <motion.div
+          className="absolute inset-0 rounded-lg bg-gradient-to-r from-green/5 to-green/10 opacity-0"
+          animate={{ opacity: isHovered ? 1 : 0 }}
+          transition={{ duration: 0.2 }}
+        />
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute top-full left-0 mt-3 w-64 bg-light-navy border border-lightest-navy/20 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-sm"
+          >
+            <div className="p-3">
+              <div className="text-xs font-medium text-slate mb-2 px-2">
+                Select your service area
+              </div>
+              <div className="space-y-1">
+                {cities.map((city, index) => (
+                  <motion.button
+                    key={city}
+                    onClick={() => handleCitySelect(city)}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-all duration-200 group",
+                      currentCity === city
+                        ? "bg-green/20 text-green border border-green/30"
+                        : "text-lightest-slate hover:bg-lightest-navy/50 hover:text-green hover:border-green/20 border border-transparent"
+                    )}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        currentCity === city 
+                          ? "bg-green/20" 
+                          : "bg-slate/20 group-hover:bg-green/20"
+                      )}>
+                        <MapPin className="h-3 w-3" />
+                      </div>
+                      <span className="font-medium">{city}</span>
+                    </div>
+                    {currentCity === city && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.1 }}
+                      >
+                        <Check className="h-4 w-4 text-green" />
+                      </motion.div>
+                    )}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default CitySelector;

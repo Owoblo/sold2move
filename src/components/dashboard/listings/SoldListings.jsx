@@ -182,14 +182,14 @@ const SoldListings = ({ filters }) => {
       filters: { searchTerm, priceFilter, sortBy, sortOrder }
     });
     
-    const dataToExport = pagedListings.map(({ addressStreet, addresscity, price, beds, baths, area, statusText }) => ({
+    const dataToExport = pagedListings.map(({ addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
       Address: addressStreet,
       City: addresscity,
-      Price: price,
-      Beds: beds,
-      Baths: baths,
-      'Sq. Ft.': area,
-      'Property Type': statustext,
+      Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
+      Beds: beds || 'N/A',
+      Baths: baths || 'N/A',
+      'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
+      'Property Type': statustext || 'N/A',
     }));
     exportToCSV(dataToExport, `sold-listings-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
     toast.success("Export Successful", "Your CSV file has been downloaded.");

@@ -43,7 +43,9 @@ import { useAnalytics } from '@/services/analytics.jsx';
 import { useJustListedEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
+import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
+import { mapDatabaseListingsToFrontend, formatPrice, formatArea, formatDate, isListingRevealed } from '@/lib/frontend-data-mapping';
 
 const PAGE_SIZE = 20;
 
@@ -52,7 +54,7 @@ const JustListed = () => {
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
-    city_name: profile?.city_name,
+    city_name: profile?.service_cities || (profile?.city_name ? [profile.city_name] : []),
     searchTerm: '',
     minPrice: null,
     maxPrice: null,
@@ -70,10 +72,12 @@ const JustListed = () => {
 
   // Update filters when profile changes
   useEffect(() => {
-    if (profile?.city_name) {
-      setFilters(prev => ({ ...prev, city_name: profile.city_name }));
+    if (profile?.service_cities) {
+      setFilters(prev => ({ ...prev, city_name: profile.service_cities }));
+    } else if (profile?.city_name) {
+      setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
     }
-  }, [profile?.city_name]);
+  }, [profile?.service_cities, profile?.city_name]);
 
   // Use enhanced hooks
   const {
@@ -112,16 +116,41 @@ const JustListed = () => {
     setCurrentPage(1);
   };
 
+  // Handle city changes
+  const handleCityChange = (newCity) => {
+    setFilters(prev => ({ ...prev, city_name: [newCity] }));
+    setCurrentPage(1);
+    trackAction('city_change', { 
+      newCity, 
+      previousCity: profile?.city_name,
+      section: 'just_listed'
+    });
+  };
+
+  // Handle multiple city changes
+  const handleCitiesChange = (newCities) => {
+    setFilters(prev => ({ ...prev, city_name: newCities }));
+    setCurrentPage(1);
+    trackAction('multi_city_change', { 
+      cities: newCities,
+      cityCount: newCities.length,
+      section: 'just_listed'
+    });
+  };
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
     trackAction('pagination', { page, section: 'just_listed' });
   };
 
-  // Sort listings client-side
+  // Map and sort listings client-side
   const sortedListings = React.useMemo(() => {
     if (!listingsData?.data) return [];
     
-    const sorted = [...listingsData.data].sort((a, b) => {
+    // Map database data to frontend format
+    const mappedListings = mapDatabaseListingsToFrontend(listingsData.data);
+    
+    const sorted = [...mappedListings].sort((a, b) => {
       let aValue, bValue;
       
       switch (sortBy) {
@@ -167,7 +196,7 @@ const JustListed = () => {
     });
     
     const dataToExport = sortedListings.map(({ id, addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
-      Address: revealedListings.has(id) ? addressStreet : '*****',
+      Address: allRevealedListings.has(id) ? addressStreet : '*****',
       City: addresscity,
       Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
       Beds: beds || 'N/A',
@@ -325,15 +354,36 @@ const JustListed = () => {
         className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
       >
         <div>
-          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
+          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
             <Building className="h-6 w-6 text-green" />
             Just Listed Properties
-            {profile?.city_name && (
-              <span className="text-slate font-normal">in {profile.city_name}</span>
+            {filters.city_name && filters.city_name.length > 0 && (
+              <span className="text-slate font-normal flex items-center gap-1">
+                in{' '}
+                <CitySelector
+                  currentCity={filters.city_name[0]}
+                  onCityChange={handleCityChange}
+                  selectedCities={filters.city_name}
+                  onCitiesChange={handleCitiesChange}
+                  variant="minimal"
+                  className="inline-block"
+                  showMultiCityOption={true}
+                />
+                {filters.city_name.length > 1 && (
+                  <span className="text-green text-sm ml-1">
+                    +{filters.city_name.length - 1} more
+                  </span>
+                )}
+              </span>
             )}
           </h2>
           <p className="text-slate mt-1">
             Discover the latest properties in your service area.
+            {filters.city_name && filters.city_name.length > 1 && (
+              <span className="text-green text-sm ml-2">
+                Showing listings from {filters.city_name.length} cities
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
@@ -472,7 +522,7 @@ const JustListed = () => {
                   </TableHeader>
                   <TableBody>
                     {sortedListings.map((listing, index) => {
-                      const isRevealed = allRevealedListings.has(listing.id) || profile?.unlimited;
+                      const isRevealed = isListingRevealed(listing.id, allRevealedListings, profile);
                       const isRevealing = revealListingMutation.isPending && revealListingMutation.variables?.listingId === listing.id;
                       
                       return (
@@ -515,10 +565,7 @@ const JustListed = () => {
                           </TableCell>
                           <TableCell>
                             <div className="text-green font-semibold text-lg">
-                              {isRevealed 
-                                ? (listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A')
-                                : '*****'
-                              }
+                              {formatPrice(listing.unformattedprice, isRevealed)}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -539,17 +586,14 @@ const JustListed = () => {
                           </TableCell>
                           <TableCell>
                             <div className="text-lightest-slate">
-                              {isRevealed 
-                                ? (listing.area ? `${listing.area.toLocaleString()}` : 'N/A')
-                                : '****'
-                              }
+                              {formatArea(listing.area, isRevealed)}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2 text-slate">
                               <Calendar className="h-4 w-4" />
                               <span className="text-sm">
-                                {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
+                                {formatDate(listing.lastseenat)}
                               </span>
                             </div>
                           </TableCell>
