@@ -13,7 +13,6 @@ const PricingPage = lazy(() => import('@/pages/PricingPage'));
 const FAQPage = lazy(() => import('@/pages/FAQPage'));
 const AboutPage = lazy(() => import('@/pages/AboutPage'));
 const ContactPage = lazy(() => import('@/pages/ContactPage'));
-const DemoDashboardPage = lazy(() => import('@/pages/DemoDashboardPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -40,8 +39,6 @@ const HealthCheck = lazy(() => import('@/pages/HealthCheck'));
 const OnboardingPage = lazy(() => import('@/pages/OnboardingEnhanced'));
 const SettingsPage = lazy(() => import('@/components/dashboard/pages/SettingsPage'));
 const PostAuthPage = lazy(() => import('@/pages/PostAuthPage'));
-const TestCheckout = lazy(() => import('@/pages/TestCheckoutEnhanced'));
-const SimpleTestCheckout = lazy(() => import('@/pages/SimpleTestCheckout'));
 const PaymentSuccess = lazy(() => import('@/pages/PaymentSuccess'));
 const Success = lazy(() => import('@/pages/Success'));
 const RequestDemoPage = lazy(() => import('@/pages/RequestDemoPage'));
@@ -72,7 +69,6 @@ function App() {
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
-                <Route path="/demo-dashboard" element={<DemoDashboardPage />} />
                 <Route path="/request-demo" element={<RequestDemoPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
@@ -83,8 +79,6 @@ function App() {
                 
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/post-auth" element={<PostAuthPage />} />
-                <Route path="/test-checkout" element={<TestCheckout />} />
-                <Route path="/simple-checkout" element={<SimpleTestCheckout />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/success" element={<Success />} />
                 <Route path="/health" element={<HealthCheck />} />

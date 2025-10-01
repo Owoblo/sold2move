@@ -135,7 +135,7 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
       zpid: r.zpid,
       imgSrc: r.imgsrc,
       detailUrl: r.detailurl,
-      addressStreet: r.addressstreet,
+      addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
       addressstate: r.addressstate,
@@ -238,7 +238,7 @@ export async function fetchSoldSincePrev(currentRunId, prevRunId, cityName, filt
       zpid: r.zpid,
       imgSrc: r.imgsrc,
       detailUrl: r.detailurl,
-      addressStreet: r.addressstreet,
+      addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
       addressstate: r.addressstate,
