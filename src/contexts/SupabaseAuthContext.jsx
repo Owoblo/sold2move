@@ -112,10 +112,15 @@ export const AuthProvider = ({ children }) => {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
       if (error) {
+        console.error('Google OAuth error:', error);
         const friendlyMessage = getAuthErrorMessage(error);
         toast({
           variant: "destructive",
@@ -127,6 +132,7 @@ export const AuthProvider = ({ children }) => {
 
       return { error: null };
     } catch (err) {
+      console.error('Google OAuth exception:', err);
       toast({
         variant: "destructive",
         title: "Google Sign in Failed",

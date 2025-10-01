@@ -11,6 +11,7 @@ const AuthCallbackPage = () => {
     // The session is automatically handled by SessionContextProvider.
     // We just need to wait for it to be available and then redirect.
     if (session) {
+      console.log('Session found, redirecting to post-auth');
       navigate('/post-auth', { replace: true });
     }
   }, [session, navigate]);
@@ -19,19 +20,38 @@ const AuthCallbackPage = () => {
     // This effect handles the case where the session is not immediately available
     // by listening for the SIGNED_IN event.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event, session ? 'Session exists' : 'No session');
+      
       if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in successfully, redirecting to post-auth');
         subscription.unsubscribe();
         navigate('/post-auth', { replace: true });
       } else if (event === 'SIGN_IN_ERROR') {
+        console.error('Sign in error occurred');
         subscription.unsubscribe();
-        navigate('/login', { replace: true });
+        navigate('/login?error=auth_failed', { replace: true });
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        console.log('Token refreshed, redirecting to post-auth');
+        subscription.unsubscribe();
+        navigate('/post-auth', { replace: true });
       }
     });
 
+    // Set a timeout to handle cases where auth state change doesn't fire
+    const timeout = setTimeout(() => {
+      console.log('Auth callback timeout, checking session manually');
+      if (session) {
+        navigate('/post-auth', { replace: true });
+      } else {
+        navigate('/login?error=timeout', { replace: true });
+      }
+    }, 10000); // 10 second timeout
+
     return () => {
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
-  }, [supabase, navigate]);
+  }, [supabase, navigate, session]);
 
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
