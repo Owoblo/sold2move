@@ -61,19 +61,34 @@ const SignUpPage = () => {
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Google OAuth error:', error);
+        toast({
+          variant: "destructive",
+          title: "Google Sign in Failed",
+          description: error.message || "Something went wrong. Please try again.",
+        });
+      }
+      // Don't set loading to false here - let the redirect handle it
+    } catch (err) {
+      console.error('Google OAuth exception:', err);
       setGoogleLoading(false);
       toast({
         variant: "destructive",
         title: "Google Sign in Failed",
-        description: error.message || "Something went wrong",
+        description: "An unexpected error occurred. Please try again.",
       });
     }
   };
