@@ -200,7 +200,7 @@ export const useRevealListingEnhanced = () => {
       }
 
       // Check if already revealed
-      const { data: existingReveal } = await supabase
+      const { data: existingReveal, error: checkError } = await supabase
         .from('listing_reveals')
         .select('id')
         .eq('user_id', userId)
@@ -209,6 +209,11 @@ export const useRevealListingEnhanced = () => {
 
       if (existingReveal) {
         return { listingId, userId, alreadyRevealed: true };
+      }
+
+      // If checkError exists but it's not a "not found" error, throw it
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw new Error('Failed to check existing reveals');
       }
 
       // Deduct credits if not unlimited
@@ -226,15 +231,18 @@ export const useRevealListingEnhanced = () => {
         }
       }
 
-      // Insert reveal record
+      // Insert reveal record (use upsert to handle conflicts)
       const { error: insertError } = await supabase
         .from('listing_reveals')
-        .insert({ 
+        .upsert({ 
           user_id: userId, 
           listing_id: String(listingId)
+        }, {
+          onConflict: 'user_id,listing_id'
         });
 
       if (insertError) {
+        console.error('Insert error:', insertError);
         throw new Error('Failed to reveal listing');
       }
 
