@@ -32,11 +32,8 @@ export const Combobox = ({
   }, [options, value]);
   
   const handleSelect = (currentValue) => {
-    const option = options.find(opt => opt.value === currentValue);
-    if (option) {
-      onChange(option.value);
-      setOpen(false);
-    }
+    onChange(currentValue);
+    setOpen(false);
   };
 
   return (
@@ -66,8 +63,8 @@ export const Combobox = ({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={handleSelect}
+                  value={option.label}
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(
