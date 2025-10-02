@@ -1,6 +1,7 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { useSession } from '@supabase/auth-helpers-react';
 import { Toaster as ShadToaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -52,6 +53,17 @@ const SuspenseFallback = () => (
 
 function App() {
   const location = useLocation();
+  const session = useSession();
+
+  // Debug session changes
+  useEffect(() => {
+    console.log('🔍 App: Session changed', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      currentPath: location.pathname
+    });
+  }, [session, location.pathname]);
 
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || location.pathname === '/onboarding';
 
