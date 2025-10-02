@@ -110,6 +110,13 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = useCallback(async () => {
     try {
       const siteUrl = getSiteUrl();
+      console.log('🔄 Initiating Google OAuth sign-in');
+      console.log('🔄 OAuth configuration:', {
+        siteUrl,
+        redirectTo: `${siteUrl}/auth/callback`,
+        provider: 'google'
+      });
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -122,7 +129,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (error) {
-        console.error('Google OAuth error:', error);
+        console.error('❌ Google OAuth error:', {
+          message: error.message,
+          status: error.status,
+          code: error.code
+        });
         const friendlyMessage = getAuthErrorMessage(error);
         toast({
           variant: "destructive",
@@ -132,6 +143,7 @@ export const AuthProvider = ({ children }) => {
         return { error };
       }
 
+      console.log('✅ Google OAuth initiated successfully, redirecting to Google...');
       return { error: null };
     } catch (err) {
       console.error('Google OAuth exception:', err);
