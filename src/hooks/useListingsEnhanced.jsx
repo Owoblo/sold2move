@@ -185,21 +185,23 @@ export const useRevealListingEnhanced = () => {
   return useMutation({
     mutationFn: async ({ listingId, userId, creditCost = 1 }) => {
       const { data, error } = await supabase.rpc('reveal_listing', { 
-        p_listing_id: listingId
+        p_listing_id: listingId,
+        p_user_id: userId,
+        p_credit_cost: creditCost
       });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      if (!data.ok) {
-        if (data.error === 'insufficient_credits') {
+      if (!data.success) {
+        if (data.error_code === 'INSUFFICIENT_CREDITS') {
           throw new Error('Insufficient credits to reveal this listing');
         }
-        throw new Error(data.error || 'Failed to reveal listing');
+        throw new Error(data.message || 'Failed to reveal listing');
       }
 
-      return { listingId, userId, alreadyRevealed: data.already_revealed };
+      return { listingId, userId, alreadyRevealed: data.message?.includes('already revealed') };
     },
     onMutate: async ({ listingId, userId }) => {
       // Cancel any outgoing refetches
