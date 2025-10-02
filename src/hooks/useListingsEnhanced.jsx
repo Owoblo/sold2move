@@ -169,7 +169,7 @@ export const useRevealedListingsEnhanced = (userId) => {
         throw new Error(error.message);
       }
 
-      return new Set(data?.map(r => String(r.listing_id)) || []);
+      return new Set(data?.map(r => r.listing_id) || []);
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -204,14 +204,14 @@ export const useRevealListingEnhanced = () => {
         userId,
         listingId,
         listingIdType: typeof listingId,
-        listingIdString: String(listingId)
+        listingIdNumber: Number(listingId)
       });
       
       const { data: existingReveal, error: checkError } = await supabase
         .from('listing_reveals')
         .select('id')
         .eq('user_id', userId)
-        .eq('listing_id', String(listingId))
+        .eq('listing_id', Number(listingId))
         .single();
 
       if (existingReveal) {
@@ -243,7 +243,7 @@ export const useRevealListingEnhanced = () => {
         .from('listing_reveals')
         .upsert({ 
           user_id: userId, 
-          listing_id: String(listingId)
+          listing_id: Number(listingId)
         }, {
           onConflict: 'user_id,listing_id'
         });

@@ -10,7 +10,7 @@ export function mapDatabaseListingToFrontend(dbListing) {
 
   return {
     // Core identifiers
-    id: String(dbListing.id), // Ensure ID is always a string
+    id: dbListing.id, // Keep as number to match database BIGINT
     zpid: dbListing.zpid,
     
     // Images and URLs
