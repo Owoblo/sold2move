@@ -169,7 +169,7 @@ export const useRevealedListingsEnhanced = (userId) => {
         throw new Error(error.message);
       }
 
-      return new Set(data?.map(r => r.listing_id) || []);
+      return new Set(data?.map(r => String(r.listing_id)) || []);
     },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -204,7 +204,7 @@ export const useRevealListingEnhanced = () => {
         .from('listing_reveals')
         .select('id')
         .eq('user_id', userId)
-        .eq('listing_id', listingId)
+        .eq('listing_id', String(listingId))
         .single();
 
       if (existingReveal) {
@@ -231,7 +231,7 @@ export const useRevealListingEnhanced = () => {
         .from('listing_reveals')
         .insert({ 
           user_id: userId, 
-          listing_id: listingId 
+          listing_id: String(listingId)
         });
 
       if (insertError) {
