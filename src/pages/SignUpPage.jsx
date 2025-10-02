@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/components/ui/use-toast';
 import PageWrapper from '@/components/layout/PageWrapper';
 import GoogleIcon from '@/components/icons/GoogleIcon';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
 import LoadingButton from '@/components/ui/LoadingButton';
 
 const SignUpPage = () => {
@@ -62,10 +62,11 @@ const SignUpPage = () => {
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
     try {
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
