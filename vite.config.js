@@ -111,7 +111,7 @@ window.fetch = function(...args) {
 	}
 
 	// Skip Vercel feedback system URLs to reduce console noise
-	if (url.includes('/.well-known/vercel/') || url.includes('feedback.js')) {
+	if (url.includes('/.well-known/vercel/') || url.includes('feedback.js') || url.includes('vercel')) {
 		return originalFetch.apply(this, args);
 	}
 
@@ -125,7 +125,7 @@ window.fetch = function(...args) {
 				contentType.includes('application/xhtml+xml');
 
 			// Skip logging errors for Vercel feedback system
-			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js');
+			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js') || url.includes('vercel');
 
 			if (!response.ok && !isDocumentResponse && !isVercelFeedback) {
 					const responseClone = response.clone();
@@ -138,7 +138,7 @@ window.fetch = function(...args) {
 		})
 		.catch(error => {
 			// Skip logging errors for Vercel feedback system
-			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js');
+			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js') || url.includes('vercel');
 			
 			if (!url.match(/\.html?$/i) && !isVercelFeedback) {
 				console.error(error);
