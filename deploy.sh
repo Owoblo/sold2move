@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🚀 Sold2Move Deployment Script for Hostinger
-# This script builds the production version and prepares files for upload
+# 🚀 Sold2Move Deployment Script for Vercel
+# This script builds the production version and prepares for Vercel deployment
 
 set -e  # Exit on any error
 
@@ -93,12 +93,12 @@ else
     exit 1
 fi
 
-# Step 5: Copy .htaccess file
-if [ -f ".htaccess" ]; then
-    cp .htaccess dist/
-    print_success ".htaccess file copied to build directory"
+# Step 5: Verify vercel.json file
+if [ -f "vercel.json" ]; then
+    print_success "vercel.json file found - SPA routing will work correctly"
 else
-    print_warning ".htaccess file not found. You may need to create one for proper routing."
+    print_error "vercel.json file not found. This is required for proper SPA routing on Vercel!"
+    exit 1
 fi
 
 # Step 6: Create deployment package
@@ -118,18 +118,22 @@ print_success "🎉 Deployment preparation complete!"
 echo "================================================"
 echo ""
 print_status "Next steps:"
-echo "1. 📁 Upload all contents of the 'deployment-package' folder to your Hostinger public_html directory"
-echo "2. 🌐 Make sure your domain is pointing to the correct hosting"
-echo "3. 🔒 Set up SSL certificate (Let's Encrypt via Hostinger control panel)"
+echo "1. 🚀 Deploy to Vercel using one of these methods:"
+echo "   - Vercel CLI: vercel --prod"
+echo "   - Git push: git add . && git commit -m 'Deploy fixes' && git push"
+echo "   - Vercel Dashboard: Connect your repo and deploy"
+echo "2. 🌐 Verify your domain is connected in Vercel dashboard"
+echo "3. 🔧 Check environment variables in Vercel project settings"
 echo "4. 🧪 Test your website thoroughly"
 echo ""
-print_status "Deployment package location: ./deployment-package/"
-print_status "Files to upload:"
-ls -la deployment-package/
+print_status "Key files for deployment:"
+echo "- vercel.json (SPA routing configuration)"
+echo "- Environment variables in Vercel dashboard"
+echo "- All source files in src/ directory"
 echo ""
 print_warning "Remember to:"
-echo "- Update .env.production with your actual domain"
-echo "- Test all functionality after deployment"
-echo "- Set up monitoring and backups"
+echo "- Set VITE_SITE_URL=https://sold2move.com in Vercel environment variables"
+echo "- Test all routes after deployment"
+echo "- Verify Google OAuth is working"
 echo ""
 print_success "Happy deploying! 🚀"
