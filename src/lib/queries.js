@@ -295,7 +295,7 @@ export async function fetchRevealedListings(userId, listingIds) {
     .from('listing_reveals')
     .select('listing_id')
     .eq('user_id', userId)
-    .in('listing_id', listingIds);
+    .in('listing_id', listingIds.map(id => String(id)));
 
   if (error) {
     console.error('Error fetching revealed listings:', error);
