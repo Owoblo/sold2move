@@ -184,24 +184,61 @@ export const useRevealListingEnhanced = () => {
 
   return useMutation({
     mutationFn: async ({ listingId, userId, creditCost = 1 }) => {
-      const { data, error } = await supabase.rpc('reveal_listing', { 
-        p_listing_id: listingId,
-        p_user_id: userId,
-        p_credit_cost: creditCost
-      });
+      // First, check if user has enough credits
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('credits_remaining, unlimited')
+        .eq('id', userId)
+        .single();
 
-      if (error) {
-        throw new Error(error.message);
+      if (profileError) {
+        throw new Error('Failed to fetch user profile');
       }
 
-      if (!data.success) {
-        if (data.error_code === 'INSUFFICIENT_CREDITS') {
-          throw new Error('Insufficient credits to reveal this listing');
+      if (!profile.unlimited && profile.credits_remaining < creditCost) {
+        throw new Error('Insufficient credits to reveal this listing');
+      }
+
+      // Check if already revealed
+      const { data: existingReveal } = await supabase
+        .from('listing_reveals')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('listing_id', listingId)
+        .single();
+
+      if (existingReveal) {
+        return { listingId, userId, alreadyRevealed: true };
+      }
+
+      // Deduct credits if not unlimited
+      if (!profile.unlimited) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ 
+            credits_remaining: profile.credits_remaining - creditCost,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+
+        if (updateError) {
+          throw new Error('Failed to deduct credits');
         }
-        throw new Error(data.message || 'Failed to reveal listing');
       }
 
-      return { listingId, userId, alreadyRevealed: data.message?.includes('already revealed') };
+      // Insert reveal record
+      const { error: insertError } = await supabase
+        .from('listing_reveals')
+        .insert({ 
+          user_id: userId, 
+          listing_id: listingId 
+        });
+
+      if (insertError) {
+        throw new Error('Failed to reveal listing');
+      }
+
+      return { listingId, userId, alreadyRevealed: false };
     },
     onMutate: async ({ listingId, userId }) => {
       // Cancel any outgoing refetches
