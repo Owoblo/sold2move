@@ -11,6 +11,7 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
 import GoogleIcon from '@/components/icons/GoogleIcon';
 import LoadingButton from '@/components/ui/LoadingButton';
+import { getSiteUrl } from '@/lib/customSupabaseClient';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
@@ -51,10 +52,11 @@ const LoginPage = () => {
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
     try {
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

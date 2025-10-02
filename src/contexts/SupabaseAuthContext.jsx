@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
+import { getSiteUrl } from '@/lib/customSupabaseClient';
 
 const AuthContext = createContext(undefined);
 
@@ -108,10 +109,11 @@ export const AuthProvider = ({ children }) => {
 
   const signInWithGoogle = useCallback(async () => {
     try {
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
