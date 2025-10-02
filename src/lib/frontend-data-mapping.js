@@ -10,7 +10,7 @@ export function mapDatabaseListingToFrontend(dbListing) {
 
   return {
     // Core identifiers
-    id: dbListing.id,
+    id: String(dbListing.id), // Ensure ID is always a string
     zpid: dbListing.zpid,
     
     // Images and URLs

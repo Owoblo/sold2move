@@ -200,6 +200,13 @@ export const useRevealListingEnhanced = () => {
       }
 
       // Check if already revealed
+      console.log('🔍 Checking if listing is already revealed:', {
+        userId,
+        listingId,
+        listingIdType: typeof listingId,
+        listingIdString: String(listingId)
+      });
+      
       const { data: existingReveal, error: checkError } = await supabase
         .from('listing_reveals')
         .select('id')
