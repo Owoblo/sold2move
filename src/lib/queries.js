@@ -131,7 +131,7 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
     
     // Map database column names to expected property names
     const mappedData = (data || []).map((r) => ({
-      id: String(r.id), // Ensure ID is always a string
+      id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
       detailUrl: r.detailurl,
@@ -234,7 +234,7 @@ export async function fetchSoldSincePrev(currentRunId, prevRunId, cityName, filt
     }
 
     const mappedData = filteredData.map((r) => ({
-      id: String(r.id), // Ensure ID is always a string
+      id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
       detailUrl: r.detailurl,
@@ -295,7 +295,7 @@ export async function fetchRevealedListings(userId, listingIds) {
     .from('listing_reveals')
     .select('listing_id')
     .eq('user_id', userId)
-    .in('listing_id', listingIds.map(id => String(id)));
+    .in('listing_id', listingIds.map(id => Number(id)));
 
   if (error) {
     console.error('Error fetching revealed listings:', error);
