@@ -100,7 +100,8 @@ const PostAuthPage = () => {
           code: error.code,
           message: error.message,
           details: error.details,
-          hint: error.hint
+          hint: error.hint,
+          fullError: error
         });
         
         // If it's a duplicate key error, the profile was created by another process
@@ -108,6 +109,15 @@ const PostAuthPage = () => {
           console.log('✅ Profile was created by another process, refreshing...');
           await refreshProfile();
         } else {
+          // Log the specific database error for debugging
+          console.error('❌ Database error details:', {
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+            errorStatus: error.status,
+            errorStatusText: error.statusText
+          });
           throw error;
         }
       } else {
