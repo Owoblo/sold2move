@@ -110,6 +110,11 @@ window.fetch = function(...args) {
 		return originalFetch.apply(this, args);
 	}
 
+	// Skip Vercel feedback system URLs to reduce console noise
+	if (url.includes('/.well-known/vercel/') || url.includes('feedback.js')) {
+		return originalFetch.apply(this, args);
+	}
+
 	return originalFetch.apply(this, args)
 		.then(async response => {
 			const contentType = response.headers.get('Content-Type') || '';
@@ -119,7 +124,10 @@ window.fetch = function(...args) {
 				contentType.includes('text/html') ||
 				contentType.includes('application/xhtml+xml');
 
-			if (!response.ok && !isDocumentResponse) {
+			// Skip logging errors for Vercel feedback system
+			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js');
+
+			if (!response.ok && !isDocumentResponse && !isVercelFeedback) {
 					const responseClone = response.clone();
 					const errorFromRes = await responseClone.text();
 					const requestUrl = response.url;
@@ -129,7 +137,10 @@ window.fetch = function(...args) {
 			return response;
 		})
 		.catch(error => {
-			if (!url.match(/\.html?$/i)) {
+			// Skip logging errors for Vercel feedback system
+			const isVercelFeedback = url.includes('/.well-known/vercel/') || url.includes('feedback.js');
+			
+			if (!url.match(/\.html?$/i) && !isVercelFeedback) {
 				console.error(error);
 			}
 
