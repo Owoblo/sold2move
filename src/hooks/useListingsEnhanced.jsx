@@ -204,15 +204,44 @@ export const useRevealListingEnhanced = () => {
         userId,
         listingId,
         listingIdType: typeof listingId,
-        listingIdNumber: Number(listingId)
+        listingIdNumber: Number(listingId),
+        listingIdString: String(listingId)
       });
       
-      const { data: existingReveal, error: checkError } = await supabase
+      // Try number first, then string as fallback
+      let existingReveal, checkError;
+      
+      // First try with number
+      const { data: data1, error: error1 } = await supabase
         .from('listing_reveals')
         .select('id')
         .eq('user_id', userId)
         .eq('listing_id', Number(listingId))
         .single();
+        
+      if (error1 && error1.code === 'PGRST116') {
+        // Not found with number, try with string
+        console.log('🔍 Trying with string as fallback...');
+        const { data: data2, error: error2 } = await supabase
+          .from('listing_reveals')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('listing_id', String(listingId))
+          .single();
+          
+        existingReveal = data2;
+        checkError = error2;
+      } else {
+        existingReveal = data1;
+        checkError = error1;
+      }
+        
+      console.log('🔍 Check result:', {
+        hasData: !!existingReveal,
+        error: checkError,
+        errorCode: checkError?.code,
+        errorMessage: checkError?.message
+      });
 
       if (existingReveal) {
         return { listingId, userId, alreadyRevealed: true };
