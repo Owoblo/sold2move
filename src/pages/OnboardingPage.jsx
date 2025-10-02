@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Building, Mail, Phone, MapPin, Globe, CheckCircle } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import LoadingButton from '@/components/ui/LoadingButton';
+import CongratulationsDialog from '@/components/ui/CongratulationsDialog';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const OnboardingPage = () => {
@@ -37,6 +38,7 @@ const OnboardingPage = () => {
   const { isSubmitting, watch, setValue } = form;
   const countryCode = watch('countryCode');
   const stateCode = watch('stateCode');
+  const [showCongratulations, setShowCongratulations] = useState(false);
 
   const countries = Country.getAllCountries()
     .filter(c => ['US', 'CA'].includes(c.isoCode))
@@ -88,13 +90,10 @@ const OnboardingPage = () => {
           }
       }
 
-      toast({
-        title: "Profile Updated!",
-        description: "Welcome aboard! Redirecting you to the dashboard...",
-        className: "bg-green text-deep-navy",
-      });
       await refreshProfile();
-      navigate('/dashboard', { replace: true });
+      
+      // Show congratulations dialog
+      setShowCongratulations(true);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -102,6 +101,11 @@ const OnboardingPage = () => {
         description: error.message,
       });
     }
+  };
+
+  const handleCongratulationsClose = () => {
+    setShowCongratulations(false);
+    navigate('/dashboard', { replace: true });
   };
 
   if (profileLoading || !session) {
@@ -211,6 +215,12 @@ const OnboardingPage = () => {
           </CardContent>
         </Card>
       </div>
+      
+      <CongratulationsDialog 
+        isOpen={showCongratulations}
+        onClose={handleCongratulationsClose}
+        credits={100}
+      />
     </PageWrapper>
   );
 };

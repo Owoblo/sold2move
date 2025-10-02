@@ -16,6 +16,7 @@ import { Building, Mail, Phone, MapPin, Globe, CheckCircle, ArrowRight, ArrowLef
 import PageWrapper from '@/components/layout/PageWrapper';
 import LoadingButton from '@/components/ui/LoadingButton';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import CongratulationsDialog from '@/components/ui/CongratulationsDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
 
@@ -28,6 +29,7 @@ const OnboardingEnhanced = () => {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCongratulations, setShowCongratulations] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(onboardingSchema),
@@ -125,6 +127,7 @@ const OnboardingEnhanced = () => {
     trackFormEvent('onboarding', 'complete', { values });
     
     try {
+      // First, update the profile
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -139,20 +142,26 @@ const OnboardingEnhanced = () => {
 
       if (error) throw error;
 
+      // Grant signup bonus credits if not already granted
+      if (!profile?.trial_granted) {
+        const { error: bonusError } = await supabase.functions.invoke('grant-signup-bonus', {
+          body: JSON.stringify({ user_id: session.user.id }),
+        });
+        if (bonusError) {
+          console.error("Could not grant bonus credits on onboarding:", bonusError.message);
+        }
+      }
+
       await refreshProfile();
       
-      toast({
-        title: "🎉 Welcome to Sold2Move!",
-        description: "Your account has been set up successfully. You can now start exploring listings in your area.",
-        duration: 5000,
-      });
-
       trackAction('onboarding_complete', { 
         companyName: values.companyName,
         serviceArea: `${values.cityName}, ${values.stateCode}`
       });
 
-      navigate('/dashboard', { replace: true });
+      // Show congratulations dialog
+      setShowCongratulations(true);
+      
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -164,6 +173,11 @@ const OnboardingEnhanced = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCongratulationsClose = () => {
+    setShowCongratulations(false);
+    navigate('/dashboard', { replace: true });
   };
 
   if (profileLoading) {
@@ -498,6 +512,12 @@ const OnboardingEnhanced = () => {
           </CardFooter>
         </Card>
       </div>
+      
+      <CongratulationsDialog 
+        isOpen={showCongratulations}
+        onClose={handleCongratulationsClose}
+        credits={100}
+      />
     </PageWrapper>
   );
 };
