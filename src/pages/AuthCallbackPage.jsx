@@ -12,6 +12,10 @@ const AuthCallbackPage = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      console.log('🔍 AuthCallbackPage: Starting auth callback handling');
+      console.log('🔍 Current URL:', window.location.href);
+      console.log('🔍 Current session:', session ? 'exists' : 'none');
+      
       try {
         // Get the URL parameters
         const urlParams = new URLSearchParams(location.search);
@@ -19,9 +23,16 @@ const AuthCallbackPage = () => {
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
 
+        console.log('🔍 URL Parameters:', {
+          code: code ? 'present' : 'missing',
+          error: error || 'none',
+          errorDescription: errorDescription || 'none',
+          fullSearch: location.search
+        });
+
         // Handle OAuth errors
         if (error) {
-          console.error('OAuth error:', error, errorDescription);
+          console.error('❌ OAuth error detected:', { error, errorDescription });
           setError(`Authentication failed: ${errorDescription || error}`);
           setIsProcessing(false);
           setTimeout(() => {
@@ -32,11 +43,18 @@ const AuthCallbackPage = () => {
 
         // If we have a code, exchange it for a session
         if (code) {
-          console.log('Exchanging code for session...');
+          console.log('🔄 Exchanging OAuth code for session...');
+          console.log('🔄 Code length:', code.length);
+          
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           
           if (exchangeError) {
-            console.error('Code exchange error:', exchangeError);
+            console.error('❌ Code exchange error:', {
+              message: exchangeError.message,
+              status: exchangeError.status,
+              code: exchangeError.code,
+              details: exchangeError
+            });
             setError(`Session exchange failed: ${exchangeError.message}`);
             setIsProcessing(false);
             setTimeout(() => {
@@ -45,22 +63,40 @@ const AuthCallbackPage = () => {
             return;
           }
 
+          console.log('✅ Code exchange successful:', {
+            hasSession: !!data.session,
+            hasUser: !!data.user,
+            sessionId: data.session?.access_token?.substring(0, 20) + '...',
+            userId: data.user?.id
+          });
+
           if (data.session) {
-            console.log('Session created successfully, redirecting to post-auth');
-            navigate('/post-auth', { replace: true });
+            console.log('🎉 Session created successfully, redirecting to post-auth');
+            // Add a small delay to ensure the session is fully established
+            setTimeout(() => {
+              navigate('/post-auth', { replace: true });
+            }, 100);
             return;
+          } else {
+            console.warn('⚠️ Code exchange succeeded but no session returned');
           }
         }
 
         // If we already have a session, redirect
         if (session) {
-          console.log('Session already exists, redirecting to post-auth');
+          console.log('✅ Session already exists, redirecting to post-auth');
+          console.log('✅ Session details:', {
+            userId: session.user?.id,
+            email: session.user?.email,
+            expiresAt: session.expires_at
+          });
           navigate('/post-auth', { replace: true });
           return;
         }
 
         // If no code and no session, something went wrong
-        console.warn('No code or session found in callback');
+        console.warn('⚠️ No code or session found in callback');
+        console.warn('⚠️ This might indicate a redirect issue or missing OAuth configuration');
         setError('No authentication code received');
         setIsProcessing(false);
         setTimeout(() => {
