@@ -144,8 +144,25 @@ const PostAuthPage = () => {
   };
 
   useEffect(() => {
+    console.log('🔍 PostAuthPage: useEffect triggered', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      profileLoading,
+      hasProfile: !!profile,
+      isCreatingProfile
+    });
+
     if (session?.user && !profileLoading && !profile && !isCreatingProfile) {
+      console.log('🔄 PostAuthPage: Conditions met, calling createProfileIfNeeded');
       createProfileIfNeeded();
+    } else {
+      console.log('🔍 PostAuthPage: Conditions not met, skipping profile creation', {
+        reason: !session?.user ? 'no session/user' : 
+                profileLoading ? 'profile loading' : 
+                profile ? 'profile exists' : 
+                'already creating'
+      });
     }
   }, [session, profile, profileLoading, isCreatingProfile]);
 
