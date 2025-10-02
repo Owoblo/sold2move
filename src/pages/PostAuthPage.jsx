@@ -44,6 +44,16 @@ const PostAuthPage = () => {
       created_at: session.user.created_at,
       last_sign_in_at: session.user.last_sign_in_at
     });
+    
+    // First, verify the user exists in auth.users
+    console.log('🔍 Verifying user exists in auth.users...');
+    const { data: authUser, error: authError } = await supabase.auth.getUser();
+    if (authError || !authUser.user) {
+      console.error('❌ User not found in auth.users:', authError);
+      throw new Error('User authentication failed');
+    }
+    console.log('✅ User verified in auth.users:', authUser.user.id);
+    
     setIsCreatingProfile(true);
 
     try {
@@ -125,23 +135,37 @@ const PostAuthPage = () => {
         await refreshProfile();
       }
     } catch (error) {
-      console.error('Failed to create profile:', error);
+      console.error('❌ CRITICAL: Failed to create profile:', error);
+      console.error('❌ Full error object:', JSON.stringify(error, null, 2));
+      console.error('❌ Error stack:', error.stack);
       
       // Handle specific database errors
       let errorMessage = "There was an error setting up your account. Please try again.";
       
       if (error.message?.includes('permission denied')) {
         errorMessage = "Database permission error. Please contact support.";
+        console.error('❌ PERMISSION DENIED ERROR - Check RLS policies');
       } else if (error.message?.includes('duplicate key')) {
         errorMessage = "Account already exists. Redirecting to login...";
-        // Try to refresh profile in case it was created by another process
+        console.log('✅ Duplicate key - profile exists, refreshing...');
         await refreshProfile();
         return;
       } else if (error.message?.includes('foreign key')) {
         errorMessage = "User authentication error. Please try logging in again.";
+        console.error('❌ FOREIGN KEY ERROR - User not in auth.users table');
+      } else if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        errorMessage = "Database table missing. Please contact support.";
+        console.error('❌ TABLE MISSING ERROR - profiles table does not exist');
+      } else if (error.message?.includes('column') && error.message?.includes('does not exist')) {
+        errorMessage = "Database schema error. Please contact support.";
+        console.error('❌ COLUMN MISSING ERROR - profiles table schema incorrect');
       } else if (error.message) {
         errorMessage = `Database error: ${error.message}`;
+        console.error('❌ UNKNOWN DATABASE ERROR:', error.message);
       }
+      
+      // Show detailed error in console for debugging
+      console.error('❌ USER-FACING ERROR MESSAGE:', errorMessage);
       
       toast({
         variant: "destructive",
