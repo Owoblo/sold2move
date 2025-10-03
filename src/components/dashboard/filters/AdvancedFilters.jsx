@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, X, DollarSign, Home, Ruler, Calendar } from 'lucide-react';
+import { Search, Filter, X, DollarSign, Home, Ruler, Calendar, Star, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { useSearchSuggestions, useFilterOptions } from '@/hooks/useListingsEnhanced';
+import SavedSearches from '@/components/dashboard/SavedSearches';
 
 const AdvancedFilters = ({ 
   filters, 
@@ -17,6 +18,7 @@ const AdvancedFilters = ({
 }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSavedSearches, setShowSavedSearches] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || '');
 
   // Get search suggestions
@@ -50,6 +52,17 @@ const AdvancedFilters = ({
     setSearchTerm(suggestion.address);
     onSearchChange(suggestion.address);
     setShowSuggestions(false);
+  };
+
+  // Handle loading saved search
+  const handleLoadSavedSearch = (savedFilters) => {
+    setLocalFilters(savedFilters);
+    onFiltersChange(savedFilters);
+    if (savedFilters.searchTerm) {
+      setSearchTerm(savedFilters.searchTerm);
+      onSearchChange(savedFilters.searchTerm);
+    }
+    setShowSavedSearches(false);
   };
 
   // Clear all filters
@@ -195,6 +208,15 @@ const AdvancedFilters = ({
           )}
         </Button>
 
+        <Button
+          variant="outline"
+          onClick={() => setShowSavedSearches(!showSavedSearches)}
+          className="flex items-center gap-2"
+        >
+          <Star className="h-4 w-4" />
+          Saved
+        </Button>
+
         {activeFilterCount > 0 && (
           <Button
             variant="ghost"
@@ -305,6 +327,14 @@ const AdvancedFilters = ({
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Saved Searches */}
+      {showSavedSearches && (
+        <SavedSearches
+          onLoadSearch={handleLoadSavedSearch}
+          currentFilters={localFilters}
+        />
       )}
     </div>
   );

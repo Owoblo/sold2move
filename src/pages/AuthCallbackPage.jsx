@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSupabaseClient, useSession } from '@supabase/auth-helpers-react';
+import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 
 const AuthCallbackPage = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const AuthCallbackPage = () => {
   const supabase = useSupabaseClient();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState(null);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -33,11 +35,8 @@ const AuthCallbackPage = () => {
         // Handle OAuth errors
         if (error) {
           console.error('❌ OAuth error detected:', { error, errorDescription });
-          setError(`Authentication failed: ${errorDescription || error}`);
+          setError(`auth_failed`);
           setIsProcessing(false);
-          setTimeout(() => {
-            navigate('/login?error=auth_failed', { replace: true });
-          }, 3000);
           return;
         }
 
@@ -55,11 +54,8 @@ const AuthCallbackPage = () => {
               code: exchangeError.code,
               details: exchangeError
             });
-            setError(`Session exchange failed: ${exchangeError.message}`);
+            setError(`session_failed`);
             setIsProcessing(false);
-            setTimeout(() => {
-              navigate('/login?error=session_failed', { replace: true });
-            }, 3000);
             return;
           }
 
@@ -97,19 +93,13 @@ const AuthCallbackPage = () => {
         // If no code and no session, something went wrong
         console.warn('⚠️ No code or session found in callback');
         console.warn('⚠️ This might indicate a redirect issue or missing OAuth configuration');
-        setError('No authentication code received');
+        setError('no_code');
         setIsProcessing(false);
-        setTimeout(() => {
-          navigate('/login?error=no_code', { replace: true });
-        }, 3000);
 
       } catch (err) {
         console.error('Auth callback error:', err);
-        setError(`Unexpected error: ${err.message}`);
+        setError('unexpected');
         setIsProcessing(false);
-        setTimeout(() => {
-          navigate('/login?error=unexpected', { replace: true });
-        }, 3000);
       }
     };
 
@@ -124,11 +114,8 @@ const AuthCallbackPage = () => {
       } else if (event === 'SIGN_IN_ERROR') {
         console.error('Sign in error occurred');
         subscription.unsubscribe();
-        setError('Sign in failed');
+        setError('auth_failed');
         setIsProcessing(false);
-        setTimeout(() => {
-          navigate('/login?error=auth_failed', { replace: true });
-        }, 3000);
       }
     });
 
@@ -136,11 +123,8 @@ const AuthCallbackPage = () => {
     const timeout = setTimeout(() => {
       console.log('Auth callback timeout');
       if (!session && !error) {
-        setError('Authentication timed out');
+        setError('timeout');
         setIsProcessing(false);
-        setTimeout(() => {
-          navigate('/login?error=timeout', { replace: true });
-        }, 3000);
       }
     }, 15000); // 15 second timeout
 
@@ -153,6 +137,18 @@ const AuthCallbackPage = () => {
     };
   }, [supabase, navigate, location, session]);
 
+  const handleRetry = () => {
+    setIsRetrying(true);
+    setError(null);
+    setIsProcessing(true);
+    // Retry the auth callback
+    window.location.reload();
+  };
+
+  const handleGoBack = () => {
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
       {isProcessing ? (
@@ -162,14 +158,12 @@ const AuthCallbackPage = () => {
           <p className="text-slate">Please wait while we securely connect to your account.</p>
         </>
       ) : (
-        <>
-          <div className="rounded-full h-32 w-32 border-2 border-red-500 mb-4 flex items-center justify-center">
-            <span className="text-red-500 text-4xl">⚠</span>
-          </div>
-          <h1 className="text-2xl font-bold font-heading text-red-400">Authentication Error</h1>
-          <p className="text-slate text-center max-w-md">{error}</p>
-          <p className="text-slate text-sm mt-2">Redirecting to login page...</p>
-        </>
+        <AuthErrorDisplay
+          error={error}
+          onRetry={handleRetry}
+          onGoBack={handleGoBack}
+          isRetrying={isRetrying}
+        />
       )}
     </div>
   );

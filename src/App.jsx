@@ -7,6 +7,9 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
+import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -54,6 +57,13 @@ const SuspenseFallback = () => (
 function App() {
   const location = useLocation();
   const session = useSession();
+  const { 
+    showTour, 
+    showWelcomeMessage, 
+    startTour, 
+    completeTour, 
+    skipTour 
+  } = useOnboarding();
 
   // Debug session changes
   useEffect(() => {
@@ -139,6 +149,17 @@ function App() {
       </main>
       {!isDashboardRoute && <Footer />}
       <ShadToaster />
+      
+      {/* Onboarding Components */}
+      <WelcomeMessage 
+        onStartTour={startTour}
+        onDismiss={skipTour}
+      />
+      <OnboardingTour
+        isOpen={showTour}
+        onComplete={completeTour}
+        onSkip={skipTour}
+      />
     </div>
   );
 }

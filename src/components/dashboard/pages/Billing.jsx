@@ -8,6 +8,8 @@ import { useProfile } from '@/hooks/useProfile.jsx';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+import UsageAnalytics from '@/components/dashboard/UsageAnalytics';
+import CreditManagementDashboard from '@/components/dashboard/CreditManagementDashboard';
 
 const Billing = () => {
   const supabase = useSupabaseClient();
@@ -147,6 +149,12 @@ const Billing = () => {
           </Card>
         </div>
       </div>
+
+      {/* Usage Analytics */}
+      <UsageAnalytics profile={profile} refreshProfile={refreshProfile} />
+
+      {/* Credit Management Dashboard */}
+      <CreditManagementDashboard profile={profile} refreshProfile={refreshProfile} />
 
       <Card className="mt-6 bg-light-navy border-lightest-navy/20">
         <CardHeader>
