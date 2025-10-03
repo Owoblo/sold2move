@@ -41,9 +41,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { useJustListedEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
+import { useBulkReveal } from '@/hooks/useBulkReveal';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
 import CitySelector from '@/components/ui/CitySelector';
+import BulkRevealModal from '@/components/dashboard/BulkRevealModal';
+import ExportModal from '@/components/dashboard/ExportModal';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 import { mapDatabaseListingsToFrontend, formatPrice, formatArea, formatDate, isListingRevealed } from '@/lib/frontend-data-mapping';
 
@@ -68,6 +71,8 @@ const JustListed = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc'); // Default to newest first
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showBulkRevealModal, setShowBulkRevealModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const { trackAction, trackListingInteraction } = useAnalytics();
 
   // Update filters when profile changes
@@ -93,6 +98,7 @@ const JustListed = () => {
   } = useRevealedListingsEnhanced(profile?.id);
 
   const revealListingMutation = useRevealListingEnhanced();
+  const { bulkRevealListings, isRevealing: isBulkRevealing } = useBulkReveal();
   
   // Local state to track immediately revealed listings
   const [localRevealedListings, setLocalRevealedListings] = useState(new Set());
@@ -187,25 +193,19 @@ const JustListed = () => {
       toast.error("Export Failed", "No listings to export with current filters.");
       return;
     }
-    
+    setShowExportModal(true);
+  };
+
+  const handleExportComplete = (exportData) => {
     trackAction('export', {
       type: 'just_listed',
       count: sortedListings.length,
       page: currentPage,
-      filters: filters
+      filters: filters,
+      format: exportData.format,
+      includeContactInfo: exportData.includeContactInfo,
+      crmType: exportData.crmType
     });
-    
-    const dataToExport = sortedListings.map(({ id, addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
-      Address: allRevealedListings.has(id) ? addressStreet : '*****',
-      City: addresscity,
-      Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
-      Beds: beds || 'N/A',
-      Baths: baths || 'N/A',
-      'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
-      'Property Type': statustext || 'N/A',
-    }));
-    exportToCSV(dataToExport, `just-listed-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
-    toast.success("Export Successful", "Your CSV file has been downloaded.");
   };
 
   const handleRowClick = (listingId) => {
@@ -249,6 +249,20 @@ const JustListed = () => {
     }
   };
 
+  const handleBulkReveal = async (selectedListingIds) => {
+    const result = await bulkRevealListings(selectedListingIds, profile.id, 1);
+    if (result.success) {
+      // Add to local revealed state for instant UI update
+      setLocalRevealedListings(prev => {
+        const newSet = new Set(prev);
+        selectedListingIds.forEach(id => newSet.add(id));
+        return newSet;
+      });
+      
+      // Refetch listings to get updated data
+      refetchListings();
+    }
+  };
 
   if (listingsLoading || profileLoading) {
     return (
@@ -387,6 +401,14 @@ const JustListed = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setShowBulkRevealModal(true)}
+            disabled={sortedListings.length === 0 || isBulkRevealing}
+            className="bg-green text-deep-navy hover:bg-green/90"
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Bulk Reveal
+          </Button>
           <Button
             onClick={handleExport}
             disabled={sortedListings.length === 0}
@@ -671,6 +693,26 @@ const JustListed = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Reveal Modal */}
+      <BulkRevealModal
+        isOpen={showBulkRevealModal}
+        onClose={() => setShowBulkRevealModal(false)}
+        listings={sortedListings}
+        onBulkReveal={handleBulkReveal}
+        isRevealing={isBulkRevealing}
+        revealedListings={allRevealedListings}
+        creditCost={1}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        listings={sortedListings}
+        listingType="just-listed"
+        onExport={handleExportComplete}
+      />
     </motion.div>
   );
 };
