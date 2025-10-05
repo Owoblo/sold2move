@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAnalytics } from '@/services/analytics.jsx';
-import { useJustListedEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
+import { useJustListedWithServiceAreas, useRevealedListingsWithServiceAreas, useRevealListingWithServiceAreas, useServiceAreaStats } from '@/hooks/useListingsWithServiceAreas';
 import { useBulkReveal } from '@/hooks/useBulkReveal';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
@@ -90,14 +90,15 @@ const JustListed = () => {
     isLoading: listingsLoading,
     error: listingsError,
     refetch: refetchListings
-  } = useJustListedEnhanced(filters, currentPage, PAGE_SIZE);
+  } = useJustListedWithServiceAreas(filters, currentPage, PAGE_SIZE);
 
   const {
     data: revealedListings = new Set(),
     isLoading: revealedLoading
-  } = useRevealedListingsEnhanced(profile?.id);
+  } = useRevealedListingsWithServiceAreas(profile?.id);
 
-  const revealListingMutation = useRevealListingEnhanced();
+  const revealListingMutation = useRevealListingWithServiceAreas();
+  const { data: serviceAreaStats } = useServiceAreaStats();
   const { bulkRevealListings, isRevealing: isBulkRevealing } = useBulkReveal();
   
   // Local state to track immediately revealed listings

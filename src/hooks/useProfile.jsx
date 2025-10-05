@@ -28,7 +28,7 @@ export const useProfile = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, service_cities, main_service_city, service_area_cluster')
         .eq('id', session.user.id)
         .single();
       
