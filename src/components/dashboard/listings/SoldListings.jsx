@@ -34,88 +34,70 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAnalytics } from '@/services/analytics.jsx';
+import { useSoldListingsWithServiceAreas, useServiceAreaStats } from '@/hooks/useListingsWithServiceAreas';
 
 const PAGE_SIZE = 20;
 
 const SoldListings = ({ filters }) => {
   const navigate = useNavigate();
-  const [allListings, setAllListings] = useState([]);
-  const [pagedListings, setPagedListings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [priceFilter, setPriceFilter] = useState('all');
   const { trackAction } = useAnalytics();
 
-  const fetchListingsData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    setCurrentPage(1);
-    try {
-      if (!profile) {
-        if (!profileLoading) {
-          setError("Profile not loaded. Please set your service area in Settings.");
-        }
-        setLoading(false);
-        return;
-      }
-      
-      const { data: runsData, error: runsError } = await supabase
-        .from('runs')
-        .select('id')
-        .order('started_at', { ascending: false })
-        .limit(2);
-
-      if (runsError || runsData.length < 2) {
-        throw new Error(runsError?.message || 'Could not fetch the latest two run IDs.');
-      }
-
-      const currentRunId = runsData[0].id;
-      const previousRunId = runsData[1].id;
-
-      const data = await fetchSoldSincePrev(currentRunId, previousRunId, profile.city_name, filters);
-      setAllListings(data);
-      setTotalPages(Math.ceil(data.length / PAGE_SIZE));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [profile, profileLoading, filters]);
-
-  useEffect(() => {
-    if (!profileLoading) {
-      fetchListingsData();
-    }
-  }, [profileLoading, fetchListingsData]);
-
-  useEffect(() => {
-    const from = (currentPage - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE;
-    setPagedListings(filteredListings.slice(from, to));
-    setTotalPages(Math.ceil(filteredListings.length / PAGE_SIZE));
-  }, [currentPage, filteredListings]);
+  // Use service area hooks
+  const {
+    data: listingsData,
+    isLoading: loading,
+    error: listingsError,
+    refetch: refetchListings
+  } = useSoldListingsWithServiceAreas(filters, currentPage, PAGE_SIZE);
+  
+  const { data: serviceAreaStats } = useServiceAreaStats();
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     trackAction('pagination', { page, section: 'sold_listings' });
   };
 
+  // Process listings data from service area hook
+  const processedListings = React.useMemo(() => {
+    if (!listingsData?.data) return [];
+    
+    // Map database data to frontend format
+    return listingsData.data.map(listing => ({
+      id: listing.id,
+      address: listing.address_street,
+      city: listing.address_city,
+      state: listing.address_state,
+      zip: listing.address_zip,
+      price: listing.unformatted_price,
+      soldDate: listing.last_seen_at,
+      date: listing.last_seen_at,
+      beds: listing.beds,
+      baths: listing.baths,
+      sqft: listing.area,
+      status: listing.status_text,
+      mls: listing.mls_number,
+      agent: listing.listing_agent,
+      office: listing.listing_office,
+      serviceAreaMatch: listing.service_area_match
+    }));
+  }, [listingsData?.data]);
+
   // Filter and sort listings
   const filteredListings = React.useMemo(() => {
-    let filtered = [...allListings];
+    let filtered = [...processedListings];
     
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(listing => 
-        listing.addressstreet?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.addresscity?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.addressstate?.toLowerCase().includes(searchTerm.toLowerCase())
+        listing.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.state?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -167,7 +149,7 @@ const SoldListings = ({ filters }) => {
     });
     
     return filtered;
-  }, [allListings, searchTerm, priceFilter, sortBy, sortOrder]);
+  }, [processedListings, searchTerm, priceFilter, sortBy, sortOrder]);
   
   const handleExport = () => {
     if (filteredListings.length === 0) {
@@ -215,12 +197,16 @@ const SoldListings = ({ filters }) => {
     );
   }
 
-  if (error) {
+  if (listingsError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg">
         <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
         <p className="text-lightest-slate font-semibold">Failed to load listings</p>
-        <p className="text-slate text-sm">{error}</p>
+        <p className="text-slate text-sm">{listingsError.message}</p>
+        <Button onClick={() => refetchListings()} className="mt-4 bg-green text-deep-navy hover:bg-green/90">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -247,12 +233,32 @@ const SoldListings = ({ filters }) => {
           <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
             <CheckCircle className="h-6 w-6 text-green" />
             Recently Sold Properties
-            {profile?.city_name && (
-              <span className="text-slate font-normal">in {profile.city_name}</span>
+            {listingsData?.serviceAreaInfo && (
+              <span className="text-slate font-normal flex items-center gap-1">
+                in{' '}
+                <Badge variant="secondary" className="bg-green/20 text-green border-green/30">
+                  {listingsData.serviceAreaInfo.mainCity}
+                </Badge>
+                {listingsData.serviceAreaInfo.totalCities > 1 && (
+                  <span className="text-green text-sm ml-1">
+                    +{listingsData.serviceAreaInfo.totalCities - 1} areas
+                  </span>
+                )}
+              </span>
             )}
           </h2>
           <p className="text-slate mt-1">
             Identify high-potential moving leads from recent sales.
+            {listingsData?.serviceAreaInfo && (
+              <span className="text-green text-sm ml-2">
+                Showing sold properties from {listingsData.serviceAreaInfo.totalCities} cities
+                {serviceAreaStats && (
+                  <span className="ml-2">
+                    • {serviceAreaStats.totalSold} total sold
+                  </span>
+                )}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
