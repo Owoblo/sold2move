@@ -1,0 +1,226 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signUpSchema } from '@/lib/validationSchemas';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/components/ui/use-toast';
+import PageWrapper from '@/components/layout/PageWrapper';
+import GoogleIcon from '@/components/icons/GoogleIcon';
+import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
+import LoadingButton from '@/components/ui/LoadingButton';
+
+const SignUpPageOptimized = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const form = useForm({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  const { isSubmitting } = form.formState;
+
+  const signUpWithPassword = async (values) => {
+    try {
+      console.log('🔄 Starting email/password signup for:', values.email);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+        }
+      });
+
+      if (error) {
+        console.error('❌ Signup error:', error);
+        toast({
+          variant: "destructive",
+          title: "Sign up Failed",
+          description: error.message || "Something went wrong. Please try again.",
+        });
+        return;
+      }
+
+      if (data.user) {
+        console.log('✅ User created successfully:', data.user.id);
+        
+        // Check if email confirmation is required
+        if (data.user.email_confirmed_at) {
+          console.log('✅ Email already confirmed, granting bonus and redirecting');
+          
+          // Grant signup bonus via Edge Function
+          try {
+            const { error: functionError } = await supabase.functions.invoke('grant-signup-bonus', {
+              body: JSON.stringify({ user_id: data.user.id }),
+            });
+
+            if (functionError) {
+              console.warn('⚠️ Failed to grant signup bonus:', functionError);
+              // Don't block user flow, but log the error
+            } else {
+              console.log('✅ Signup bonus granted successfully');
+            }
+          } catch (bonusError) {
+            console.warn('⚠️ Signup bonus error:', bonusError);
+            // Don't block user flow
+          }
+          
+          // Redirect to post-auth page for profile setup
+          navigate('/post-auth');
+        } else {
+          console.log('📧 Email confirmation required, redirecting to success page');
+          // Redirect to success page to inform user to check email
+          navigate('/signup-success');
+        }
+      }
+    } catch (err) {
+      console.error('❌ Signup exception:', err);
+      toast({
+        variant: "destructive",
+        title: "Sign up Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setGoogleLoading(true);
+    try {
+      console.log('🔄 Starting Google OAuth signup');
+      
+      const siteUrl = getSiteUrl();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${siteUrl}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error('❌ Google OAuth error:', error);
+        toast({
+          variant: "destructive",
+          title: "Google Sign in Failed",
+          description: error.message || "Something went wrong. Please try again.",
+        });
+        setGoogleLoading(false);
+        return;
+      }
+
+      console.log('✅ Google OAuth initiated successfully');
+      // Don't set loading to false here - let the redirect handle it
+    } catch (err) {
+      console.error('❌ Google OAuth exception:', err);
+      setGoogleLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Google Sign in Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    }
+  };
+
+  return (
+    <PageWrapper title="Sign Up" description="Create an account to get started with Sold2Move.">
+      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-200px)] py-12">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-heading">Create an Account</CardTitle>
+            <CardDescription>Join our network and start finding leads today.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(signUpWithPassword)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="you@company.com" 
+                          type="email"
+                          {...field} 
+                          disabled={isSubmitting || googleLoading} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="Minimum 8 characters"
+                          {...field} 
+                          disabled={isSubmitting || googleLoading} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <LoadingButton 
+                  type="submit" 
+                  className="w-full bg-green text-deep-navy hover:bg-green/90" 
+                  isLoading={isSubmitting} 
+                  disabled={googleLoading}
+                >
+                  Sign Up
+                </LoadingButton>
+              </form>
+            </Form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-lightest-navy/20" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-light-navy px-2 text-slate">Or continue with</span>
+              </div>
+            </div>
+
+            <LoadingButton 
+              variant="outline" 
+              className="w-full" 
+              onClick={signInWithGoogle} 
+              isLoading={googleLoading} 
+              disabled={isSubmitting}
+            >
+              <GoogleIcon className="mr-2 h-4 w-4" />
+              Google
+            </LoadingButton>
+
+            <p className="mt-6 text-center text-sm text-slate">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-green hover:text-green/90">
+                Sign in
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </PageWrapper>
+  );
+};
+
+export default SignUpPageOptimized;
