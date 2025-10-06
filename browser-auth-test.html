@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test Suite</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #e2e8f0;
+        }
+        .test-container {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #333;
+        }
+        .test-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #22c55e;
+            color: #0a0a0a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #16a34a;
+        }
+        .test-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .test-results {
+            background: #0a0a0a;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .log-success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .log-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .log-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .log-info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .form-group {
+            margin: 15px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #e2e8f0;
+            font-size: 14px;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #22c55e;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-pending { background: #f59e0b; }
+        .status-success { background: #22c55e; }
+        .status-error { background: #ef4444; }
+        .test-summary {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Authentication Test Suite</h1>
+    <p>This page allows you to test the authentication system for Sold2Move.</p>
+
+    <div class="test-container">
+        <h2>Test Configuration</h2>
+        <div class="form-group">
+            <label for="testEmail">Test Email:</label>
+            <input type="email" id="testEmail" value="test@example.com" placeholder="Enter test email">
+        </div>
+        <div class="form-group">
+            <label for="testPassword">Test Password:</label>
+            <input type="password" id="testPassword" value="TestPassword123!" placeholder="Enter test password">
+        </div>
+        <div class="form-group">
+            <label for="supabaseUrl">Supabase URL:</label>
+            <input type="url" id="supabaseUrl" value="https://idbyrtwdeeruiutoukct.supabase.co" placeholder="Enter Supabase URL">
+        </div>
+        <div class="form-group">
+            <label for="supabaseKey">Supabase Anon Key:</label>
+            <input type="text" id="supabaseKey" placeholder="Enter Supabase anon key">
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Controls</h2>
+        <button class="test-button" onclick="initializeSupabase()">Initialize Supabase</button>
+        <button class="test-button" onclick="runAllTests()">Run All Tests</button>
+        <button class="test-button" onclick="clearResults()">Clear Results</button>
+        <button class="test-button" onclick="exportResults()">Export Results</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Individual Tests</h2>
+        <button class="test-button" onclick="testConnection()">Test Connection</button>
+        <button class="test-button" onclick="testSignup()">Test Signup</button>
+        <button class="test-button" onclick="testSignin()">Test Signin</button>
+        <button class="test-button" onclick="testGoogleOAuth()">Test Google OAuth</button>
+        <button class="test-button" onclick="testSession()">Test Session</button>
+        <button class="test-button" onclick="testSignout()">Test Signout</button>
+    </div>
+
+    <div class="test-container">
+        <h2>Test Results</h2>
+        <div id="testResults" class="test-results">
+            <div class="log-entry log-info">Ready to run tests. Click "Initialize Supabase" first.</div>
+        </div>
+    </div>
+
+    <div class="test-summary" id="testSummary" style="display: none;">
+        <h2>Test Summary</h2>
+        <div id="summaryContent"></div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        let supabase = null;
+        let testResults = [];
+        let currentUser = null;
+
+        window.initializeSupabase = async function() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+
+            if (!url || !key) {
+                log('Please enter both Supabase URL and anon key', 'error');
+                return;
+            }
+
+            try {
+                supabase = createClient(url, key);
+                log('Supabase client initialized successfully', 'success');
+                
+                // Test basic connection
+                const { data, error } = await supabase.auth.getUser();
+                if (error && error.message !== 'Auth session missing!') {
+                    log(`Connection test failed: ${error.message}`, 'error');
+                } else {
+                    log('Connection test passed', 'success');
+                }
+            } catch (error) {
+                log(`Failed to initialize Supabase: ${error.message}`, 'error');
+            }
+        };
+
+        window.testConnection = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            log('Testing Supabase connection...', 'info');
+            
+            try {
+                const { data, error } = await supabase.auth.getUser();
+                
+                if (error && error.message !== 'Auth session missing!') {
+                    log(`Connection failed: ${error.message}`, 'error');
+                } else {
+                    log('Connection successful', 'success');
+                    if (data.user) {
+                        log(`Current user: ${data.user.email}`, 'info');
+                    } else {
+                        log('No active session', 'info');
+                    }
+                }
+            } catch (error) {
+                log(`Connection error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testSignup = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+
+            if (!email || !password) {
+                log('Please enter email and password', 'error');
+                return;
+            }
+
+            // Use timestamp to make email unique
+            const uniqueEmail = email.replace('@', `+${Date.now()}@`);
+
+            log(`Testing signup with email: ${uniqueEmail}`, 'info');
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: uniqueEmail,
+                    password: password,
+                });
+
+                if (error) {
+                    log(`Signup failed: ${error.message}`, 'error');
+                } else {
+                    log('Signup successful', 'success');
+                    log(`User ID: ${data.user?.id}`, 'info');
+                    
+                    // Test signup bonus
+                    try {
+                        const { error: bonusError } = await supabase.functions.invoke('grant-signup-bonus', {
+                            body: JSON.stringify({ user_id: data.user.id }),
+                        });
+
+                        if (bonusError) {
+                            log(`Signup bonus failed: ${bonusError.message}`, 'warning');
+                        } else {
+                            log('Signup bonus granted successfully', 'success');
+                        }
+                    } catch (bonusError) {
+                        log(`Signup bonus error: ${bonusError.message}`, 'warning');
+                    }
+                }
+            } catch (error) {
+                log(`Signup error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testSignin = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+
+            if (!email || !password) {
+                log('Please enter email and password', 'error');
+                return;
+            }
+
+            log(`Testing signin with email: ${email}`, 'info');
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) {
+                    log(`Signin failed: ${error.message}`, 'error');
+                } else {
+                    log('Signin successful', 'success');
+                    log(`User: ${data.user?.email}`, 'info');
+                    log(`Session active: ${!!data.session}`, 'info');
+                    currentUser = data.user;
+                }
+            } catch (error) {
+                log(`Signin error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testGoogleOAuth = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            log('Testing Google OAuth initiation...', 'info');
+
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${window.location.origin}/auth/callback`,
+                    },
+                });
+
+                if (error) {
+                    log(`Google OAuth failed: ${error.message}`, 'error');
+                } else {
+                    log('Google OAuth URL generated successfully', 'success');
+                    log(`OAuth URL: ${data.url}`, 'info');
+                    log('Note: OAuth flow requires user interaction in browser', 'warning');
+                }
+            } catch (error) {
+                log(`Google OAuth error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testSession = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            log('Testing session management...', 'info');
+
+            try {
+                const { data: userData, error: userError } = await supabase.auth.getUser();
+                
+                if (userError) {
+                    log(`No active session: ${userError.message}`, 'warning');
+                } else if (userData.user) {
+                    log(`Active session found for: ${userData.user.email}`, 'success');
+                    
+                    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+                    
+                    if (sessionError) {
+                        log(`Session retrieval failed: ${sessionError.message}`, 'warning');
+                    } else {
+                        log('Session data retrieved successfully', 'success');
+                        const expiresAt = new Date(sessionData.session.expires_at);
+                        log(`Session expires at: ${expiresAt.toISOString()}`, 'info');
+                    }
+                } else {
+                    log('No user data available', 'warning');
+                }
+            } catch (error) {
+                log(`Session test error: ${error.message}`, 'error');
+            }
+        };
+
+        window.testSignout = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            log('Testing signout...', 'info');
+
+            try {
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    log(`Signout failed: ${error.message}`, 'error');
+                } else {
+                    log('Signout successful', 'success');
+                    currentUser = null;
+                }
+            } catch (error) {
+                log(`Signout error: ${error.message}`, 'error');
+            }
+        };
+
+        window.runAllTests = async function() {
+            if (!supabase) {
+                log('Please initialize Supabase first', 'error');
+                return;
+            }
+
+            log('🧪 Starting comprehensive authentication test suite...', 'info');
+            
+            const tests = [
+                { name: 'Connection Test', fn: testConnection },
+                { name: 'Signup Test', fn: testSignup },
+                { name: 'Signin Test', fn: testSignin },
+                { name: 'Google OAuth Test', fn: testGoogleOAuth },
+                { name: 'Session Test', fn: testSession },
+                { name: 'Signout Test', fn: testSignout },
+            ];
+
+            let passed = 0;
+            let failed = 0;
+
+            for (const test of tests) {
+                log(`\n--- Running ${test.name} ---`, 'info');
+                const result = await test.fn();
+                if (result !== false) {
+                    passed++;
+                } else {
+                    failed++;
+                }
+            }
+
+            log(`\n🎉 Test suite completed! Passed: ${passed}, Failed: ${failed}`, 'info');
+            showTestSummary(passed, failed);
+        };
+
+        window.clearResults = function() {
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('testSummary').style.display = 'none';
+            testResults = [];
+        };
+
+        window.exportResults = function() {
+            const results = testResults.map(r => `${r.timestamp} [${r.type.toUpperCase()}] ${r.message}`).join('\n');
+            const blob = new Blob([results], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `auth-test-results-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            document.getElementById('testResults').appendChild(logEntry);
+            document.getElementById('testResults').scrollTop = document.getElementById('testResults').scrollHeight;
+            
+            testResults.push({ timestamp, type, message });
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function showTestSummary(passed, failed) {
+            const summaryDiv = document.getElementById('testSummary');
+            const contentDiv = document.getElementById('summaryContent');
+            
+            contentDiv.innerHTML = `
+                <div style="display: flex; gap: 20px; margin: 20px 0;">
+                    <div style="flex: 1; text-align: center; padding: 20px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid #22c55e;">
+                        <h3 style="color: #22c55e; margin: 0;">✅ Passed</h3>
+                        <div style="font-size: 2em; font-weight: bold; color: #22c55e;">${passed}</div>
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 20px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid #ef4444;">
+                        <h3 style="color: #ef4444; margin: 0;">❌ Failed</h3>
+                        <div style="font-size: 2em; font-weight: bold; color: #ef4444;">${failed}</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <div style="font-size: 1.2em; color: ${failed === 0 ? '#22c55e' : '#f59e0b'};">
+                        ${failed === 0 ? '🎉 All tests passed!' : '⚠️ Some tests failed. Check the logs above.'}
+                    </div>
+                </div>
+            `;
+            
+            summaryDiv.style.display = 'block';
+        }
+
+        // Initialize with default values
+        log('Authentication test suite loaded. Please enter your Supabase credentials and click "Initialize Supabase".', 'info');
+    </script>
+</body>
+</html>
