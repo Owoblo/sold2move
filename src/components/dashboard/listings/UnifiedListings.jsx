@@ -16,7 +16,12 @@ import {
   RefreshCw,
   TrendingUp,
   Users,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  Lock,
+  Zap,
+  Filter,
+  Search
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile.jsx';
@@ -27,8 +32,9 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useAnalytics } from '@/services/analytics.jsx';
-import { useSoldListingsEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
+import { useJustListedEnhanced, useSoldListingsEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
 import CitySelector from '@/components/ui/CitySelector';
@@ -36,10 +42,11 @@ import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 
 const PAGE_SIZE = 20;
 
-const SoldListingsEnhanced = () => {
+const UnifiedListings = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('just-listed'); // 'just-listed' or 'sold'
   const [filters, setFilters] = useState({
     city_name: [],
     searchTerm: '',
@@ -53,7 +60,7 @@ const SoldListingsEnhanced = () => {
     dateRange: 'all',
   });
   const [sortBy, setSortBy] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc'); // Default to newest first
+  const [sortOrder, setSortOrder] = useState('desc');
   const { trackAction } = useAnalytics();
 
   // Update filters when profile changes
@@ -65,12 +72,19 @@ const SoldListingsEnhanced = () => {
     }
   }, [profile?.service_cities, profile?.city_name]);
 
-  // Use enhanced hooks
+  // Use enhanced hooks based on active tab
   const {
-    data: listingsData,
-    isLoading: listingsLoading,
-    error: listingsError,
-    refetch: refetchListings
+    data: justListedData,
+    isLoading: justListedLoading,
+    error: justListedError,
+    refetch: refetchJustListed
+  } = useJustListedEnhanced(filters, currentPage, PAGE_SIZE);
+
+  const {
+    data: soldListingsData,
+    isLoading: soldListingsLoading,
+    error: soldListingsError,
+    refetch: refetchSoldListings
   } = useSoldListingsEnhanced(filters, currentPage, PAGE_SIZE);
 
   // Reveal functionality
@@ -88,10 +102,16 @@ const SoldListingsEnhanced = () => {
     return combined;
   }, [revealedListings, localRevealedListings]);
 
+  // Get current data based on active tab
+  const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
+  const currentLoading = activeTab === 'just-listed' ? justListedLoading : soldListingsLoading;
+  const currentError = activeTab === 'just-listed' ? justListedError : soldListingsError;
+  const currentRefetch = activeTab === 'just-listed' ? refetchJustListed : refetchSoldListings;
+
   // Handle filter changes
   const handleFiltersChange = (newFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
   // Handle search changes
@@ -107,7 +127,7 @@ const SoldListingsEnhanced = () => {
     trackAction('city_change', { 
       newCity, 
       previousCity: profile?.city_name,
-      section: 'sold_listings'
+      section: activeTab
     });
   };
 
@@ -118,13 +138,13 @@ const SoldListingsEnhanced = () => {
     trackAction('multi_city_change', { 
       cities: newCities,
       cityCount: newCities.length,
-      section: 'sold_listings'
+      section: activeTab
     });
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    trackAction('pagination', { page, section: 'sold_listings' });
+    trackAction('pagination', { page, section: activeTab });
   };
 
   const handleRowClick = (listingId) => {
@@ -138,17 +158,20 @@ const SoldListingsEnhanced = () => {
         return;
     }
 
+    const creditCost = activeTab === 'just-listed' ? 1 : 2;
+    
     trackAction('listing_reveal_attempt', { 
       listingId, 
       page: currentPage,
-      totalListings: sortedListings.length 
+      totalListings: currentData?.data?.length || 0,
+      type: activeTab
     });
     
     try {
       await revealListingMutation.mutateAsync({
         listingId,
         userId: profile.id,
-        creditCost: 2, // Sold listings cost 2 credits
+        creditCost,
       });
       
       // Immediately add to local revealed state for instant UI update
@@ -157,14 +180,12 @@ const SoldListingsEnhanced = () => {
       trackAction('listing_reveal_success', {
         listingId,
         page: currentPage,
-        totalListings: sortedListings.length,
+        totalListings: currentData?.data?.length || 0,
+        type: activeTab
       });
       
-      // Don't navigate immediately - let the user see the revealed address
-      // The address will be revealed in place and they can click on it
     } catch (err) {
       if (err.message.includes('Insufficient credits')) {
-        // Show upgrade modal or redirect to pricing
         navigate('/pricing');
       }
     }
@@ -172,9 +193,9 @@ const SoldListingsEnhanced = () => {
 
   // Sort listings client-side
   const sortedListings = React.useMemo(() => {
-    if (!listingsData?.data) return [];
+    if (!currentData?.data) return [];
     
-    const sorted = [...listingsData.data].sort((a, b) => {
+    const sorted = [...currentData.data].sort((a, b) => {
       let aValue, bValue;
       
       switch (sortBy) {
@@ -204,7 +225,7 @@ const SoldListingsEnhanced = () => {
     });
     
     return sorted;
-  }, [listingsData?.data, sortBy, sortOrder]);
+  }, [currentData?.data, sortBy, sortOrder]);
 
   const handleExport = () => {
     if (sortedListings.length === 0) {
@@ -213,7 +234,7 @@ const SoldListingsEnhanced = () => {
     }
     
     trackAction('export', {
-      type: 'sold_listings',
+      type: activeTab,
       count: sortedListings.length,
       page: currentPage,
       filters: filters
@@ -228,11 +249,17 @@ const SoldListingsEnhanced = () => {
       'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
       'Property Type': statustext || 'N/A',
     }));
-    exportToCSV(dataToExport, `sold-listings-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
+    exportToCSV(dataToExport, `${activeTab}-listings-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
     toast.success("Export Successful", "Your CSV file has been downloaded.");
   };
 
-  if (listingsLoading || profileLoading) {
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+    trackAction('tab_change', { from: activeTab, to: tab });
+  };
+
+  if (currentLoading || profileLoading) {
     return (
       <Card className="bg-light-navy border-border">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -248,71 +275,20 @@ const SoldListingsEnhanced = () => {
     );
   }
 
-  if (listingsError) {
-    console.error('SoldListingsEnhanced: Error state:', listingsError);
-    
-    // Determine error type and show appropriate message
-    const isColumnError = listingsError.code === 'COLUMN_NOT_FOUND' || 
-                         listingsError.message?.includes('column') ||
-                         listingsError.message?.includes('does not exist');
-    
-    const isNetworkError = listingsError.code === 'CONNECTION_FAILED' ||
-                          listingsError.message?.includes('fetch') ||
-                          listingsError.message?.includes('network');
-    
-    const isAuthError = listingsError.code === 'UNAUTHORIZED' ||
-                       listingsError.message?.includes('auth');
-    
+  if (currentError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg p-6">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
         <h3 className="text-lg font-semibold text-lightest-slate mb-2">
-          {isColumnError ? 'Database Structure Issue' : 
-           isNetworkError ? 'Connection Problem' :
-           isAuthError ? 'Authentication Required' :
-           'Failed to Load Listings'}
+          Failed to Load Listings
         </h3>
         <p className="text-slate text-sm text-center mb-4 max-w-md">
-          {isColumnError ? 
-            'There\'s a data structure issue. Our team has been notified and will fix this shortly.' :
-            isNetworkError ?
-            'Unable to connect to our servers. Please check your internet connection and try again.' :
-            isAuthError ?
-            'Please log in again to continue.' :
-            listingsError.message || 'An unexpected error occurred. Please try again.'}
+          {currentError.message || 'An unexpected error occurred. Please try again.'}
         </p>
-        
-        {/* Error details for development */}
-        {process.env.NODE_ENV === 'development' && (
-          <details className="mb-4 w-full max-w-md">
-            <summary className="text-xs text-slate cursor-pointer hover:text-lightest-slate">
-              Technical Details (Development)
-            </summary>
-            <div className="mt-2 p-3 bg-deep-navy rounded text-xs text-slate font-mono overflow-auto">
-              <div><strong>Error Code:</strong> {listingsError.code || 'Unknown'}</div>
-              <div><strong>Message:</strong> {listingsError.message}</div>
-              {listingsError.context && (
-                <div><strong>Context:</strong> {JSON.stringify(listingsError.context, null, 2)}</div>
-              )}
-            </div>
-          </details>
-        )}
-        
-        <div className="flex gap-2">
-          <Button onClick={refetchListings} className="bg-green text-deep-navy hover:bg-green/90">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-          {isAuthError && (
-            <Button 
-              onClick={() => navigate('/login')} 
-              variant="outline"
-              className="border-green text-green hover:bg-green/10"
-            >
-              Go to Login
-            </Button>
-          )}
-        </div>
+        <Button onClick={currentRefetch} className="bg-green text-deep-navy hover:bg-green/90">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -325,58 +301,108 @@ const SoldListingsEnhanced = () => {
       className="space-y-6"
     >
       <Helmet>
-        <title>Sold Properties | Sold2Move</title>
-        <meta name="description" content="View recently sold properties to identify high-potential moving leads." />
+        <title>Property Listings | Sold2Move</title>
+        <meta name="description" content="Browse just listed and recently sold properties to find moving leads." />
       </Helmet>
 
-      {/* Enhanced Header */}
+      {/* Enhanced Header with Tabs */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+        className="space-y-4"
       >
-        <div>
-          <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
-            <CheckCircle className="h-6 w-6 text-green" />
-            Recently Sold Properties
-            {filters.city_name && filters.city_name.length > 0 && (
-              <span className="text-slate font-normal flex items-center gap-1">
-                in{' '}
-                <CitySelector
-                  currentCity={filters.city_name[0]}
-                  onCityChange={handleCityChange}
-                  selectedCities={filters.city_name}
-                  onCitiesChange={handleCitiesChange}
-                  variant="minimal"
-                  className="inline-block"
-                  showMultiCityOption={true}
-                />
-                {filters.city_name.length > 1 && (
-                  <span className="text-green text-sm ml-1">
-                    +{filters.city_name.length - 1} more
-                  </span>
-                )}
-              </span>
-            )}
-          </h2>
-          <p className="text-slate mt-1">
-            Identify high-potential moving leads from recent sales.
-            {filters.city_name && filters.city_name.length > 1 && (
-              <span className="text-green text-sm ml-2">
-                Showing listings from {filters.city_name.length} cities
-              </span>
-            )}
-          </p>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
+              {activeTab === 'just-listed' ? (
+                <>
+                  <Building className="h-6 w-6 text-green" />
+                  Just Listed Properties
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-6 w-6 text-green" />
+                  Recently Sold Properties
+                </>
+              )}
+              {filters.city_name && filters.city_name.length > 0 && (
+                <span className="text-slate font-normal flex items-center gap-1">
+                  in{' '}
+                  <CitySelector
+                    currentCity={filters.city_name[0]}
+                    onCityChange={handleCityChange}
+                    selectedCities={filters.city_name}
+                    onCitiesChange={handleCitiesChange}
+                    variant="minimal"
+                    className="inline-block"
+                    showMultiCityOption={true}
+                  />
+                  {filters.city_name.length > 1 && (
+                    <span className="text-green text-sm ml-1">
+                      +{filters.city_name.length - 1} more
+                    </span>
+                  )}
+                </span>
+              )}
+            </h2>
+            <p className="text-slate mt-1">
+              {activeTab === 'just-listed' 
+                ? 'Find new listings that might be moving leads.'
+                : 'Identify high-potential moving leads from recent sales.'
+              }
+              {filters.city_name && filters.city_name.length > 1 && (
+                <span className="text-green text-sm ml-2">
+                  Showing listings from {filters.city_name.length} cities
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleExport}
+              disabled={sortedListings.length === 0}
+              variant="outline"
+              className="border-green text-green hover:bg-green/10"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export ({sortedListings.length})
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        {/* Tab Navigation */}
+        <div className="flex gap-1 p-1 bg-light-navy rounded-lg w-fit">
           <Button
-            onClick={handleExport}
-            disabled={sortedListings.length === 0}
-            variant="outline"
-            className="border-green text-green hover:bg-green/10"
+            onClick={() => handleTabChange('just-listed')}
+            variant={activeTab === 'just-listed' ? 'default' : 'ghost'}
+            className={activeTab === 'just-listed' 
+              ? 'bg-green text-deep-navy hover:bg-green/90' 
+              : 'text-slate hover:text-lightest-slate hover:bg-lightest-navy/30'
+            }
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export ({sortedListings.length})
+            <Building className="h-4 w-4 mr-2" />
+            Just Listed
+            {justListedData?.count && (
+              <Badge variant="secondary" className="ml-2">
+                {justListedData.count}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            onClick={() => handleTabChange('sold')}
+            variant={activeTab === 'sold' ? 'default' : 'ghost'}
+            className={activeTab === 'sold' 
+              ? 'bg-green text-deep-navy hover:bg-green/90' 
+              : 'text-slate hover:text-lightest-slate hover:bg-lightest-navy/30'
+            }
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Sold
+            {soldListingsData?.count && (
+              <Badge variant="secondary" className="ml-2">
+                {soldListingsData.count}
+              </Badge>
+            )}
           </Button>
         </div>
       </motion.div>
@@ -424,7 +450,7 @@ const SoldListingsEnhanced = () => {
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="date">Date Sold</SelectItem>
+              <SelectItem value="date">Date {activeTab === 'just-listed' ? 'Listed' : 'Sold'}</SelectItem>
               <SelectItem value="price">Price</SelectItem>
               <SelectItem value="beds">Bedrooms</SelectItem>
               <SelectItem value="area">Square Footage</SelectItem>
@@ -456,26 +482,36 @@ const SoldListingsEnhanced = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Sold Properties
+                {activeTab === 'just-listed' ? (
+                  <Building className="h-5 w-5" />
+                ) : (
+                  <CheckCircle className="h-5 w-5" />
+                )}
+                {activeTab === 'just-listed' ? 'Just Listed Properties' : 'Sold Properties'}
                 <Badge variant="secondary" className="ml-2">
                   {sortedListings.length} results
                 </Badge>
               </div>
               <div className="text-sm text-slate">
-                Page {currentPage} of {listingsData?.totalPages || 1}
+                Page {currentPage} of {currentData?.totalPages || 1}
               </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
             {sortedListings.length === 0 ? (
               <div className="text-center py-12">
-                <CheckCircle className="h-16 w-16 text-slate mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-lightest-slate mb-2">No Sold Properties Found</h3>
+                {activeTab === 'just-listed' ? (
+                  <Building className="h-16 w-16 text-slate mx-auto mb-4" />
+                ) : (
+                  <CheckCircle className="h-16 w-16 text-slate mx-auto mb-4" />
+                )}
+                <h3 className="text-lg font-semibold text-lightest-slate mb-2">
+                  No {activeTab === 'just-listed' ? 'Just Listed' : 'Sold'} Properties Found
+                </h3>
                 <p className="text-slate mb-4">
                   {hasActiveFilters(filters, profile)
-                    ? "No sold properties match your current filters. Try adjusting your search criteria."
-                    : "No sold properties found for your service area. Make sure your service area is set in Settings."
+                    ? "No properties match your current filters. Try adjusting your search criteria."
+                    : "No properties found for your service area. Make sure your service area is set in Settings."
                   }
                 </p>
                 {hasActiveFilters(filters, profile) && (
@@ -498,7 +534,7 @@ const SoldListingsEnhanced = () => {
                       <TableHead className="min-w-[80px]">Beds</TableHead>
                       <TableHead className="min-w-[80px]">Baths</TableHead>
                       <TableHead className="min-w-[100px]">Sq Ft</TableHead>
-                      <TableHead className="min-w-[120px]">Date Sold</TableHead>
+                      <TableHead className="min-w-[120px]">Date {activeTab === 'just-listed' ? 'Listed' : 'Sold'}</TableHead>
                       <TableHead className="min-w-[100px]">Type</TableHead>
                       <TableHead className="min-w-[120px]">Actions</TableHead>
                     </TableRow>
@@ -605,7 +641,7 @@ const SoldListingsEnhanced = () => {
                               variant="outline"
                               className="border-green text-green hover:bg-green/10"
                             >
-                              <CheckCircle className="h-4 w-4 mr-2" />
+                              <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </Button>
                           ) : (
@@ -615,8 +651,8 @@ const SoldListingsEnhanced = () => {
                               size="sm"
                               className="bg-green text-deep-navy hover:bg-green/90"
                             >
-                              <TrendingUp className="h-4 w-4 mr-2" />
-                              Reveal (2)
+                              <Lock className="h-4 w-4 mr-2" />
+                              Reveal ({activeTab === 'just-listed' ? '1' : '2'})
                             </Button>
                           )}
                         </TableCell>
@@ -628,14 +664,14 @@ const SoldListingsEnhanced = () => {
             )}
 
             {/* Enhanced Pagination */}
-            {listingsData?.totalPages > 1 && (
+            {currentData?.totalPages > 1 && (
               <div className="mt-6 flex items-center justify-between">
                 <div className="text-sm text-slate">
-                  Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, listingsData.count)} of {listingsData.count} results
+                  Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, currentData.count)} of {currentData.count} results
                 </div>
                 <Pagination
                   currentPage={currentPage}
-                  totalPages={listingsData.totalPages}
+                  totalPages={currentData.totalPages}
                   onPageChange={handlePageChange}
                 />
               </div>
@@ -647,4 +683,4 @@ const SoldListingsEnhanced = () => {
   );
 };
 
-export default SoldListingsEnhanced;
+export default UnifiedListings;

@@ -208,8 +208,8 @@ const PostAuthPage = () => {
         console.log('Redirecting to dashboard:', from);
         navigate(from, { replace: true });
       } else {
-        console.log('Redirecting to onboarding');
-        navigate('/onboarding', { replace: true });
+        console.log('Redirecting to welcome page');
+        navigate('/welcome', { replace: true });
       }
     }
   }, [profile, profileLoading, navigate, location.state]);

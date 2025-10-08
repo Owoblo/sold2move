@@ -57,7 +57,7 @@ const JustListed = () => {
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
-    city_name: profile?.service_cities || (profile?.city_name ? [profile.city_name] : []),
+    city_name: [],
     searchTerm: '',
     minPrice: null,
     maxPrice: null,
@@ -77,7 +77,7 @@ const JustListed = () => {
 
   // Update filters when profile changes
   useEffect(() => {
-    if (profile?.service_cities) {
+    if (profile?.service_cities && profile.service_cities.length > 0) {
       setFilters(prev => ({ ...prev, city_name: profile.service_cities }));
     } else if (profile?.city_name) {
       setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));

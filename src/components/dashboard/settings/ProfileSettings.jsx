@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Combobox } from '@/components/ui/combobox';
+import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
 import { Country, State, City } from 'country-state-city';
 import LoadingButton from '@/components/ui/LoadingButton';
@@ -26,7 +27,8 @@ const ProfileSettings = () => {
       business_email: '',
       country_code: '',
       state_code: '',
-      city_name: ''
+      city_name: '',
+      service_cities: []
     },
   });
 
@@ -49,7 +51,8 @@ const ProfileSettings = () => {
         business_email: profile.business_email || session?.user?.email || '',
         country_code: profile.country_code || '',
         state_code: profile.state_code || '',
-        city_name: profile.city_name || ''
+        city_name: profile.city_name || '',
+        service_cities: profile.service_cities || []
       });
     }
   }, [profile, session, form]);
@@ -175,6 +178,32 @@ const ProfileSettings = () => {
                     <FormLabel>City</FormLabel>
                     <FormControl>
                       <Combobox options={cities} value={field.value} onChange={field.onChange} placeholder="Select city" disabled={!stateCode} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="md:col-span-2 border-t border-lightest-navy/20 pt-6 mt-2">
+              <p className="text-lg font-semibold text-lightest-slate mb-2">Service Areas</p>
+              <p className="text-sm text-slate mb-4">Select multiple cities where you provide services. These are the actual cities from your property database.</p>
+            </div>
+
+            <div className="md:col-span-2">
+              <FormField
+                control={form.control}
+                name="service_cities"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Cities</FormLabel>
+                    <FormControl>
+                      <DatabaseCitySelector
+                        selectedCities={field.value}
+                        onCitiesChange={field.onChange}
+                        placeholder="Select cities where you provide services..."
+                        maxSelections={20}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -43,7 +43,13 @@ export const Combobox = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className={cn(
+            "w-full justify-between transition-all duration-200",
+            "hover:border-green/50 hover:bg-green/5",
+            "focus:border-green focus:ring-2 focus:ring-green/20",
+            open && "border-green ring-2 ring-green/20",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
           disabled={disabled}
         >
           {selectedOption ? selectedOption.label : placeholder}
@@ -65,11 +71,18 @@ export const Combobox = ({
                   key={option.value}
                   value={option.label}
                   onSelect={() => handleSelect(option.value)}
+                  className={cn(
+                    "cursor-pointer transition-all duration-200",
+                    "hover:bg-green/10 hover:text-green",
+                    "active:bg-green/20 active:scale-[0.98]",
+                    "focus:bg-green/10 focus:text-green",
+                    value === option.value && "bg-green/20 text-green font-medium"
+                  )}
                 >
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
-                      value === option.value ? 'opacity-100' : 'opacity-0'
+                      'mr-2 h-4 w-4 transition-opacity duration-200',
+                      value === option.value ? 'opacity-100 text-green' : 'opacity-0'
                     )}
                   />
                   {option.label}

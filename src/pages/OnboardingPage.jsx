@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Combobox } from '@/components/ui/combobox';
+import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Mail, Phone, MapPin, Globe, CheckCircle } from 'lucide-react';
+import { Building, Mail, Phone, MapPin, Globe, CheckCircle, Plus } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import LoadingButton from '@/components/ui/LoadingButton';
 import CongratulationsDialog from '@/components/ui/CongratulationsDialog';
@@ -32,6 +33,7 @@ const OnboardingPage = () => {
       countryCode: 'US',
       stateCode: '',
       cityName: '',
+      serviceCities: [],
     },
   });
 
@@ -58,6 +60,7 @@ const OnboardingPage = () => {
           countryCode: profile.country_code || 'US',
           stateCode: profile.state_code || '',
           cityName: profile.city_name || '',
+          serviceCities: profile.service_cities || [],
         });
       }
     }
@@ -74,6 +77,7 @@ const OnboardingPage = () => {
         country_code: values.countryCode,
         state_code: values.stateCode,
         city_name: values.cityName,
+        service_cities: values.serviceCities,
         onboarding_complete: true,
         updated_at: new Date(),
       };
@@ -205,6 +209,33 @@ const OnboardingPage = () => {
                     )}
                   />
                 </div>
+                
+                {/* Service Cities Selection */}
+                <FormField
+                  control={form.control}
+                  name="serviceCities"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Plus className="h-4 w-4 text-green" />
+                        Service Areas (Cities from your listings)
+                      </FormLabel>
+                      <FormControl>
+                        <DatabaseCitySelector
+                          selectedCities={field.value}
+                          onCitiesChange={field.onChange}
+                          placeholder="Select cities where you provide services..."
+                          maxSelections={10}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                      <p className="text-sm text-slate">
+                        Select the cities where you want to see listings and provide moving services. 
+                        These are the actual cities from your property database.
+                      </p>
+                    </FormItem>
+                  )}
+                />
                 <CardFooter className="p-0 pt-6">
                   <LoadingButton type="submit" className="w-full bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting}>
                     Complete Setup & Enter Dashboard

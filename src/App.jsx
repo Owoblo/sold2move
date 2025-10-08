@@ -22,14 +22,17 @@ const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
 const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
+const WelcomePage = lazy(() => import('@/pages/WelcomePage'));
+const ComponentTestPage = lazy(() => import('@/pages/ComponentTestPage'));
+const BillingTestPage = lazy(() => import('@/pages/BillingTestPage'));
 const ProtectedRoute = lazy(() => import('@/components/layout/ProtectedRoute'));
 const PublicRoute = lazy(() => import('@/components/layout/PublicRoute'));
 const DashboardLayout = lazy(() => import('@/components/dashboard/layout/DashboardLayout'));
-const DashboardPage = lazy(() => import('@/pages/DashboardEnhanced'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const AccountHub = lazy(() => import('@/components/dashboard/pages/AccountHub'));
 const Orders = lazy(() => import('@/components/dashboard/pages/Orders'));
 const SupportTicket = lazy(() => import('@/components/dashboard/pages/SupportTicket'));
-const Billing = lazy(() => import('@/components/dashboard/pages/Billing'));
+const Billing = lazy(() => import('@/components/dashboard/pages/BillingLive'));
 const MailingAssets = lazy(() => import('@/components/dashboard/pages/MailingAssets'));
 const Products = lazy(() => import('@/components/dashboard/pages/Products'));
 const Listings = lazy(() => import('@/components/dashboard/pages/Listings'));
@@ -101,6 +104,30 @@ function App() {
                 
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/post-auth" element={<PostAuthPage />} />
+        <Route 
+          path="/welcome"
+          element={
+            <ProtectedRoute>
+              <WelcomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/test-components"
+          element={
+            <ProtectedRoute>
+              <ComponentTestPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/test-billing"
+          element={
+            <ProtectedRoute>
+              <BillingTestPage />
+            </ProtectedRoute>
+          }
+        />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/success" element={<Success />} />
                 <Route path="/health" element={<HealthCheck />} />
@@ -150,16 +177,21 @@ function App() {
       {!isDashboardRoute && <Footer />}
       <ShadToaster />
       
-      {/* Onboarding Components */}
-      <WelcomeMessage 
-        onStartTour={startTour}
-        onDismiss={skipTour}
-      />
-      <OnboardingTour
-        isOpen={showTour}
-        onComplete={completeTour}
-        onSkip={skipTour}
-      />
+      {/* Onboarding Components - Only show for authenticated users */}
+      {session && (
+        <>
+          <WelcomeMessage 
+            onStartTour={startTour}
+            onDismiss={skipTour}
+            showWelcomeMessage={showWelcomeMessage}
+          />
+          <OnboardingTour
+            isOpen={showTour}
+            onComplete={completeTour}
+            onSkip={skipTour}
+          />
+        </>
+      )}
     </div>
   );
 }
