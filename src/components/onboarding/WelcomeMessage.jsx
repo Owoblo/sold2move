@@ -5,8 +5,12 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Zap, ArrowRight } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile.jsx';
 
-const WelcomeMessage = ({ onStartTour, onDismiss }) => {
+const WelcomeMessage = ({ onStartTour, onDismiss, showWelcomeMessage }) => {
   const { profile } = useProfile();
+
+  if (!showWelcomeMessage) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -57,7 +61,7 @@ const WelcomeMessage = ({ onStartTour, onDismiss }) => {
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Zap className="h-5 w-5 text-green" />
-                <span className="font-semibold text-lightest-slate">You have 100 free credits!</span>
+                <span className="font-semibold text-lightest-slate">You have {profile?.credits_remaining || 100} free credits!</span>
               </div>
               <p className="text-sm text-slate">
                 Each property reveal costs 1-2 credits. That's enough to reveal 50-100 properties to get you started.

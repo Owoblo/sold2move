@@ -9,26 +9,23 @@ export const useOnboarding = () => {
 
   useEffect(() => {
     if (profile) {
-      // Check if user is new (just completed onboarding)
-      const isNewUser = profile.onboarding_complete && !profile.tour_completed;
+      // Check if user is new (hasn't completed onboarding yet)
+      const isNewUser = !profile.onboarding_complete;
       
-      // Check if user has never seen the tour
-      const hasNeverSeenTour = !localStorage.getItem('sold2move_tour_completed');
+      // Check if user has never seen the welcome message
+      const hasNeverSeenWelcome = !localStorage.getItem('sold2move_welcome_seen');
       
-      // Show tour for new users or users who haven't seen it
-      if (isNewUser || hasNeverSeenTour) {
+      // Only show welcome message for new users who haven't seen it
+      if (isNewUser && hasNeverSeenWelcome) {
         setShowWelcomeMessage(true);
-        // Show tour after a short delay to let the welcome message show
-        setTimeout(() => {
-          setShowWelcomeMessage(false);
-          setShowTour(true);
-        }, 2000);
       }
     }
   }, [profile]);
 
   const startTour = () => {
+    setShowWelcomeMessage(false);
     setShowTour(true);
+    localStorage.setItem('sold2move_welcome_seen', 'true');
   };
 
   const completeTour = () => {
@@ -46,8 +43,10 @@ export const useOnboarding = () => {
 
   const skipTour = () => {
     setShowTour(false);
+    setShowWelcomeMessage(false);
     setHasCompletedTour(true);
     localStorage.setItem('sold2move_tour_completed', 'true');
+    localStorage.setItem('sold2move_welcome_seen', 'true');
   };
 
   const resetTour = () => {
