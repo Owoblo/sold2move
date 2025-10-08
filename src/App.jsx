@@ -43,7 +43,7 @@ const SampleMailers = lazy(() => import('@/components/dashboard/pages/SampleMail
 const VideoTutorials = lazy(() => import('@/components/dashboard/pages/VideoTutorials'));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'));
 const HealthCheck = lazy(() => import('@/pages/HealthCheck'));
-const OnboardingPage = lazy(() => import('@/pages/OnboardingEnhanced'));
+const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
 const SettingsPage = lazy(() => import('@/components/dashboard/pages/SettingsPage'));
 const PostAuthPage = lazy(() => import('@/pages/PostAuthPage'));
 const PaymentSuccess = lazy(() => import('@/pages/PaymentSuccess'));
