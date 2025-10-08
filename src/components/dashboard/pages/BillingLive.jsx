@@ -17,7 +17,7 @@ const pricingPlans = [
   {
     id: 'starter_monthly',
     name: 'Starter',
-    price: '$49',
+    price: '$49 CAD',
     interval: 'month',
     features: ['500 credits/month', 'Basic filters', 'Email support'],
     stripePriceId: 'price_1SFrRDCUfCzyitr0gM80TZwJ', // Real Stripe price ID
@@ -27,7 +27,7 @@ const pricingPlans = [
   {
     id: 'professional_monthly',
     name: 'Professional',
-    price: '$99',
+    price: '$99 CAD',
     interval: 'month',
     features: ['2000 credits/month', 'Advanced filters', 'Priority support', 'CRM integration'],
     stripePriceId: 'price_1SFrRECUfCzyitr0ONdOzHLp', // Real Stripe price ID
@@ -37,7 +37,7 @@ const pricingPlans = [
   {
     id: 'enterprise_monthly',
     name: 'Enterprise',
-    price: '$299',
+    price: '$299 CAD',
     interval: 'month',
     features: ['Unlimited credits', 'All features', 'Dedicated account manager', 'Custom integrations'],
     stripePriceId: 'price_1SFrRGCUfCzyitr0Jrm1ui5K', // Real Stripe price ID
@@ -47,10 +47,10 @@ const pricingPlans = [
 ];
 
 const creditPackages = [
-  { id: 'credit_pack_100', name: '100 Credits', price: '$20', credits: 100, savings: '0%', stripePriceId: 'price_1SFrRtCUfCzyitr0ftw8x63q' },
-  { id: 'credit_pack_500', name: '500 Credits', price: '$80', credits: 500, savings: '20%', stripePriceId: 'price_1SFrRtCUfCzyitr0Wg2k0Cx9' },
-  { id: 'credit_pack_1000', name: '1000 Credits', price: '$140', credits: 1000, savings: '30%', stripePriceId: 'price_1SFrRuCUfCzyitr0aXuAPESw' },
-  { id: 'credit_pack_2500', name: '2500 Credits', price: '$300', credits: 2500, savings: '40%', stripePriceId: 'price_1SFrRuCUfCzyitr0gtxAJWJ6' },
+  { id: 'credit_pack_100', name: '100 Credits', price: '$20 CAD', credits: 100, savings: '0%', stripePriceId: 'price_1SFrRtCUfCzyitr0ftw8x63q' },
+  { id: 'credit_pack_500', name: '500 Credits', price: '$80 CAD', credits: 500, savings: '20%', stripePriceId: 'price_1SFrRtCUfCzyitr0Wg2k0Cx9' },
+  { id: 'credit_pack_1000', name: '1000 Credits', price: '$140 CAD', credits: 1000, savings: '30%', stripePriceId: 'price_1SFrRuCUfCzyitr0aXuAPESw' },
+  { id: 'credit_pack_2500', name: '2500 Credits', price: '$300 CAD', credits: 2500, savings: '40%', stripePriceId: 'price_1SFrRuCUfCzyitr0gtxAJWJ6' },
 ];
 
 const BillingLive = () => {

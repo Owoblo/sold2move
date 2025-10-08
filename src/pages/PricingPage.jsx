@@ -32,8 +32,8 @@ const pricingPlans = [
     title: 'Starter',
     description: 'Perfect for small operators who just need steady leads.',
     prices: {
-      monthly: { id: 'price_1SFrRDCUfCzyitr0gM80TZwJ', amount: 49, interval: '/month', currency: 'USD' },
-      yearly: { id: 'price_1SFrRDCUfCzyitr0gM80TZwJ', amount: 49, interval: '/month', currency: 'USD' },
+      monthly: { id: 'price_1SFrRDCUfCzyitr0gM80TZwJ', amount: 49, interval: '/month', currency: 'CAD' },
+      yearly: { id: 'price_1SFrRDCUfCzyitr0gM80TZwJ', amount: 49, interval: '/month', currency: 'CAD' },
     },
     credits: '500 Credits/month',
     features: ['500 credits monthly', 'CSV export', 'Email alerts', 'Basic filters', 'Email support'],
@@ -45,8 +45,8 @@ const pricingPlans = [
     title: 'Professional',
     description: 'For serious marketers who want to scale their business.',
     prices: {
-      monthly: { id: 'price_1SFrRECUfCzyitr0ONdOzHLp', amount: 99, interval: '/month', currency: 'USD' },
-      yearly: { id: 'price_1SFrRECUfCzyitr0ONdOzHLp', amount: 99, interval: '/month', currency: 'USD' },
+      monthly: { id: 'price_1SFrRECUfCzyitr0ONdOzHLp', amount: 99, interval: '/month', currency: 'CAD' },
+      yearly: { id: 'price_1SFrRECUfCzyitr0ONdOzHLp', amount: 99, interval: '/month', currency: 'CAD' },
     },
     credits: '2000 Credits/month',
     features: ['2000 credits monthly', 'Advanced filters', 'Priority support', 'CRM integration', 'Extra credits available'],
@@ -58,8 +58,8 @@ const pricingPlans = [
     title: 'Enterprise',
     description: 'For large teams and franchises that need it all.',
     prices: {
-      monthly: { id: 'price_1SFrRGCUfCzyitr0Jrm1ui5K', amount: 299, interval: '/month', currency: 'USD' },
-      yearly: { id: 'price_1SFrRGCUfCzyitr0Jrm1ui5K', amount: 299, interval: '/month', currency: 'USD' },
+      monthly: { id: 'price_1SFrRGCUfCzyitr0Jrm1ui5K', amount: 299, interval: '/month', currency: 'CAD' },
+      yearly: { id: 'price_1SFrRGCUfCzyitr0Jrm1ui5K', amount: 299, interval: '/month', currency: 'CAD' },
     },
     credits: 'Unlimited Credits',
     features: ['Unlimited credits', 'All features', 'Dedicated account manager', 'Custom integrations', 'API access'],
@@ -76,7 +76,7 @@ const topUpPacks = [
         price: 20,
         priceId: 'price_1SFrRtCUfCzyitr0ftw8x63q',
         description: "Perfect for trying out extra features",
-        currency: 'USD'
+        currency: 'CAD'
     },
     {
         name: '500 Credits',
@@ -84,7 +84,7 @@ const topUpPacks = [
         price: 80,
         priceId: 'price_1SFrRtCUfCzyitr0Wg2k0Cx9',
         description: "Great for regular users",
-        currency: 'USD',
+        currency: 'CAD',
         popular: true
     },
     {
@@ -93,7 +93,7 @@ const topUpPacks = [
         price: 140,
         priceId: 'price_1SFrRuCUfCzyitr0aXuAPESw',
         description: "Best value for power users",
-        currency: 'USD'
+        currency: 'CAD'
     },
     {
         name: '2500 Credits',
@@ -101,7 +101,7 @@ const topUpPacks = [
         price: 300,
         priceId: 'price_1SFrRuCUfCzyitr0gtxAJWJ6',
         description: "Maximum value for high-volume users",
-        currency: 'USD'
+        currency: 'CAD'
     }
 ];
 
