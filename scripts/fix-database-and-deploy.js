@@ -4,9 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 // Initialize clients
-const supabaseUrl = 'https://idbyrtwdeeruiutoukct.supabase.co';
-const supabaseServiceKey = '[YOUR_SUPABASE_SERVICE_ROLE_KEY]';
-const stripeSecretKey = '[YOUR_STRIPE_SECRET_KEY]';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://idbyrtwdeeruiutoukct.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
