@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || 'https://idbyrtwdeeruiutoukct.supabase.co';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -208,6 +208,11 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Unexpected error in create-checkout-session:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     return new Response(JSON.stringify({
       error: 'Internal server error',
       details: error.message,

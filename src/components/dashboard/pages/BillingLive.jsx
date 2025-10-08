@@ -59,6 +59,7 @@ const BillingLive = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingPackageId, setLoadingPackageId] = useState(null);
   const [stripeConfig, setStripeConfig] = useState(null);
 
   // Check Stripe configuration
@@ -89,16 +90,27 @@ const BillingLive = () => {
   }, []);
 
   const handleCheckout = async (priceId, mode = 'subscription') => {
+    setLoadingPackageId(priceId);
     setIsSubmitting(true);
     try {
+      console.log('Creating checkout session for:', { priceId, mode });
+      
       const { data, error } = await supabase.functions.invoke('create-checkout-session-fixed', {
         body: JSON.stringify({ priceId, mode }),
       });
 
+      console.log('Checkout session response:', { data, error });
+
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
+      if (!data.sessionId) {
+        throw new Error('No session ID returned from checkout function');
+      }
+
       const stripe = await getStripe();
+      console.log('Redirecting to Stripe checkout with session:', data.sessionId);
+      
       const { error: stripeError } = await stripe.redirectToCheckout({
         sessionId: data.sessionId,
       });
@@ -113,6 +125,7 @@ const BillingLive = () => {
       });
     } finally {
       setIsSubmitting(false);
+      setLoadingPackageId(null);
     }
   };
 
@@ -318,10 +331,10 @@ const BillingLive = () => {
                   ) : (
                     <Button
                       onClick={() => handleCheckout(plan.stripePriceId, 'subscription')}
-                      disabled={isSubmitting}
+                      disabled={loadingPackageId === plan.stripePriceId}
                       className="w-full bg-green text-deep-navy hover:bg-green/90"
                     >
-                      {isSubmitting ? 'Processing...' : `Upgrade to ${plan.name}`} <ArrowRight className="h-4 w-4 ml-2" />
+                      {loadingPackageId === plan.stripePriceId ? 'Processing...' : `Upgrade to ${plan.name}`} <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   )}
                 </CardFooter>
@@ -358,10 +371,10 @@ const BillingLive = () => {
                 <CardFooter className="pt-4">
                   <Button
                     onClick={() => handleCheckout(pack.stripePriceId, 'payment')}
-                    disabled={isSubmitting}
+                    disabled={loadingPackageId === pack.stripePriceId}
                     className="w-full bg-yellow-400 text-deep-navy hover:bg-yellow-400/90"
                   >
-                    {isSubmitting ? 'Processing...' : 'Buy Now'} <ArrowRight className="h-4 w-4 ml-2" />
+                    {loadingPackageId === pack.stripePriceId ? 'Processing...' : 'Buy Now'} <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardFooter>
               </Card>
