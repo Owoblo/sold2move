@@ -1,37 +1,59 @@
 import { useState, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile.jsx';
+import { useSession } from '@supabase/auth-helpers-react';
 
 export const useOnboarding = () => {
+  const session = useSession();
   const { profile } = useProfile();
   const [showTour, setShowTour] = useState(false);
   const [hasCompletedTour, setHasCompletedTour] = useState(false);
   const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
 
   useEffect(() => {
-    if (profile) {
+    // Only proceed if user is authenticated AND has a profile
+    if (session?.user && profile) {
       // Check if user is new (hasn't completed onboarding yet)
       const isNewUser = !profile.onboarding_complete;
       
-      // Check if user has never seen the welcome message
-      const hasNeverSeenWelcome = !localStorage.getItem('sold2move_welcome_seen');
+      // Check if user has never seen the welcome message for THIS specific user
+      const userWelcomeKey = `sold2move_welcome_seen_${session.user.id}`;
+      const hasNeverSeenWelcome = !localStorage.getItem(userWelcomeKey);
       
-      // Only show welcome message for new users who haven't seen it
+      // Only show welcome message for authenticated new users who haven't seen it
       if (isNewUser && hasNeverSeenWelcome) {
         setShowWelcomeMessage(true);
       }
+    } else {
+      // Reset states when user is not authenticated
+      setShowWelcomeMessage(false);
+      setShowTour(false);
+      
+      // Clean up any old localStorage entries that might cause issues
+      // This ensures the welcome modal doesn't show for unauthenticated users
+      if (!session?.user) {
+        // Remove old global keys that might be causing the issue
+        localStorage.removeItem('sold2move_welcome_seen');
+        localStorage.removeItem('sold2move_tour_completed');
+      }
     }
-  }, [profile]);
+  }, [session, profile]);
 
   const startTour = () => {
     setShowWelcomeMessage(false);
     setShowTour(true);
-    localStorage.setItem('sold2move_welcome_seen', 'true');
+    if (session?.user) {
+      const userWelcomeKey = `sold2move_welcome_seen_${session.user.id}`;
+      localStorage.setItem(userWelcomeKey, 'true');
+    }
   };
 
   const completeTour = () => {
     setShowTour(false);
     setHasCompletedTour(true);
-    localStorage.setItem('sold2move_tour_completed', 'true');
+    if (session?.user) {
+      const userTourKey = `sold2move_tour_completed_${session.user.id}`;
+      localStorage.setItem(userTourKey, 'true');
+    }
     
     // Update profile to mark tour as completed
     // This would typically be done via an API call
@@ -45,14 +67,24 @@ export const useOnboarding = () => {
     setShowTour(false);
     setShowWelcomeMessage(false);
     setHasCompletedTour(true);
-    localStorage.setItem('sold2move_tour_completed', 'true');
-    localStorage.setItem('sold2move_welcome_seen', 'true');
+    if (session?.user) {
+      const userTourKey = `sold2move_tour_completed_${session.user.id}`;
+      const userWelcomeKey = `sold2move_welcome_seen_${session.user.id}`;
+      localStorage.setItem(userTourKey, 'true');
+      localStorage.setItem(userWelcomeKey, 'true');
+    }
   };
 
   const resetTour = () => {
-    localStorage.removeItem('sold2move_tour_completed');
+    if (session?.user) {
+      const userTourKey = `sold2move_tour_completed_${session.user.id}`;
+      const userWelcomeKey = `sold2move_welcome_seen_${session.user.id}`;
+      localStorage.removeItem(userTourKey);
+      localStorage.removeItem(userWelcomeKey);
+    }
     setHasCompletedTour(false);
     setShowTour(false);
+    setShowWelcomeMessage(false);
   };
 
   return {
