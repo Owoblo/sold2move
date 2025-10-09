@@ -83,7 +83,7 @@ const AuthErrorDisplay = ({ error, onRetry, onGoBack, isRetrying = false }) => {
           <Button
             onClick={onRetry}
             disabled={isRetrying}
-            className="w-full bg-green text-deep-navy hover:bg-green/90"
+            className="w-full bg-teal text-deep-navy hover:bg-teal/90"
           >
             {isRetrying ? (
               <>
@@ -115,7 +115,7 @@ const AuthErrorDisplay = ({ error, onRetry, onGoBack, isRetrying = false }) => {
             Still having trouble?{' '}
             <a 
               href="mailto:support@sold2move.com" 
-              className="text-green hover:underline"
+              className="text-teal hover:underline"
             >
               Contact Support
             </a>

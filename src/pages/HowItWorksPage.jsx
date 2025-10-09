@@ -6,27 +6,27 @@ import { MapPin, Filter, Database, Mail, BarChart } from 'lucide-react';
 const HowItWorksPage = () => {
   const steps = [
     {
-      icon: <MapPin className="h-10 w-10 text-green" />,
+      icon: <MapPin className="h-10 w-10 text-teal" />,
       title: 'Step 1: Define Your Territory',
       description: 'Select the cities, zip codes, or counties where you operate. Our platform covers the entire US and Canada.',
     },
     {
-      icon: <Filter className="h-10 w-10 text-green" />,
+      icon: <Filter className="h-10 w-10 text-teal" />,
       title: 'Step 2: Set Your Filters',
       description: 'Narrow down your leads by property type, sale price, and date of sale to find your ideal customers.',
     },
     {
-      icon: <Database className="h-10 w-10 text-green" />,
+      icon: <Database className="h-10 w-10 text-teal" />,
       title: 'Step 3: Get Real-Time Leads',
       description: 'As soon as a home is sold in your territory, the lead appears in your dashboard. No more waiting for outdated lists.',
     },
     {
-      icon: <Mail className="h-10 w-10 text-green" />,
+      icon: <Mail className="h-10 w-10 text-teal" />,
       title: 'Step 4: Launch Direct Mail Campaigns',
       description: 'With one click, generate and send professionally designed postcards or letters to your new leads.',
     },
     {
-      icon: <BarChart className="h-10 w-10 text-green" />,
+      icon: <BarChart className="h-10 w-10 text-teal" />,
       title: 'Step 5: Track and Optimize',
       description: 'Use our built-in analytics to monitor your campaign performance, track your ROI, and refine your strategy.',
     },
@@ -68,7 +68,7 @@ const HowItWorksPage = () => {
                 </div>
               </div>
               <div className="hidden md:flex w-1/2 items-center justify-center">
-                <div className="w-6 h-6 bg-green rounded-full z-10"></div>
+                <div className="w-6 h-6 bg-teal rounded-full z-10"></div>
               </div>
             </motion.div>
           ))}

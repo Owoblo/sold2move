@@ -5,7 +5,7 @@ const toast = {
     shadToast({
       title: title,
       description: description,
-      className: 'bg-green text-deep-navy border-green',
+      className: 'bg-teal text-deep-navy border-teal',
     });
   },
   error: (title, description) => {

@@ -29,7 +29,7 @@ const TermsPage = () => {
             <p>We may terminate or suspend your account and bar access to the service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever and without limitation, including but not limited to a breach of the Terms.</p>
 
             <h2 className="text-2xl font-semibold text-light-slate pt-4 font-heading">6. Contact Us</h2>
-            <p>If you have any questions about these Terms, please contact us at <a href="mailto:legal@sold2move.com" className="text-green hover:underline">legal@sold2move.com</a>.</p>
+            <p>If you have any questions about these Terms, please contact us at <a href="mailto:legal@sold2move.com" className="text-teal hover:underline">legal@sold2move.com</a>.</p>
           </div>
         </div>
       </div>

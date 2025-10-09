@@ -124,7 +124,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
       return {
         status: 'unlimited',
         message: 'Unlimited Credits',
-        color: 'text-green',
+        color: 'text-teal',
         icon: CheckCircle,
         progress: 100
       };
@@ -163,7 +163,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
     return {
       status: 'good',
       message: 'Plenty of Credits',
-      color: 'text-green',
+      color: 'text-teal',
       icon: CheckCircle,
       progress: (currentCredits / maxCredits) * 100
     };
@@ -226,7 +226,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold text-lightest-slate flex items-center gap-2">
-            <Zap className="h-5 w-5 text-green" />
+            <Zap className="h-5 w-5 text-teal" />
             Credit Management
           </h3>
           <p className="text-slate text-sm">
@@ -235,7 +235,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
         </div>
         <Button
           onClick={() => setShowTopUpModal(true)}
-          className="bg-green text-deep-navy hover:bg-green/90"
+          className="bg-teal text-deep-navy hover:bg-teal/90"
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
           Buy Credits
@@ -312,7 +312,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
                           ? 'text-red-400' 
                           : usageProjection.daysRemaining && usageProjection.daysRemaining <= 7
                           ? 'text-amber-400'
-                          : 'text-green'
+                          : 'text-teal'
                       }`}>
                         {usageProjection.daysRemaining ? `${usageProjection.daysRemaining} days` : 'N/A'}
                       </p>
@@ -334,8 +334,8 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
       >
         <Card className="bg-deep-navy/30 border-lightest-navy/20 hover:bg-deep-navy/50 transition-colors cursor-pointer">
           <CardContent className="p-4 text-center">
-            <div className="p-2 bg-green/10 rounded-lg w-fit mx-auto mb-2">
-              <Gift className="h-5 w-5 text-green" />
+            <div className="p-2 bg-teal/10 rounded-lg w-fit mx-auto mb-2">
+              <Gift className="h-5 w-5 text-teal" />
             </div>
             <p className="text-sm text-slate">Free Trial</p>
             <p className="text-xs text-slate">Get 100 free credits</p>
@@ -382,7 +382,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
         <Card className="bg-light-navy border-lightest-navy/20">
           <CardHeader>
             <CardTitle className="text-lg text-lightest-slate flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-green" />
+              <Calendar className="h-5 w-5 text-teal" />
               Recent Transactions
             </CardTitle>
           </CardHeader>
@@ -409,12 +409,12 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        transaction.type === 'purchased' ? 'bg-green/10' :
+                        transaction.type === 'purchased' ? 'bg-teal/10' :
                         transaction.type === 'used' ? 'bg-amber-400/10' :
                         'bg-blue-400/10'
                       }`}>
                         {transaction.type === 'purchased' ? (
-                          <ShoppingCart className="h-4 w-4 text-green" />
+                          <ShoppingCart className="h-4 w-4 text-teal" />
                         ) : transaction.type === 'used' ? (
                           <Zap className="h-4 w-4 text-amber-400" />
                         ) : (
@@ -432,7 +432,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-semibold ${
-                        transaction.type === 'purchased' ? 'text-green' :
+                        transaction.type === 'purchased' ? 'text-teal' :
                         transaction.type === 'used' ? 'text-amber-400' :
                         'text-blue-400'
                       }`}>
@@ -453,7 +453,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
         <DialogContent className="max-w-2xl bg-light-navy border-lightest-navy/20">
           <DialogHeader>
             <DialogTitle className="text-lightest-slate flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-green" />
+              <ShoppingCart className="h-5 w-5 text-teal" />
               Buy Credits
             </DialogTitle>
             <DialogDescription className="text-slate">
@@ -470,20 +470,20 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
               >
                 <Card className={`cursor-pointer transition-all duration-200 ${
                   selectedTopUpAmount?.amount === option.amount 
-                    ? 'bg-green/10 border-green/50' 
+                    ? 'bg-teal/10 border-teal/50' 
                     : 'bg-deep-navy/30 border-lightest-navy/20 hover:bg-deep-navy/50'
                 }`}>
                   <CardContent className="p-4">
                     <div className="text-center">
                       {option.popular && (
-                        <Badge className="mb-2 bg-green text-deep-navy">
+                        <Badge className="mb-2 bg-teal text-deep-navy">
                           Most Popular
                         </Badge>
                       )}
                       <div className="text-2xl font-bold text-lightest-slate mb-1">
                         {option.credits} Credits
                       </div>
-                      <div className="text-3xl font-bold text-green mb-2">
+                      <div className="text-3xl font-bold text-teal mb-2">
                         ${option.price}
                       </div>
                       <div className="text-sm text-slate mb-4">
@@ -492,7 +492,7 @@ const CreditManagementDashboard = ({ profile, refreshProfile }) => {
                       <Button
                         onClick={() => handleTopUp(option)}
                         disabled={isProcessingTopUp}
-                        className="w-full bg-green text-deep-navy hover:bg-green/90"
+                        className="w-full bg-teal text-deep-navy hover:bg-teal/90"
                       >
                         {isProcessingTopUp ? (
                           <div className="h-4 w-4 animate-spin rounded-full border-2 border-deep-navy border-t-transparent" />

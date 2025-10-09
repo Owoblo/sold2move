@@ -201,7 +201,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={value}>
       {isInitialized ? children : (
         <div className="flex items-center justify-center min-h-screen bg-deep-navy">
-          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal"></div>
         </div>
       )}
     </AuthContext.Provider>

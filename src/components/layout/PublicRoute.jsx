@@ -9,7 +9,7 @@ const PublicRoute = ({ children }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-deep-navy">
-        <Loader2 className="h-8 w-8 animate-spin text-green" />
+        <Loader2 className="h-8 w-8 animate-spin text-teal" />
       </div>
     );
   }

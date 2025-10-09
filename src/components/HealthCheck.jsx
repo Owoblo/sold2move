@@ -125,7 +125,7 @@ const HealthCheck = ({ onStatusChange }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircle className="h-4 w-4 text-green" />;
+        return <CheckCircle className="h-4 w-4 text-teal" />;
       case 'unhealthy':
         return <XCircle className="h-4 w-4 text-red-500" />;
       case 'checking':
@@ -138,7 +138,7 @@ const HealthCheck = ({ onStatusChange }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'healthy':
-        return <Badge className="bg-green text-deep-navy">Healthy</Badge>;
+        return <Badge className="bg-teal text-deep-navy">Healthy</Badge>;
       case 'unhealthy':
         return <Badge variant="destructive">Unhealthy</Badge>;
       case 'checking':

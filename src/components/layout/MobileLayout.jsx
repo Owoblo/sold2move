@@ -81,16 +81,16 @@ const MobileLayout = ({ children }) => {
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-2">
-              <CurrentPageIcon className="h-5 w-5 text-green" />
+              <CurrentPageIcon className="h-5 w-5 text-teal" />
               <h1 className="text-lg font-semibold">{getCurrentPageTitle()}</h1>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             {/* Credits Display */}
-            <div className="flex items-center gap-1 px-2 py-1 bg-green/10 rounded-full">
-              <Zap className="h-4 w-4 text-green" />
-              <span className="text-sm font-medium text-green">
+            <div className="flex items-center gap-1 px-2 py-1 bg-teal/10 rounded-full">
+              <Zap className="h-4 w-4 text-teal" />
+              <span className="text-sm font-medium text-teal">
                 {profile?.unlimited ? '∞' : (profile?.credits_remaining || 0)}
               </span>
             </div>
@@ -152,7 +152,7 @@ const MobileLayout = ({ children }) => {
                 onClick={() => navigate(item.path)}
                 className={`flex flex-col items-center gap-1 p-2 h-auto ${
                   isActive 
-                    ? 'text-green bg-green/10' 
+                    ? 'text-teal bg-teal/10' 
                     : 'text-slate hover:text-lightest-slate'
                 }`}
               >
@@ -199,8 +199,8 @@ const MobileLayout = ({ children }) => {
                 <Card className="bg-deep-navy/30 border-lightest-navy/20 mb-6">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green/10 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-green" />
+                      <div className="w-10 h-10 bg-teal/10 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-teal" />
                       </div>
                       <div>
                         <p className="font-medium text-lightest-slate">
@@ -213,9 +213,9 @@ const MobileLayout = ({ children }) => {
                     </div>
                     <div className="mt-3 flex items-center justify-between">
                       <div className="flex items-center gap-1">
-                        <Zap className="h-4 w-4 text-green" />
+                        <Zap className="h-4 w-4 text-teal" />
                         <span className="text-sm text-slate">Credits:</span>
-                        <span className="text-sm font-medium text-green">
+                        <span className="text-sm font-medium text-teal">
                           {profile?.unlimited ? 'Unlimited' : (profile?.credits_remaining || 0)}
                         </span>
                       </div>
@@ -242,7 +242,7 @@ const MobileLayout = ({ children }) => {
                         }}
                         className={`w-full justify-start gap-3 h-12 ${
                           isActive 
-                            ? 'bg-green/10 text-green border border-green/20' 
+                            ? 'bg-teal/10 text-teal border border-teal/20' 
                             : 'text-lightest-slate hover:bg-lightest-navy/50'
                         }`}
                       >
@@ -309,7 +309,7 @@ const MobileLayout = ({ children }) => {
                   <input
                     type="text"
                     placeholder="Search listings, addresses, or cities..."
-                    className="w-full pl-10 pr-4 py-3 bg-light-navy border border-lightest-navy/20 rounded-lg text-lightest-slate placeholder-slate focus:outline-none focus:ring-2 focus:ring-green/50"
+                    className="w-full pl-10 pr-4 py-3 bg-light-navy border border-lightest-navy/20 rounded-lg text-lightest-slate placeholder-slate focus:outline-none focus:ring-2 focus:ring-teal/50"
                     autoFocus
                   />
                 </div>

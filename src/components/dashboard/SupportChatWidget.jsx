@@ -58,7 +58,7 @@ const SupportChatWidget = () => {
         <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
           <Button
             onClick={toggleOpen}
-            className="rounded-full w-16 h-16 bg-green text-deep-navy shadow-lg hover:bg-green/90"
+            className="rounded-full w-16 h-16 bg-teal text-deep-navy shadow-lg hover:bg-teal/90"
           >
             {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
           </Button>
@@ -92,7 +92,7 @@ const SupportChatWidget = () => {
                   disabled={isSending}
                 />
               </div>
-              <Button type="submit" className="w-full bg-green text-deep-navy hover:bg-green/90" disabled={isSending}>
+              <Button type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" disabled={isSending}>
                 {isSending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

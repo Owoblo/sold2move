@@ -244,7 +244,7 @@ const BillingEnhanced = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'active':
-        return <CheckCircle className="h-4 w-4 text-green" />;
+        return <CheckCircle className="h-4 w-4 text-teal" />;
       case 'canceled':
         return <XCircle className="h-4 w-4 text-red-500" />;
       case 'past_due':
@@ -257,7 +257,7 @@ const BillingEnhanced = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-green/10 text-green border-green/20';
+        return 'bg-teal/10 text-teal border-teal/20';
       case 'canceled':
         return 'bg-red-500/10 text-red-500 border-red-500/20';
       case 'past_due':
@@ -296,7 +296,7 @@ const BillingEnhanced = () => {
           <Button
             onClick={handleManageSubscription}
             variant="outline"
-            className="border-green text-green hover:bg-green/10"
+            className="border-teal text-teal hover:bg-teal/10"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Manage Subscription
@@ -331,7 +331,7 @@ const BillingEnhanced = () => {
               
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-green" />
+                  <Zap className="h-4 w-4 text-teal" />
                   <span className="text-sm font-medium">Credits Remaining</span>
                 </div>
                 <div className="text-2xl font-bold text-lightest-slate">
@@ -373,22 +373,22 @@ const BillingEnhanced = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * index }}
                 >
-                  <Card className={`relative ${plan.popular ? 'ring-2 ring-green' : ''} ${isCurrentPlan ? 'bg-green/5' : ''}`}>
+                  <Card className={`relative ${plan.popular ? 'ring-2 ring-teal' : ''} ${isCurrentPlan ? 'bg-teal/5' : ''}`}>
                     {plan.popular && (
                       <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-green text-deep-navy">Most Popular</Badge>
+                        <Badge className="bg-teal text-deep-navy">Most Popular</Badge>
                       </div>
                     )}
                     {isCurrentPlan && (
                       <div className="absolute -top-3 right-4">
-                        <Badge className="bg-green/20 text-green border-green/30">Current Plan</Badge>
+                        <Badge className="bg-teal/20 text-teal border-teal/30">Current Plan</Badge>
                       </div>
                     )}
                     
                     <CardHeader>
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-light-navy rounded-lg">
-                          <Icon className="h-6 w-6 text-green" />
+                          <Icon className="h-6 w-6 text-teal" />
                         </div>
                         <div>
                           <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -411,7 +411,7 @@ const BillingEnhanced = () => {
                       <div className="space-y-3">
                         {plan.features.map((feature, featureIndex) => (
                           <div key={featureIndex} className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green flex-shrink-0" />
+                            <CheckCircle className="h-4 w-4 text-teal flex-shrink-0" />
                             <span className="text-sm text-lightest-slate">{feature}</span>
                           </div>
                         ))}
@@ -420,7 +420,7 @@ const BillingEnhanced = () => {
                       <Button
                         onClick={() => handleSubscribe(plan.id, 'monthly')}
                         disabled={loading || isCurrentPlan}
-                        className={`w-full ${plan.popular ? 'bg-green text-deep-navy hover:bg-green/90' : ''}`}
+                        className={`w-full ${plan.popular ? 'bg-teal text-deep-navy hover:bg-teal/90' : ''}`}
                         variant={plan.popular ? 'default' : 'outline'}
                       >
                         {isCurrentPlan ? 'Current Plan' : `Start ${plan.name}`}
@@ -464,7 +464,7 @@ const BillingEnhanced = () => {
                       <div className="text-2xl font-bold text-lightest-slate mb-2">
                         {pkg.credits} Credits
                       </div>
-                      <div className="text-3xl font-bold text-green mb-2">
+                      <div className="text-3xl font-bold text-teal mb-2">
                         ${pkg.price}
                       </div>
                       {pkg.savings > 0 && (
@@ -509,7 +509,7 @@ const BillingEnhanced = () => {
                   <div key={index} className="flex items-center justify-between p-4 bg-light-navy rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-lightest-navy/20 rounded-md">
-                        <DollarSign className="h-4 w-4 text-green" />
+                        <DollarSign className="h-4 w-4 text-teal" />
                       </div>
                       <div>
                         <div className="font-medium text-lightest-slate">{item.description}</div>

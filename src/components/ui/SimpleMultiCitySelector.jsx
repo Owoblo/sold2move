@@ -127,12 +127,12 @@ const SimpleMultiCitySelector = ({
     <div className={cn("relative", className)} ref={dropdownRef}>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-green/50 transition-all duration-300 hover:bg-light-navy/30"
+        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-teal/50 transition-all duration-300 hover:bg-light-navy/30"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
       >
         <div className="flex items-center gap-3">
-          <Globe className="h-5 w-5 text-green" />
+          <Globe className="h-5 w-5 text-teal" />
           <span className="text-lightest-slate font-medium">
             {getDisplayText()}
           </span>
@@ -152,7 +152,7 @@ const SimpleMultiCitySelector = ({
             <Badge
               key={city}
               variant="secondary"
-              className="bg-green/20 text-green border-green/30 hover:bg-green/30 transition-colors"
+              className="bg-teal/20 text-teal border-teal/30 hover:bg-teal/30 transition-colors"
             >
               <MapPin className="h-3 w-3 mr-1" />
               {city}
@@ -212,11 +212,11 @@ const SimpleMultiCitySelector = ({
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-                            isGroupFullySelected ? "bg-green border-green" : 
-                            isGroupPartiallySelected ? "bg-green/20 border-green" : "border-slate/40"
+                            isGroupFullySelected ? "bg-teal border-teal" : 
+                            isGroupPartiallySelected ? "bg-teal/20 border-teal" : "border-slate/40"
                           )}>
                             {isGroupFullySelected && <Check className="h-3 w-3 text-white" />}
-                            {isGroupPartiallySelected && <div className="w-2 h-2 bg-green rounded-full" />}
+                            {isGroupPartiallySelected && <div className="w-2 h-2 bg-teal rounded-full" />}
                           </div>
                           <span className="font-semibold text-lightest-slate">{province}</span>
                           <span className="text-sm text-slate">
@@ -246,14 +246,14 @@ const SimpleMultiCitySelector = ({
                                 onClick={() => handleCityToggle(city.name)}
                                 className={cn(
                                   "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left",
-                                  selectedCities.includes(city.name) && "bg-green/10"
+                                  selectedCities.includes(city.name) && "bg-teal/10"
                                 )}
                                 whileHover={{ x: 4 }}
                                 whileTap={{ scale: 0.98 }}
                               >
                                 <div className={cn(
                                   "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-                                  selectedCities.includes(city.name) ? "bg-green border-green" : "border-slate/40"
+                                  selectedCities.includes(city.name) ? "bg-teal border-teal" : "border-slate/40"
                                 )}>
                                   {selectedCities.includes(city.name) && <Check className="h-3 w-3 text-white" />}
                                 </div>
@@ -262,7 +262,7 @@ const SimpleMultiCitySelector = ({
                                   <span className="font-medium text-lightest-slate">
                                     {city.name}
                                   </span>
-                                  <Badge variant="outline" className="text-xs border-green/30 text-green">
+                                  <Badge variant="outline" className="text-xs border-teal/30 text-teal">
                                     Main
                                   </Badge>
                                 </div>
@@ -284,7 +284,7 @@ const SimpleMultiCitySelector = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="border-green text-green hover:bg-green/10"
+                  className="border-teal text-teal hover:bg-teal/10"
                 >
                   Done
                 </Button>

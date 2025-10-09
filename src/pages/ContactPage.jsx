@@ -38,7 +38,7 @@ const ContactPage = () => {
         toast({
           title: '✅ Message Sent!',
           description: "Thanks for reaching out. We'll get back to you shortly.",
-          className: 'bg-green text-deep-navy',
+          className: 'bg-teal text-deep-navy',
         });
         form.reset();
         resolve();
@@ -152,7 +152,7 @@ const ContactPage = () => {
                     </FormItem>
                   )}
                 />
-                <LoadingButton type="submit" size="lg" className="w-full bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting}>
+                <LoadingButton type="submit" size="lg" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting}>
                   Request a Demo
                 </LoadingButton>
               </form>
@@ -167,23 +167,23 @@ const ContactPage = () => {
             className="lg:col-span-2 space-y-8"
           >
             <div className="flex items-start">
-              <Mail className="h-6 w-6 text-green mt-1 mr-4" />
+              <Mail className="h-6 w-6 text-teal mt-1 mr-4" />
               <div>
                 <h3 className="text-xl font-semibold text-lightest-slate font-heading">Email</h3>
                 <p className="text-slate">General Inquiries</p>
-                <a href="mailto:hello@sold2move.com" className="text-green hover:underline">hello@sold2move.com</a>
+                <a href="mailto:hello@sold2move.com" className="text-teal hover:underline">hello@sold2move.com</a>
               </div>
             </div>
             <div className="flex items-start">
-              <Phone className="h-6 w-6 text-green mt-1 mr-4" />
+              <Phone className="h-6 w-6 text-teal mt-1 mr-4" />
               <div>
                 <h3 className="text-xl font-semibold text-lightest-slate font-heading">Phone</h3>
                 <p className="text-slate">Sales & Support</p>
-                <a href="tel:1-800-555-0199" className="text-green hover:underline">1-800-555-0199</a>
+                <a href="tel:1-800-555-0199" className="text-teal hover:underline">1-800-555-0199</a>
               </div>
             </div>
             <div className="flex items-start">
-              <MapPin className="h-6 w-6 text-green mt-1 mr-4" />
+              <MapPin className="h-6 w-6 text-teal mt-1 mr-4" />
               <div>
                 <h3 className="text-xl font-semibold text-lightest-slate font-heading">Office</h3>
                 <p className="text-slate">123 Innovation Drive<br />Suite 404<br />Austin, TX 78701</p>

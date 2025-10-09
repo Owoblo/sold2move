@@ -65,7 +65,7 @@ const AboutPage = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="bg-light-navy p-8 rounded-lg"
           >
-            <Rocket className="h-12 w-12 text-green mx-auto mb-4" />
+            <Rocket className="h-12 w-12 text-teal mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-lightest-slate mb-2 font-heading">Innovation</h3>
             <p className="text-slate">We constantly refine our technology to deliver the fastest, most accurate data in the industry.</p>
           </motion.div>
@@ -76,7 +76,7 @@ const AboutPage = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="bg-light-navy p-8 rounded-lg"
           >
-            <Users className="h-12 w-12 text-green mx-auto mb-4" />
+            <Users className="h-12 w-12 text-teal mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-lightest-slate mb-2 font-heading">Customer Focus</h3>
             <p className="text-slate">Your success is our success. We're dedicated to providing tools and support that drive real results.</p>
           </motion.div>
@@ -87,7 +87,7 @@ const AboutPage = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="bg-light-navy p-8 rounded-lg"
           >
-            <Target className="h-12 w-12 text-green mx-auto mb-4" />
+            <Target className="h-12 w-12 text-teal mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-lightest-slate mb-2 font-heading">Integrity</h3>
             <p className="text-slate">We believe in transparent pricing and honest practices. No hidden fees, no long-term contracts.</p>
           </motion.div>

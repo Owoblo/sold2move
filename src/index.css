@@ -26,8 +26,8 @@
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
  
-    --accent: 0 0% 75%; /* Silver/Light Gray */
-    --accent-foreground: 220 100% 20%;
+    --accent: 217.2 32.6% 17.5%; /* Dark accent for dark mode */
+    --accent-foreground: 210 40% 98%;
  
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
@@ -71,7 +71,7 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 0 0% 75%; /* Silver/Light Gray */
+    --accent: 210 40% 96.1%; /* Light accent for light mode */
     --accent-foreground: 220 8.9% 10.8%;
  
     --destructive: 0 84.2% 60.2%;

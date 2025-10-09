@@ -64,7 +64,7 @@ const ListingsFilter = ({ filters, onFilterChange, onApply, onReset }) => {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={onApply} className="w-full bg-green text-deep-navy hover:bg-green/90">
+          <Button onClick={onApply} className="w-full bg-teal text-deep-navy hover:bg-teal/90">
             <SlidersHorizontal className="h-4 w-4 mr-2" />
             Apply
           </Button>

@@ -30,9 +30,9 @@ const WelcomeMessage = ({ onStartTour, onDismiss, showWelcomeMessage }) => {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", damping: 15 }}
-              className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4"
             >
-              <CheckCircle className="h-8 w-8 text-green" />
+              <CheckCircle className="h-8 w-8 text-teal" />
             </motion.div>
             
             <motion.h2
@@ -60,7 +60,7 @@ const WelcomeMessage = ({ onStartTour, onDismiss, showWelcomeMessage }) => {
               className="bg-deep-navy/30 rounded-lg p-4 mb-6"
             >
               <div className="flex items-center justify-center gap-2 mb-2">
-                <Zap className="h-5 w-5 text-green" />
+                <Zap className="h-5 w-5 text-teal" />
                 <span className="font-semibold text-lightest-slate">You have {profile?.credits_remaining || 100} free credits!</span>
               </div>
               <p className="text-sm text-slate">
@@ -83,7 +83,7 @@ const WelcomeMessage = ({ onStartTour, onDismiss, showWelcomeMessage }) => {
               </Button>
               <Button
                 onClick={onStartTour}
-                className="flex-1 bg-green text-deep-navy hover:bg-green/90"
+                className="flex-1 bg-teal text-deep-navy hover:bg-teal/90"
               >
                 Start Tour
                 <ArrowRight className="h-4 w-4 ml-2" />

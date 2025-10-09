@@ -37,7 +37,7 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2 lg:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
               <div className="p-2 bg-lightest-navy rounded-md">
-                <Home className="h-6 w-6 text-green" />
+                <Home className="h-6 w-6 text-teal" />
               </div>
               <span className="text-xl font-bold text-lightest-slate font-heading">Sold2Move</span>
             </Link>
@@ -49,7 +49,7 @@ const Footer = () => {
             <ul className="space-y-2">
               {quickLinks.map(link => (
                 <li key={link.name}>
-                  <Link to={link.path} className="hover:text-green transition-colors">{link.name}</Link>
+                  <Link to={link.path} className="hover:text-teal transition-colors">{link.name}</Link>
                 </li>
               ))}
             </ul>
@@ -60,7 +60,7 @@ const Footer = () => {
             <ul className="space-y-2">
               {legalLinks.map(link => (
                 <li key={link.name}>
-                  <Link to={link.path} className="hover:text-green transition-colors">{link.name}</Link>
+                  <Link to={link.path} className="hover:text-teal transition-colors">{link.name}</Link>
                 </li>
               ))}
             </ul>
@@ -70,7 +70,7 @@ const Footer = () => {
             <p className="font-semibold text-lightest-slate mb-4 font-heading">Follow Us</p>
             <div className="flex space-x-4">
               {socialLinks.map(social => (
-                <button key={social.name} onClick={() => handleSocialClick(social.name)} className="hover:text-green transition-colors">
+                <button key={social.name} onClick={() => handleSocialClick(social.name)} className="hover:text-teal transition-colors">
                   <social.icon size={20} />
                 </button>
               ))}

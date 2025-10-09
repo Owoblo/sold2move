@@ -212,9 +212,9 @@ const DashboardPage = () => {
     const stateName = State.getStateByCodeAndCountry(state_code, country_code)?.name;
     return (
       <div className="flex items-center gap-4 text-slate">
-        <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-green" /><span>{countryName}</span></div>
-        <div className="flex items-center gap-2"><Building className="h-4 w-4 text-green" /><span>{stateName}</span></div>
-        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-green" /><span>{city_name}</span></div>
+        <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
+        <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
+        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
       </div>
     );
   };
@@ -227,7 +227,7 @@ const DashboardPage = () => {
           <h3 className="text-xl font-bold text-lightest-slate">You've run out of credits!</h3>
           <p>To continue revealing new leads, please top up your credits or upgrade your plan.</p>
           <div className="flex gap-4 mt-2">
-            <Button asChild className="bg-green text-deep-navy hover:bg-green/90"><Link to="/pricing#top-up">Buy Credits</Link></Button>
+            <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90"><Link to="/pricing#top-up">Buy Credits</Link></Button>
             <Button asChild variant="outline"><Link to="/pricing">Upgrade Plan</Link></Button>
           </div>
         </div>
@@ -269,14 +269,14 @@ const DashboardPage = () => {
           <Button 
             onClick={() => handleActionClick('Export CSV')} 
             variant="outline" 
-            className="border-green text-green hover:bg-green/10 hover:text-green"
+            className="border-teal text-teal hover:bg-teal/10 hover:text-teal"
           >
             <Download className="mr-2 h-4 w-4" /> 
             Export CSV
           </Button>
           <Button 
             onClick={() => handleActionClick('Generate Mail Pack')} 
-            className="bg-green text-deep-navy hover:bg-green/90"
+            className="bg-teal text-deep-navy hover:bg-teal/90"
           >
             <Mail className="mr-2 h-4 w-4" /> 
             Generate Mail Pack
@@ -316,7 +316,7 @@ const DashboardPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green">
+            <div className="text-2xl font-bold text-teal">
               {revealedListings.size}
             </div>
             <p className="text-xs text-slate mt-1">
@@ -369,7 +369,7 @@ const DashboardPage = () => {
         <Card className="bg-light-navy border-lightest-navy/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
-              <Filter className="h-5 w-5 text-green" />
+              <Filter className="h-5 w-5 text-teal" />
               Your Active Service Area
             </CardTitle>
           </CardHeader>
@@ -480,7 +480,7 @@ const DashboardPage = () => {
                           <div className="text-center">
                             <h3 className="text-lg font-semibold text-lightest-slate mb-2">Error Loading Listings</h3>
                             <p className="text-slate mb-4">{error}</p>
-                            <Button onClick={() => window.location.reload()} className="bg-green text-deep-navy hover:bg-green/90">
+                            <Button onClick={() => window.location.reload()} className="bg-teal text-deep-navy hover:bg-teal/90">
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Try Again
                             </Button>
@@ -504,7 +504,7 @@ const DashboardPage = () => {
                           <TableCell className="font-medium text-lightest-slate">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-light-navy rounded-md">
-                                <Home className="h-4 w-4 text-green" />
+                                <Home className="h-4 w-4 text-teal" />
                               </div>
                               <div>
                                 <div className="font-medium">
@@ -522,7 +522,7 @@ const DashboardPage = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-green font-semibold text-lg">
+                            <div className="text-teal font-semibold text-lg">
                               {formatPrice(lead.price)}
                             </div>
                           </TableCell>
@@ -533,7 +533,7 @@ const DashboardPage = () => {
                           </TableCell>
                     <TableCell className="text-right">
                       {isRevealed ? (
-                              <div className="flex items-center justify-end gap-2 text-green">
+                              <div className="flex items-center justify-end gap-2 text-teal">
                                 <Eye className="h-4 w-4" />
                                 <span className="text-sm">Revealed</span>
                               </div>
@@ -543,7 +543,7 @@ const DashboardPage = () => {
                                 size="sm" 
                                 isLoading={revealingId === lead.id} 
                                 onClick={() => handleReveal(lead.id)}
-                                className="bg-green text-deep-navy hover:bg-green/90"
+                                className="bg-teal text-deep-navy hover:bg-teal/90"
                               >
                            <Lock className="mr-2 h-4 w-4" />
                           Reveal (1 credit)
@@ -567,7 +567,7 @@ const DashboardPage = () => {
                               }
                             </p>
                             {!profile?.onboarding_complete && (
-                              <Button asChild className="bg-green text-deep-navy hover:bg-green/90">
+                              <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
                                 <Link to="/onboarding">Complete Profile</Link>
                               </Button>
                             )}

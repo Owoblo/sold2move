@@ -7,17 +7,17 @@ import { Calendar, Clock, Zap } from 'lucide-react';
 const RequestDemoPage = () => {
   const benefits = [
     {
-      icon: <Zap className="h-6 w-6 text-green" />,
+      icon: <Zap className="h-6 w-6 text-teal" />,
       title: 'Personalized Walkthrough',
       description: 'See how Sold2Move can be tailored to your specific business needs and goals.',
     },
     {
-      icon: <Calendar className="h-6 w-6 text-green" />,
+      icon: <Calendar className="h-6 w-6 text-teal" />,
       title: 'Live Q&A Session',
       description: 'Get all your questions answered in real-time by one of our product experts.',
     },
     {
-      icon: <Clock className="h-6 w-6 text-green" />,
+      icon: <Clock className="h-6 w-6 text-teal" />,
       title: 'Quick & Easy',
       description: 'The demo takes just 30 minutes and is packed with actionable insights.',
     },
@@ -57,7 +57,7 @@ const RequestDemoPage = () => {
             <div className="space-y-8">
               {benefits.map((benefit, index) => (
                 <div key={index} className="flex items-start gap-4">
-                  <div className="flex-shrink-0 bg-green/10 p-3 rounded-full">
+                  <div className="flex-shrink-0 bg-teal/10 p-3 rounded-full">
                     {benefit.icon}
                   </div>
                   <div>

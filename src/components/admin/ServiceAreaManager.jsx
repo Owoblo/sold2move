@@ -147,7 +147,7 @@ const ServiceAreaManager = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5 text-green" />
+              <Globe className="h-5 w-5 text-teal" />
               Service Area Management
             </CardTitle>
             <p className="text-slate text-sm">
@@ -183,7 +183,7 @@ const ServiceAreaManager = () => {
                     {filteredCities.map(([cityName, data]) => (
                       <SelectItem key={cityName} value={cityName}>
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-green" />
+                          <MapPin className="h-4 w-4 text-teal" />
                           <span>{cityName}</span>
                           <Badge variant="outline" className="text-xs">
                             {data.provinceCode}
@@ -198,13 +198,13 @@ const ServiceAreaManager = () => {
 
             {/* Selected City Info */}
             {selectedCityData && (
-              <div className="p-4 bg-light-navy/30 rounded-lg border border-green/20">
+              <div className="p-4 bg-light-navy/30 rounded-lg border border-teal/20">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-lg font-semibold text-lightest-slate flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-green" />
+                    <MapPin className="h-5 w-5 text-teal" />
                     {selectedCity}
                   </h3>
-                  <Badge variant="outline" className="border-green/30 text-green">
+                  <Badge variant="outline" className="border-teal/30 text-teal">
                     {selectedCityData.province}
                   </Badge>
                 </div>
@@ -254,7 +254,7 @@ const ServiceAreaManager = () => {
                   <Button
                     onClick={handleAddTown}
                     disabled={!newTown.name.trim()}
-                    className="bg-green text-deep-navy hover:bg-green/90"
+                    className="bg-teal text-deep-navy hover:bg-teal/90"
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Town
@@ -278,7 +278,7 @@ const ServiceAreaManager = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between p-3 bg-light-navy/30 rounded-lg border border-slate/20 hover:border-green/20 transition-colors"
+                      className="flex items-center justify-between p-3 bg-light-navy/30 rounded-lg border border-slate/20 hover:border-teal/20 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ const ServiceAreaManager = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditingTown(town.name)}
-                          className="text-slate hover:text-green"
+                          className="text-slate hover:text-teal"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -326,7 +326,7 @@ const ServiceAreaManager = () => {
                     You have unsaved changes
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-green">
+                  <div className="flex items-center gap-2 text-teal">
                     <CheckCircle className="h-4 w-4" />
                     All changes saved
                   </div>
@@ -346,7 +346,7 @@ const ServiceAreaManager = () => {
                 <Button
                   onClick={handleSaveChanges}
                   disabled={!hasChanges}
-                  className="bg-green text-deep-navy hover:bg-green/90"
+                  className="bg-teal text-deep-navy hover:bg-teal/90"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Changes

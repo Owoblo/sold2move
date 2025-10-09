@@ -285,7 +285,7 @@ const UnifiedListings = () => {
         <p className="text-slate text-sm text-center mb-4 max-w-md">
           {currentError.message || 'An unexpected error occurred. Please try again.'}
         </p>
-        <Button onClick={currentRefetch} className="bg-green text-deep-navy hover:bg-green/90">
+        <Button onClick={currentRefetch} className="bg-teal text-deep-navy hover:bg-teal/90">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
         </Button>
@@ -316,12 +316,12 @@ const UnifiedListings = () => {
             <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
               {activeTab === 'just-listed' ? (
                 <>
-                  <Building className="h-6 w-6 text-green" />
+                  <Building className="h-6 w-6 text-teal" />
                   Just Listed Properties
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-6 w-6 text-green" />
+                  <CheckCircle className="h-6 w-6 text-teal" />
                   Recently Sold Properties
                 </>
               )}
@@ -338,7 +338,7 @@ const UnifiedListings = () => {
                     showMultiCityOption={true}
                   />
                   {filters.city_name.length > 1 && (
-                    <span className="text-green text-sm ml-1">
+                    <span className="text-teal text-sm ml-1">
                       +{filters.city_name.length - 1} more
                     </span>
                   )}
@@ -351,7 +351,7 @@ const UnifiedListings = () => {
                 : 'Identify high-potential moving leads from recent sales.'
               }
               {filters.city_name && filters.city_name.length > 1 && (
-                <span className="text-green text-sm ml-2">
+                <span className="text-teal text-sm ml-2">
                   Showing listings from {filters.city_name.length} cities
                 </span>
               )}
@@ -362,7 +362,7 @@ const UnifiedListings = () => {
               onClick={handleExport}
               disabled={sortedListings.length === 0}
               variant="outline"
-              className="border-green text-green hover:bg-green/10"
+              className="border-teal text-teal hover:bg-teal/10"
             >
               <Download className="h-4 w-4 mr-2" />
               Export ({sortedListings.length})
@@ -376,7 +376,7 @@ const UnifiedListings = () => {
             onClick={() => handleTabChange('just-listed')}
             variant={activeTab === 'just-listed' ? 'default' : 'ghost'}
             className={activeTab === 'just-listed' 
-              ? 'bg-green text-deep-navy hover:bg-green/90' 
+              ? 'bg-teal text-deep-navy hover:bg-teal/90' 
               : 'text-slate hover:text-lightest-slate hover:bg-lightest-navy/30'
             }
           >
@@ -392,7 +392,7 @@ const UnifiedListings = () => {
             onClick={() => handleTabChange('sold')}
             variant={activeTab === 'sold' ? 'default' : 'ghost'}
             className={activeTab === 'sold' 
-              ? 'bg-green text-deep-navy hover:bg-green/90' 
+              ? 'bg-teal text-deep-navy hover:bg-teal/90' 
               : 'text-slate hover:text-lightest-slate hover:bg-lightest-navy/30'
             }
           >
@@ -518,7 +518,7 @@ const UnifiedListings = () => {
                   <Button 
                     onClick={() => setFilters(clearAllFilters(profile))}
                     variant="outline"
-                    className="border-green text-green hover:bg-green/10"
+                    className="border-teal text-teal hover:bg-teal/10"
                   >
                     Clear Filters
                   </Button>
@@ -552,13 +552,13 @@ const UnifiedListings = () => {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-light-navy rounded-md">
-                              <Home className="h-4 w-4 text-green" />
+                              <Home className="h-4 w-4 text-teal" />
                             </div>
                             <div>
                               <div 
                                 className={`font-medium ${
                                   profile?.unlimited || allRevealedListings?.has(listing.id) 
-                                    ? 'text-lightest-slate cursor-pointer hover:text-green transition-colors' 
+                                    ? 'text-lightest-slate cursor-pointer hover:text-teal transition-colors' 
                                     : 'text-slate'
                                 }`}
                                 onClick={(e) => {
@@ -583,7 +583,7 @@ const UnifiedListings = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-green font-semibold text-lg">
+                          <div className="text-teal font-semibold text-lg">
                             {profile?.unlimited || allRevealedListings?.has(listing.id)
                               ? (listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A')
                               : '*****'
@@ -639,7 +639,7 @@ const UnifiedListings = () => {
                               }}
                               size="sm"
                               variant="outline"
-                              className="border-green text-green hover:bg-green/10"
+                              className="border-teal text-teal hover:bg-teal/10"
                             >
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
@@ -649,7 +649,7 @@ const UnifiedListings = () => {
                               onClick={(e) => handleReveal(listing.id, e)}
                               disabled={isRevealing}
                               size="sm"
-                              className="bg-green text-deep-navy hover:bg-green/90"
+                              className="bg-teal text-deep-navy hover:bg-teal/90"
                             >
                               <Lock className="h-4 w-4 mr-2" />
                               Reveal ({activeTab === 'just-listed' ? '1' : '2'})

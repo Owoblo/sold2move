@@ -15,8 +15,8 @@ const CongratulationsDialog = ({ isOpen, onClose, credits = 100 }) => {
             transition={{ type: "spring", stiffness: 200, damping: 10 }}
             className="mx-auto mb-4"
           >
-            <div className="w-20 h-20 bg-green/20 rounded-full flex items-center justify-center">
-              <Sparkles className="h-10 w-10 text-green" />
+            <div className="w-20 h-20 bg-teal/20 rounded-full flex items-center justify-center">
+              <Sparkles className="h-10 w-10 text-teal" />
             </div>
           </motion.div>
           
@@ -30,13 +30,13 @@ const CongratulationsDialog = ({ isOpen, onClose, credits = 100 }) => {
             transition={{ delay: 0.2 }}
             className="space-y-4"
           >
-            <div className="bg-green/10 border border-green/20 rounded-lg p-4">
+            <div className="bg-teal/10 border border-teal/20 rounded-lg p-4">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <Gift className="h-5 w-5 text-green" />
-                <span className="font-semibold text-green">Signup Bonus!</span>
+                <Gift className="h-5 w-5 text-teal" />
+                <span className="font-semibold text-teal">Signup Bonus!</span>
               </div>
               <p className="text-lightest-slate text-lg font-bold">
-                You've received <span className="text-green">{credits} free credits</span>
+                You've received <span className="text-teal">{credits} free credits</span>
               </p>
               <p className="text-slate text-sm">
                 Start exploring real-time moving leads in your area
@@ -45,15 +45,15 @@ const CongratulationsDialog = ({ isOpen, onClose, credits = 100 }) => {
             
             <div className="space-y-2 text-sm text-slate">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green" />
+                <CheckCircle className="h-4 w-4 text-teal" />
                 <span>Access to real-time moving leads</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green" />
+                <CheckCircle className="h-4 w-4 text-teal" />
                 <span>Advanced filtering options</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green" />
+                <CheckCircle className="h-4 w-4 text-teal" />
                 <span>Export capabilities</span>
               </div>
             </div>
@@ -68,7 +68,7 @@ const CongratulationsDialog = ({ isOpen, onClose, credits = 100 }) => {
         >
           <Button 
             onClick={onClose}
-            className="w-full bg-green text-deep-navy hover:bg-green/90 font-semibold"
+            className="w-full bg-teal text-deep-navy hover:bg-teal/90 font-semibold"
           >
             Start Exploring Leads
           </Button>

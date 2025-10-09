@@ -184,7 +184,7 @@ const LoginPage = () => {
                     </FormItem>
                   )}
                 />
-                <LoadingButton type="submit" className="w-full bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting} disabled={googleLoading}>
+                <LoadingButton type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting} disabled={googleLoading}>
                   Sign In
                 </LoadingButton>
               </form>
@@ -206,7 +206,7 @@ const LoginPage = () => {
             <div className="mt-6 text-center text-sm">
               <p className="text-slate">
                 Don't have an account?{' '}
-                <Link to="/signup" className="font-medium text-green hover:underline">
+                <Link to="/signup" className="font-medium text-teal hover:underline">
                   Sign up
                 </Link>
               </p>

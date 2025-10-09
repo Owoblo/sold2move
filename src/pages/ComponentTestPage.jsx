@@ -78,7 +78,7 @@ const ComponentTestPage = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'success':
-        return <CheckCircle className="h-4 w-4 text-green" />;
+        return <CheckCircle className="h-4 w-4 text-teal" />;
       case 'error':
         return <XCircle className="h-4 w-4 text-red-500" />;
       default:
@@ -89,7 +89,7 @@ const ComponentTestPage = () => {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'success':
-        return <Badge className="bg-green/20 text-green">PASS</Badge>;
+        return <Badge className="bg-teal/20 text-teal">PASS</Badge>;
       case 'error':
         return <Badge className="bg-red-500/20 text-red-500">FAIL</Badge>;
       default:
@@ -109,7 +109,7 @@ const ComponentTestPage = () => {
         <Card className="bg-light-navy border-lightest-navy/20">
           <CardHeader>
             <CardTitle className="text-lightest-slate flex items-center gap-2">
-              <Info className="h-5 w-5 text-green" />
+              <Info className="h-5 w-5 text-teal" />
               Test Controls
             </CardTitle>
             <CardDescription>
@@ -119,7 +119,7 @@ const ComponentTestPage = () => {
           <CardContent className="space-y-4">
             <Button 
               onClick={runAllTests}
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               Run All Tests
             </Button>

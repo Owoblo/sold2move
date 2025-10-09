@@ -107,7 +107,7 @@ export default function PaymentSuccess() {
     return (
       <div className="min-h-screen bg-deep-navy flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-green mx-auto mb-4" />
+          <Loader2 className="h-12 w-12 animate-spin text-teal mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-white mb-2">Processing Your Payment...</h2>
           <p className="text-slate">Please wait while we confirm your subscription</p>
         </div>
@@ -124,7 +124,7 @@ export default function PaymentSuccess() {
             <p className="text-slate mb-4">{error}</p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="bg-green text-deep-navy px-4 py-2 rounded hover:bg-green/90"
+              className="bg-teal text-deep-navy px-4 py-2 rounded hover:bg-teal/90"
             >
               Go to Dashboard
             </button>
@@ -137,8 +137,8 @@ export default function PaymentSuccess() {
   return (
     <div className="min-h-screen bg-deep-navy flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-6">
-        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-8">
-          <CheckCircle className="h-16 w-16 text-green mx-auto mb-4" />
+        <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg p-8">
+          <CheckCircle className="h-16 w-16 text-teal mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-white mb-2">Payment Successful! 🎉</h2>
           <p className="text-slate mb-4">
             Your Starter subscription has been activated
@@ -146,10 +146,10 @@ export default function PaymentSuccess() {
           
           <div className="bg-light-navy/50 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <CreditCard className="h-5 w-5 text-green" />
+              <CreditCard className="h-5 w-5 text-teal" />
               <span className="text-white font-semibold">Credits Added</span>
             </div>
-            <div className="text-3xl font-bold text-green">
+            <div className="text-3xl font-bold text-teal">
               +{creditsAdded}
             </div>
             <p className="text-slate text-sm">Credits added to your account</p>
@@ -167,7 +167,7 @@ export default function PaymentSuccess() {
           <div className="mt-6">
             <button
               onClick={() => navigate('/dashboard')}
-              className="bg-green text-deep-navy px-6 py-3 rounded-lg font-semibold hover:bg-green/90 transition-colors"
+              className="bg-teal text-deep-navy px-6 py-3 rounded-lg font-semibold hover:bg-teal/90 transition-colors"
             >
               Go to Dashboard
             </button>

@@ -66,7 +66,7 @@ const CitySelector = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <span className="text-green font-medium group-hover:text-green/80 transition-colors">
+          <span className="text-teal font-medium group-hover:text-teal/80 transition-colors">
             {currentCity}
           </span>
           <motion.div
@@ -77,7 +77,7 @@ const CitySelector = ({
             transition={{ duration: 0.2 }}
             className="ml-1"
           >
-            <ChevronDown className="h-3 w-3 text-green" />
+            <ChevronDown className="h-3 w-3 text-teal" />
           </motion.div>
         </motion.button>
 
@@ -97,8 +97,8 @@ const CitySelector = ({
                     className={cn(
                       "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all duration-150 mb-2 border-b border-slate/20",
                       selectedCities.length > 0
-                        ? "bg-green/20 text-green"
-                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-green"
+                        ? "bg-teal/20 text-teal"
+                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-teal"
                     )}
                     whileHover={{ x: 4 }}
                   >
@@ -107,7 +107,7 @@ const CitySelector = ({
                       <span>Select Multiple Cities</span>
                     </div>
                     {selectedCities.length > 0 && (
-                      <Check className="h-3 w-3 text-green" />
+                      <Check className="h-3 w-3 text-teal" />
                     )}
                   </motion.button>
                 )}
@@ -118,8 +118,8 @@ const CitySelector = ({
                     className={cn(
                       "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all duration-150",
                       currentCity === city
-                        ? "bg-green/20 text-green"
-                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-green"
+                        ? "bg-teal/20 text-teal"
+                        : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-teal"
                     )}
                     whileHover={{ x: 4 }}
                   >
@@ -128,7 +128,7 @@ const CitySelector = ({
                       <span>{city}</span>
                     </div>
                     {currentCity === city && (
-                      <Check className="h-3 w-3 text-green" />
+                      <Check className="h-3 w-3 text-teal" />
                     )}
                   </motion.button>
                 ))}
@@ -146,12 +146,12 @@ const CitySelector = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-light-navy/30 border border-transparent hover:border-green/20"
+        className="group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-light-navy/30 border border-transparent hover:border-teal/20"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
-        <MapPin className="h-4 w-4 text-green" />
-        <span className="text-green font-semibold group-hover:text-green/80 transition-colors">
+        <MapPin className="h-4 w-4 text-teal" />
+        <span className="text-teal font-semibold group-hover:text-teal/80 transition-colors">
           {currentCity}
         </span>
         <motion.div
@@ -161,12 +161,12 @@ const CitySelector = ({
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
         >
-          <ChevronDown className="h-4 w-4 text-green" />
+          <ChevronDown className="h-4 w-4 text-teal" />
         </motion.div>
         
         {/* Hover indicator */}
         <motion.div
-          className="absolute inset-0 rounded-lg bg-gradient-to-r from-green/5 to-green/10 opacity-0"
+          className="absolute inset-0 rounded-lg bg-gradient-to-r from-teal/5 to-teal/10 opacity-0"
           animate={{ opacity: isHovered ? 1 : 0 }}
           transition={{ duration: 0.2 }}
         />
@@ -193,8 +193,8 @@ const CitySelector = ({
                     className={cn(
                       "w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-lg transition-all duration-200 group",
                       currentCity === city
-                        ? "bg-green/20 text-green border border-green/30"
-                        : "text-lightest-slate hover:bg-lightest-navy/50 hover:text-green hover:border-green/20 border border-transparent"
+                        ? "bg-teal/20 text-teal border border-teal/30"
+                        : "text-lightest-slate hover:bg-lightest-navy/50 hover:text-teal hover:border-teal/20 border border-transparent"
                     )}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -206,8 +206,8 @@ const CitySelector = ({
                       <div className={cn(
                         "p-1.5 rounded-md transition-colors",
                         currentCity === city 
-                          ? "bg-green/20" 
-                          : "bg-slate/20 group-hover:bg-green/20"
+                          ? "bg-teal/20" 
+                          : "bg-slate/20 group-hover:bg-teal/20"
                       )}>
                         <MapPin className="h-3 w-3" />
                       </div>
@@ -219,7 +219,7 @@ const CitySelector = ({
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.1 }}
                       >
-                        <Check className="h-4 w-4 text-green" />
+                        <Check className="h-4 w-4 text-teal" />
                       </motion.div>
                     )}
                   </motion.button>

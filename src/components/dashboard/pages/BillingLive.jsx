@@ -182,7 +182,7 @@ const BillingLive = () => {
           <Card className="bg-light-navy border-lightest-navy/20">
             <CardHeader>
               <CardTitle className="text-lightest-slate flex items-center gap-2">
-                <Info className="h-5 w-5 text-green" />
+                <Info className="h-5 w-5 text-teal" />
                 Stripe Configuration
               </CardTitle>
             </CardHeader>
@@ -206,7 +206,7 @@ const BillingLive = () => {
                   </div>
                   <div className="text-center p-4 bg-deep-navy/30 rounded-lg">
                     <p className="text-slate text-sm">Status</p>
-                    <p className="text-green font-semibold">READY</p>
+                    <p className="text-teal font-semibold">READY</p>
                   </div>
                 </div>
               )}
@@ -218,14 +218,14 @@ const BillingLive = () => {
         <Card className="bg-light-navy border-lightest-navy/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
-              <CreditCard className="h-6 w-6 text-green" />
+              <CreditCard className="h-6 w-6 text-teal" />
               Current Plan
             </CardTitle>
             <Button
               onClick={handleManageSubscription}
               disabled={isSubmitting || !profile?.stripe_customer_id}
               variant="outline"
-              className="border-green text-green hover:bg-green/10"
+              className="border-teal text-teal hover:bg-teal/10"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Manage Subscription
@@ -235,7 +235,7 @@ const BillingLive = () => {
             <div className="flex items-center gap-4 mb-4">
               <Badge
                 className={`text-lg px-4 py-1 ${
-                  profile?.subscription_status === 'active' ? 'bg-green/20 text-green' : 'bg-red-500/20 text-red-400'
+                  profile?.subscription_status === 'active' ? 'bg-teal/20 text-teal' : 'bg-red-500/20 text-red-400'
                 }`}
               >
                 {profile?.subscription_status ? profile.subscription_status.toUpperCase() : 'FREE'}
@@ -275,7 +275,7 @@ const BillingLive = () => {
               <div className="space-y-2">
                 <h4 className="text-lightest-slate font-semibold">1. Get Stripe Secret Key:</h4>
                 <ul className="text-slate text-sm space-y-1">
-                  <li>• Go to: <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-green hover:underline">Stripe API Keys</a></li>
+                  <li>• Go to: <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">Stripe API Keys</a></li>
                   <li>• Copy the "Secret key" (starts with sk_live_)</li>
                   <li>• Set it as: export STRIPE_SECRET_KEY="your_secret_key"</li>
                 </ul>
@@ -302,14 +302,14 @@ const BillingLive = () => {
               whileHover={{ scale: 1.03, boxShadow: "0 10px 20px rgba(0,0,0,0.2)" }}
               transition={{ duration: 0.2 }}
             >
-              <Card className={`h-full flex flex-col bg-light-navy border-lightest-navy/20 ${currentPlan === plan.name.toLowerCase() ? 'border-green ring-2 ring-green/50' : ''}`}>
+              <Card className={`h-full flex flex-col bg-light-navy border-lightest-navy/20 ${currentPlan === plan.name.toLowerCase() ? 'border-teal ring-2 ring-teal/50' : ''}`}>
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-3xl font-bold text-lightest-slate flex items-center justify-center gap-2">
                     {plan.name}
-                    {plan.badge && <Badge variant="secondary" className="bg-green/20 text-green">{plan.badge}</Badge>}
+                    {plan.badge && <Badge variant="secondary" className="bg-teal/20 text-teal">{plan.badge}</Badge>}
                   </CardTitle>
                   <p className="text-slate mt-2">{plan.description}</p>
-                  <p className="text-5xl font-extrabold text-green mt-4">
+                  <p className="text-5xl font-extrabold text-teal mt-4">
                     {plan.price}<span className="text-xl text-slate font-medium">/{plan.interval}</span>
                   </p>
                 </CardHeader>
@@ -317,7 +317,7 @@ const BillingLive = () => {
                   <ul className="space-y-2 text-slate">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green" />
+                        <CheckCircle className="h-4 w-4 text-teal" />
                         {feature}
                       </li>
                     ))}
@@ -325,14 +325,14 @@ const BillingLive = () => {
                 </CardContent>
                 <CardFooter className="pt-4">
                   {currentPlan === plan.name.toLowerCase() ? (
-                    <Button className="w-full bg-green/10 text-green cursor-not-allowed" disabled>
+                    <Button className="w-full bg-teal/10 text-teal cursor-not-allowed" disabled>
                       <CheckCircle className="h-4 w-4 mr-2" /> Current Plan
                     </Button>
                   ) : (
                     <Button
                       onClick={() => handleCheckout(plan.stripePriceId, 'subscription')}
                       disabled={loadingPackageId === plan.stripePriceId}
-                      className="w-full bg-green text-deep-navy hover:bg-green/90"
+                      className="w-full bg-teal text-deep-navy hover:bg-teal/90"
                     >
                       {loadingPackageId === plan.stripePriceId ? 'Processing...' : `Upgrade to ${plan.name}`} <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>

@@ -51,7 +51,7 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
                 <SkeletonLoader className="h-5 w-24" />
               ) : (
                 <>
-                  <div className="w-8 h-8 rounded-full bg-green/20 text-green flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold">
                     {profile?.company_name?.charAt(0) || <User size={16} />}
                   </div>
                   <span className="hidden md:inline">{profile?.company_name || 'My Account'}</span>

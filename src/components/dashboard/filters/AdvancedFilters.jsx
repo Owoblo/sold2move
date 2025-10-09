@@ -242,7 +242,7 @@ const AdvancedFilters = ({
             {filterOptions?.priceRange && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green" />
+                  <DollarSign className="h-4 w-4 text-teal" />
                   <span className="text-sm font-medium">Price Range</span>
                 </div>
                 <div className="px-3">
@@ -269,7 +269,7 @@ const AdvancedFilters = ({
             {filterOptions?.areaRange && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-green" />
+                  <Ruler className="h-4 w-4 text-teal" />
                   <span className="text-sm font-medium">Square Footage</span>
                 </div>
                 <div className="px-3">
@@ -298,27 +298,27 @@ const AdvancedFilters = ({
                 <span className="text-sm font-medium text-slate">Active Filters:</span>
                 <div className="flex flex-wrap gap-2">
                   {localFilters.minPrice && (
-                    <Badge variant="outline" className="text-green border-green/30">
+                    <Badge variant="outline" className="text-teal border-teal/30">
                       Min: ${localFilters.minPrice.toLocaleString()}
                     </Badge>
                   )}
                   {localFilters.maxPrice && (
-                    <Badge variant="outline" className="text-green border-green/30">
+                    <Badge variant="outline" className="text-teal border-teal/30">
                       Max: ${localFilters.maxPrice.toLocaleString()}
                     </Badge>
                   )}
                   {localFilters.beds && (
-                    <Badge variant="outline" className="text-green border-green/30">
+                    <Badge variant="outline" className="text-teal border-teal/30">
                       {localFilters.beds}+ Beds
                     </Badge>
                   )}
                   {localFilters.baths && (
-                    <Badge variant="outline" className="text-green border-green/30">
+                    <Badge variant="outline" className="text-teal border-teal/30">
                       {localFilters.baths}+ Baths
                     </Badge>
                   )}
                   {localFilters.propertyType && (
-                    <Badge variant="outline" className="text-green border-green/30">
+                    <Badge variant="outline" className="text-teal border-teal/30">
                       {localFilters.propertyType}
                     </Badge>
                   )}

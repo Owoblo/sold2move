@@ -33,15 +33,15 @@ const CreditMeter = () => {
   const isUnlimited = profile?.unlimited ?? false;
   
   const displayCredits = isUnlimited ? 'Unlimited' : credits;
-  const creditsColor = credits === 0 ? 'text-red-500' : credits <= LOW_CREDIT_THRESHOLD ? 'text-amber-400' : 'text-green';
+  const creditsColor = credits === 0 ? 'text-red-500' : credits <= LOW_CREDIT_THRESHOLD ? 'text-amber-400' : 'text-teal';
 
   return (
     <div className="flex items-center gap-1">
       <Popover>
         <PopoverTrigger asChild>
           <button className="flex items-center gap-2 text-sm font-semibold text-lightest-slate bg-light-navy px-3 py-1.5 rounded-full hover:bg-lightest-navy/20 transition-colors">
-            <Zap className={`h-4 w-4 ${isUnlimited ? 'text-green' : creditsColor}`} />
-            <span className={`${isUnlimited ? 'text-green' : creditsColor}`}>{displayCredits}</span>
+            <Zap className={`h-4 w-4 ${isUnlimited ? 'text-teal' : creditsColor}`} />
+            <span className={`${isUnlimited ? 'text-teal' : creditsColor}`}>{displayCredits}</span>
             {!isUnlimited && <span>Credits</span>}
           </button>
         </PopoverTrigger>
@@ -54,13 +54,13 @@ const CreditMeter = () => {
               </p>
             </div>
             <div className="text-center">
-              <p className={`text-4xl font-bold ${isUnlimited ? 'text-green' : creditsColor}`}>
+              <p className={`text-4xl font-bold ${isUnlimited ? 'text-teal' : creditsColor}`}>
                 {displayCredits}
               </p>
               <p className="text-sm text-slate">{isUnlimited ? 'Access' : 'Remaining'}</p>
             </div>
             {!isUnlimited && (
-              <Button asChild size="sm" className="w-full bg-green text-deep-navy hover:bg-green/90">
+              <Button asChild size="sm" className="w-full bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/pricing#top-up">Buy More Credits</Link>
               </Button>
             )}
@@ -70,7 +70,7 @@ const CreditMeter = () => {
        <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
-            <Info className="h-4 w-4 text-slate hover:text-green cursor-pointer"/>
+            <Info className="h-4 w-4 text-slate hover:text-teal cursor-pointer"/>
           </TooltipTrigger>
           <TooltipContent className="bg-light-navy border-lightest-navy/20 text-lightest-slate">
             <p>1 credit = 1 address reveal.</p>

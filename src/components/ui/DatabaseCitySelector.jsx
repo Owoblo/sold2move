@@ -88,12 +88,12 @@ const DatabaseCitySelector = ({
       {/* Trigger Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-green/50 transition-all duration-300 hover:bg-light-navy/30"
+        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-teal/50 transition-all duration-300 hover:bg-light-navy/30"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <MapPin className="h-4 w-4 text-green flex-shrink-0" />
+          <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
           <span className="text-lightest-slate truncate">
             {selectedCities.length > 0 
               ? `${selectedCities.length} cit${selectedCities.length === 1 ? 'y' : 'ies'} selected`
@@ -114,7 +114,7 @@ const DatabaseCitySelector = ({
             <Badge
               key={city}
               variant="secondary"
-              className="bg-green/20 text-green border-green/30 hover:bg-green/30 transition-colors"
+              className="bg-teal/20 text-teal border-teal/30 hover:bg-teal/30 transition-colors"
             >
               <MapPin className="h-3 w-3 mr-1" />
               {city}
@@ -158,7 +158,7 @@ const DatabaseCitySelector = ({
                     placeholder="Search cities..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-deep-navy border-slate/30 text-lightest-slate placeholder-slate focus:border-green"
+                    className="pl-10 bg-deep-navy border-slate/30 text-lightest-slate placeholder-slate focus:border-teal"
                   />
                 </div>
               </div>
@@ -180,20 +180,20 @@ const DatabaseCitySelector = ({
                           onClick={() => handleCityToggle(city.name, city.state)}
                           className={cn(
                             "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
-                            isSelected && "bg-green/10"
+                            isSelected && "bg-teal/10"
                           )}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <div className="flex items-center gap-2 flex-1">
-                            <MapPin className="h-4 w-4 text-green flex-shrink-0" />
+                            <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
                             <div>
                               <div className="text-lightest-slate font-medium">{city.name}</div>
                               <div className="text-slate text-sm">{city.state}, {city.country}</div>
                             </div>
                           </div>
                           {isSelected && (
-                            <Check className="h-4 w-4 text-green" />
+                            <Check className="h-4 w-4 text-teal" />
                           )}
                         </motion.button>
                       );
@@ -217,7 +217,7 @@ const DatabaseCitySelector = ({
                           className="w-full flex items-center justify-between p-3 hover:bg-lightest-navy/20 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <Globe className="h-4 w-4 text-green" />
+                            <Globe className="h-4 w-4 text-teal" />
                             <span className="text-lightest-slate font-medium">{stateKey}</span>
                             <Badge variant="secondary" className="bg-slate/20 text-slate">
                               {cities.length}
@@ -248,17 +248,17 @@ const DatabaseCitySelector = ({
                                     onClick={() => handleCityToggle(city.name, city.state)}
                                     className={cn(
                                       "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left border-t border-slate/10",
-                                      isSelected && "bg-green/10"
+                                      isSelected && "bg-teal/10"
                                     )}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                   >
                                     <div className="flex items-center gap-2 flex-1">
-                                      <MapPin className="h-4 w-4 text-green flex-shrink-0" />
+                                      <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
                                       <span className="text-lightest-slate">{city.name}</span>
                                     </div>
                                     {isSelected && (
-                                      <Check className="h-4 w-4 text-green" />
+                                      <Check className="h-4 w-4 text-teal" />
                                     )}
                                   </motion.button>
                                 );
@@ -283,20 +283,20 @@ const DatabaseCitySelector = ({
                         onClick={() => handleCityToggle(city.name, city.state)}
                         className={cn(
                           "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
-                          isSelected && "bg-green/10"
+                          isSelected && "bg-teal/10"
                         )}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-center gap-2 flex-1">
-                          <MapPin className="h-4 w-4 text-green flex-shrink-0" />
+                          <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
                           <div>
                             <div className="text-lightest-slate font-medium">{city.name}</div>
                             <div className="text-slate text-sm">{city.state}, {city.country}</div>
                           </div>
                         </div>
                         {isSelected && (
-                          <Check className="h-4 w-4 text-green" />
+                          <Check className="h-4 w-4 text-teal" />
                         )}
                       </motion.button>
                     );
@@ -313,7 +313,7 @@ const DatabaseCitySelector = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="border-green text-green hover:bg-green/10"
+                  className="border-teal text-teal hover:bg-teal/10"
                 >
                   Done
                 </Button>

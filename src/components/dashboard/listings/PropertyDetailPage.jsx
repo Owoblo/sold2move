@@ -49,7 +49,7 @@ const PropertyDetailPage = () => {
     return (
       <PageWrapper>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-12 w-12 animate-spin text-green" />
+          <Loader2 className="h-12 w-12 animate-spin text-teal" />
         </div>
       </PageWrapper>
     );
@@ -111,7 +111,7 @@ const PropertyDetailPage = () => {
                         <img 
                           src={photo.url} 
                           alt={`Thumbnail ${index + 1}`} 
-                          className={`w-24 h-16 object-cover rounded-md cursor-pointer border-2 ${selectedImage === photo.url ? 'border-green' : 'border-transparent'}`}
+                          className={`w-24 h-16 object-cover rounded-md cursor-pointer border-2 ${selectedImage === photo.url ? 'border-teal' : 'border-transparent'}`}
                         />
                       </div>
                     ))}
@@ -124,7 +124,7 @@ const PropertyDetailPage = () => {
           <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle className="text-3xl text-green">{listing.price}</CardTitle>
+                <CardTitle className="text-3xl text-teal">{listing.price}</CardTitle>
                 <p className="text-lg text-lightest-slate">{listing.addressstreet}</p>
                 <p className="text-md text-slate flex items-center">
                   <MapPin className="mr-2 h-4 w-4" />
@@ -134,17 +134,17 @@ const PropertyDetailPage = () => {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-center my-4">
                   <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Bed className="mx-auto h-6 w-6 text-green mb-1" />
+                    <Bed className="mx-auto h-6 w-6 text-teal mb-1" />
                     <p className="font-bold text-lightest-slate">{listing.beds || 'N/A'}</p>
                     <p className="text-xs text-slate">Beds</p>
                   </div>
                   <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Bath className="mx-auto h-6 w-6 text-green mb-1" />
+                    <Bath className="mx-auto h-6 w-6 text-teal mb-1" />
                     <p className="font-bold text-lightest-slate">{listing.baths || 'N/A'}</p>
                     <p className="text-xs text-slate">Baths</p>
                   </div>
                   <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Ruler className="mx-auto h-6 w-6 text-green mb-1" />
+                    <Ruler className="mx-auto h-6 w-6 text-teal mb-1" />
                     <p className="font-bold text-lightest-slate">{listing.area ? `${listing.area.toLocaleString()} sqft` : 'N/A'}</p>
                     <p className="text-xs text-slate">Area</p>
                   </div>
@@ -161,20 +161,20 @@ const PropertyDetailPage = () => {
                   <div className="flex justify-between">
                     <span className="text-slate">Days on Zillow:</span>
                     <span className="font-medium text-lightest-slate flex items-center">
-                      <CalendarDays className="mr-2 h-4 w-4 text-green" />
+                      <CalendarDays className="mr-2 h-4 w-4 text-teal" />
                       {daysOnZillow ?? 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate">Listed By:</span>
                     <span className="font-medium text-lightest-slate flex items-center">
-                      <Building className="mr-2 h-4 w-4 text-green" />
+                      <Building className="mr-2 h-4 w-4 text-teal" />
                       {listing.brokerName || 'N/A'}
                     </span>
                   </div>
                 </div>
                 {listing.detailurl && (
-                  <Button asChild className="w-full mt-6 bg-green text-deep-navy hover:bg-green/90">
+                  <Button asChild className="w-full mt-6 bg-teal text-deep-navy hover:bg-teal/90">
                     <a href={listing.detailurl} target="_blank" rel="noopener noreferrer">
                       View on Zillow <ExternalLink className="ml-2 h-4 w-4" />
                     </a>

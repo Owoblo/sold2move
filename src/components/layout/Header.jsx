@@ -51,8 +51,8 @@ const Header = () => {
     { name: 'Contact', path: '/contact' },
   ];
 
-  const activeLinkClass = "text-green";
-  const inactiveLinkClass = "text-lightest-slate hover:text-green transition-colors duration-300";
+  const activeLinkClass = "text-teal";
+  const inactiveLinkClass = "text-lightest-slate hover:text-teal transition-colors duration-300";
 
   return (
     <motion.header
@@ -61,9 +61,9 @@ const Header = () => {
       <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2 group">
           <div className="p-2 bg-light-navy rounded-md group-hover:bg-lightest-navy transition-colors">
-            <Home className="h-6 w-6 text-green" />
+            <Home className="h-6 w-6 text-teal" />
           </div>
-          <span className="text-xl font-bold text-lightest-slate group-hover:text-green transition-colors font-heading">
+          <span className="text-xl font-bold text-lightest-slate group-hover:text-teal transition-colors font-heading">
             Sold2Move
           </span>
         </Link>
@@ -81,25 +81,25 @@ const Header = () => {
         </div>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-green">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-teal">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           {session ? (
             <>
               <span className="text-light-slate">Welcome, {session.user.user_metadata?.full_name || session.user.email}!</span>
-              <Button asChild className="bg-green text-deep-navy hover:bg-green/90">
+              <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
-              <Button onClick={handleLogout} variant="outline" className="border-green text-green hover:bg-green/10 hover:text-green">
+              <Button onClick={handleLogout} variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal">
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" className="text-lightest-slate hover:text-green">
+              <Button asChild variant="ghost" className="text-lightest-slate hover:text-teal">
                 <Link to="/login">Login</Link>
               </Button>
-              <Button asChild className="bg-green text-deep-navy hover:bg-green/90">
+              <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/signup">Sign Up</Link>
               </Button>
             </>
@@ -109,7 +109,7 @@ const Header = () => {
         <div className="md:hidden">
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)} 
-            className="text-green focus:outline-none focus:ring-2 focus:ring-green focus:ring-offset-2 focus:ring-offset-deep-navy rounded-md p-1"
+            className="text-teal focus:outline-none focus:ring-2 focus:ring-teal focus:ring-offset-2 focus:ring-offset-deep-navy rounded-md p-1"
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
@@ -139,25 +139,25 @@ const Header = () => {
               </NavLink>
             ))}
             <div className="flex flex-col space-y-4 w-full pt-4 border-t border-lightest-navy/20 mt-4">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-green w-full">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-teal w-full">
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 <span className="ml-2">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </Button>
               {session ? (
                  <>
-                  <Button asChild className="bg-green text-deep-navy hover:bg-green/90 w-full">
+                  <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90 w-full">
                     <Link to="/dashboard">Dashboard</Link>
                   </Button>
-                  <Button onClick={handleLogout} variant="outline" className="border-green text-green hover:bg-green/10 hover:text-green w-full">
+                  <Button onClick={handleLogout} variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal w-full">
                     Logout
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button asChild variant="outline" className="border-green text-green hover:bg-green/10 hover:text-green w-full">
+                  <Button asChild variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal w-full">
                     <Link to="/login">Login</Link>
                   </Button>
-                  <Button asChild className="bg-green text-deep-navy hover:bg-green/90 w-full">
+                  <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90 w-full">
                     <Link to="/signup">Sign Up</Link>
                   </Button>
                 </>

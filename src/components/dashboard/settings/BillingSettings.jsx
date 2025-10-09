@@ -49,7 +49,7 @@ const BillingSettings = () => {
       <div className="space-y-2 text-lightest-slate">
         <div className="flex justify-between items-center">
           <span className="text-slate">Plan:</span>
-          <Badge variant="outline" className="capitalize bg-green/10 text-green border-green/50">{profile.plan_tier}</Badge>
+          <Badge variant="outline" className="capitalize bg-teal/10 text-teal border-teal/50">{profile.plan_tier}</Badge>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-slate">Status:</span>

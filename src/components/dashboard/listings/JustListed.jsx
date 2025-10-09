@@ -332,7 +332,7 @@ const JustListed = () => {
         )}
         
         <div className="flex gap-2">
-          <Button onClick={refetchListings} className="bg-green text-deep-navy hover:bg-green/90">
+          <Button onClick={refetchListings} className="bg-teal text-deep-navy hover:bg-teal/90">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -340,7 +340,7 @@ const JustListed = () => {
             <Button 
               onClick={() => navigate('/login')} 
               variant="outline"
-              className="border-green text-green hover:bg-green/10"
+              className="border-teal text-teal hover:bg-teal/10"
             >
               Go to Login
             </Button>
@@ -370,7 +370,7 @@ const JustListed = () => {
       >
         <div>
           <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
-            <Building className="h-6 w-6 text-green" />
+            <Building className="h-6 w-6 text-teal" />
             Just Listed Properties
             {filters.city_name && filters.city_name.length > 0 && (
               <span className="text-slate font-normal flex items-center gap-1">
@@ -385,7 +385,7 @@ const JustListed = () => {
                   showMultiCityOption={true}
                 />
                 {filters.city_name.length > 1 && (
-                  <span className="text-green text-sm ml-1">
+                  <span className="text-teal text-sm ml-1">
                     +{filters.city_name.length - 1} more
                   </span>
                 )}
@@ -395,7 +395,7 @@ const JustListed = () => {
           <p className="text-slate mt-1">
             Discover the latest properties in your service area.
             {filters.city_name && filters.city_name.length > 1 && (
-              <span className="text-green text-sm ml-2">
+              <span className="text-teal text-sm ml-2">
                 Showing listings from {filters.city_name.length} cities
               </span>
             )}
@@ -405,7 +405,7 @@ const JustListed = () => {
           <Button
             onClick={() => setShowBulkRevealModal(true)}
             disabled={sortedListings.length === 0 || isBulkRevealing}
-            className="bg-green text-deep-navy hover:bg-green/90"
+            className="bg-teal text-deep-navy hover:bg-teal/90"
           >
             <Zap className="h-4 w-4 mr-2" />
             Bulk Reveal
@@ -414,7 +414,7 @@ const JustListed = () => {
             onClick={handleExport}
             disabled={sortedListings.length === 0}
             variant="outline"
-            className="border-green text-green hover:bg-green/10"
+            className="border-teal text-teal hover:bg-teal/10"
           >
             <Download className="h-4 w-4 mr-2" />
             Export ({sortedListings.length})
@@ -523,7 +523,7 @@ const JustListed = () => {
                   <Button 
                     onClick={() => setFilters(clearAllFilters(profile))}
                     variant="outline"
-                    className="border-green text-green hover:bg-green/10"
+                    className="border-teal text-teal hover:bg-teal/10"
                   >
                     Clear Filters
                   </Button>
@@ -559,13 +559,13 @@ const JustListed = () => {
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-light-navy rounded-md">
-                                <Home className="h-4 w-4 text-green" />
+                                <Home className="h-4 w-4 text-teal" />
                               </div>
                               <div>
                                 <div 
                                   className={`font-medium ${
                                     isRevealed 
-                                      ? 'text-lightest-slate cursor-pointer hover:text-green transition-colors' 
+                                      ? 'text-lightest-slate cursor-pointer hover:text-teal transition-colors' 
                                       : 'text-slate'
                                   }`}
                                   onClick={(e) => {
@@ -587,7 +587,7 @@ const JustListed = () => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-green font-semibold text-lg">
+                            <div className="text-teal font-semibold text-lg">
                               {formatPrice(listing.unformattedprice, isRevealed)}
                             </div>
                           </TableCell>
@@ -629,7 +629,7 @@ const JustListed = () => {
                                 }}
                                 size="sm"
                                 variant="outline"
-                                className="border-green text-green hover:bg-green/10"
+                                className="border-teal text-teal hover:bg-teal/10"
                               >
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
@@ -640,7 +640,7 @@ const JustListed = () => {
                                 isLoading={isRevealing}
                                 disabled={isRevealing}
                               size="sm"
-                                className="bg-green text-deep-navy hover:bg-green/90"
+                                className="bg-teal text-deep-navy hover:bg-teal/90"
                               >
                                       <Zap className="h-4 w-4 mr-2" />
                                       Reveal (1)
@@ -677,7 +677,7 @@ const JustListed = () => {
         <DialogContent className="bg-light-navy border-lightest-navy/20 text-lightest-slate">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-green" />
+              <Zap className="h-5 w-5 text-teal" />
               Out of Credits
             </DialogTitle>
             <DialogDescription>
@@ -685,7 +685,7 @@ const JustListed = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-start gap-2">
-            <LoadingButton asChild className="bg-green text-deep-navy hover:bg-green/90">
+            <LoadingButton asChild className="bg-teal text-deep-navy hover:bg-teal/90">
               <Link to="/pricing#top-up" onClick={() => setShowUpgradeModal(false)}>Buy Credits</Link>
             </LoadingButton>
             <LoadingButton asChild variant="outline">

@@ -299,7 +299,7 @@ const SoldListingsEnhanced = () => {
         )}
         
         <div className="flex gap-2">
-          <Button onClick={refetchListings} className="bg-green text-deep-navy hover:bg-green/90">
+          <Button onClick={refetchListings} className="bg-teal text-deep-navy hover:bg-teal/90">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -307,7 +307,7 @@ const SoldListingsEnhanced = () => {
             <Button 
               onClick={() => navigate('/login')} 
               variant="outline"
-              className="border-green text-green hover:bg-green/10"
+              className="border-teal text-teal hover:bg-teal/10"
             >
               Go to Login
             </Button>
@@ -337,7 +337,7 @@ const SoldListingsEnhanced = () => {
       >
         <div>
           <h2 className="text-2xl font-bold text-lightest-slate flex items-center gap-2 flex-wrap">
-            <CheckCircle className="h-6 w-6 text-green" />
+            <CheckCircle className="h-6 w-6 text-teal" />
             Recently Sold Properties
             {filters.city_name && filters.city_name.length > 0 && (
               <span className="text-slate font-normal flex items-center gap-1">
@@ -352,7 +352,7 @@ const SoldListingsEnhanced = () => {
                   showMultiCityOption={true}
                 />
                 {filters.city_name.length > 1 && (
-                  <span className="text-green text-sm ml-1">
+                  <span className="text-teal text-sm ml-1">
                     +{filters.city_name.length - 1} more
                   </span>
                 )}
@@ -362,7 +362,7 @@ const SoldListingsEnhanced = () => {
           <p className="text-slate mt-1">
             Identify high-potential moving leads from recent sales.
             {filters.city_name && filters.city_name.length > 1 && (
-              <span className="text-green text-sm ml-2">
+              <span className="text-teal text-sm ml-2">
                 Showing listings from {filters.city_name.length} cities
               </span>
             )}
@@ -373,7 +373,7 @@ const SoldListingsEnhanced = () => {
             onClick={handleExport}
             disabled={sortedListings.length === 0}
             variant="outline"
-            className="border-green text-green hover:bg-green/10"
+            className="border-teal text-teal hover:bg-teal/10"
           >
             <Download className="h-4 w-4 mr-2" />
             Export ({sortedListings.length})
@@ -482,7 +482,7 @@ const SoldListingsEnhanced = () => {
                   <Button 
                     onClick={() => setFilters(clearAllFilters(profile))}
                     variant="outline"
-                    className="border-green text-green hover:bg-green/10"
+                    className="border-teal text-teal hover:bg-teal/10"
                   >
                     Clear Filters
                   </Button>
@@ -516,13 +516,13 @@ const SoldListingsEnhanced = () => {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-light-navy rounded-md">
-                              <Home className="h-4 w-4 text-green" />
+                              <Home className="h-4 w-4 text-teal" />
                             </div>
                             <div>
                               <div 
                                 className={`font-medium ${
                                   profile?.unlimited || allRevealedListings?.has(listing.id) 
-                                    ? 'text-lightest-slate cursor-pointer hover:text-green transition-colors' 
+                                    ? 'text-lightest-slate cursor-pointer hover:text-teal transition-colors' 
                                     : 'text-slate'
                                 }`}
                                 onClick={(e) => {
@@ -547,7 +547,7 @@ const SoldListingsEnhanced = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-green font-semibold text-lg">
+                          <div className="text-teal font-semibold text-lg">
                             {profile?.unlimited || allRevealedListings?.has(listing.id)
                               ? (listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A')
                               : '*****'
@@ -603,7 +603,7 @@ const SoldListingsEnhanced = () => {
                               }}
                               size="sm"
                               variant="outline"
-                              className="border-green text-green hover:bg-green/10"
+                              className="border-teal text-teal hover:bg-teal/10"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               View Details
@@ -613,7 +613,7 @@ const SoldListingsEnhanced = () => {
                               onClick={(e) => handleReveal(listing.id, e)}
                               disabled={isRevealing}
                               size="sm"
-                              className="bg-green text-deep-navy hover:bg-green/90"
+                              className="bg-teal text-deep-navy hover:bg-teal/90"
                             >
                               <TrendingUp className="h-4 w-4 mr-2" />
                               Reveal (2)

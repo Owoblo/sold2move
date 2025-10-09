@@ -42,7 +42,7 @@ const WelcomePage = () => {
   if (isLoading || profileLoading) {
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal"></div>
         <p className="text-light-slate mt-4">Loading your account...</p>
       </div>
     );
@@ -53,8 +53,8 @@ const WelcomePage = () => {
       <div className="container mx-auto px-6 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green/10 rounded-full mb-6">
-            <Sparkles className="h-10 w-10 text-green" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-teal/10 rounded-full mb-6">
+            <Sparkles className="h-10 w-10 text-teal" />
           </div>
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-lightest-slate mb-4">
             Welcome to Sold2Move!
@@ -64,9 +64,9 @@ const WelcomePage = () => {
           </p>
           
           {/* Credits Badge */}
-          <div className="inline-flex items-center gap-2 bg-green/10 border border-green/20 rounded-full px-6 py-3 mb-8">
-            <CreditCard className="h-5 w-5 text-green" />
-            <span className="text-green font-semibold">
+          <div className="inline-flex items-center gap-2 bg-teal/10 border border-teal/20 rounded-full px-6 py-3 mb-8">
+            <CreditCard className="h-5 w-5 text-teal" />
+            <span className="text-teal font-semibold">
               You have {profile?.credits_remaining || 100} free credits!
             </span>
           </div>
@@ -80,8 +80,8 @@ const WelcomePage = () => {
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           <Card className="bg-light-navy/50 border-lightest-navy/20">
             <CardHeader className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-green/10 rounded-full mb-4 mx-auto">
-                <Search className="h-6 w-6 text-green" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-teal/10 rounded-full mb-4 mx-auto">
+                <Search className="h-6 w-6 text-teal" />
               </div>
               <CardTitle className="text-lightest-slate">Find Moving Leads</CardTitle>
               <CardDescription className="text-slate">
@@ -92,8 +92,8 @@ const WelcomePage = () => {
 
           <Card className="bg-light-navy/50 border-lightest-navy/20">
             <CardHeader className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-green/10 rounded-full mb-4 mx-auto">
-                <Target className="h-6 w-6 text-green" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-teal/10 rounded-full mb-4 mx-auto">
+                <Target className="h-6 w-6 text-teal" />
               </div>
               <CardTitle className="text-lightest-slate">Target Your Market</CardTitle>
               <CardDescription className="text-slate">
@@ -104,8 +104,8 @@ const WelcomePage = () => {
 
           <Card className="bg-light-navy/50 border-lightest-navy/20">
             <CardHeader className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-green/10 rounded-full mb-4 mx-auto">
-                <TrendingUp className="h-6 w-6 text-green" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-teal/10 rounded-full mb-4 mx-auto">
+                <TrendingUp className="h-6 w-6 text-teal" />
               </div>
               <CardTitle className="text-lightest-slate">Convert & Grow</CardTitle>
               <CardDescription className="text-slate">
@@ -122,8 +122,8 @@ const WelcomePage = () => {
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green/20 rounded-full mb-4">
-                <span className="text-2xl font-bold text-green">1</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-teal/20 rounded-full mb-4">
+                <span className="text-2xl font-bold text-teal">1</span>
               </div>
               <h3 className="text-lg font-semibold text-lightest-slate mb-2">Set Your Preferences</h3>
               <p className="text-slate">
@@ -131,8 +131,8 @@ const WelcomePage = () => {
               </p>
             </div>
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green/20 rounded-full mb-4">
-                <span className="text-2xl font-bold text-green">2</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-teal/20 rounded-full mb-4">
+                <span className="text-2xl font-bold text-teal">2</span>
               </div>
               <h3 className="text-lg font-semibold text-lightest-slate mb-2">Discover Properties</h3>
               <p className="text-slate">
@@ -140,8 +140,8 @@ const WelcomePage = () => {
               </p>
             </div>
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green/20 rounded-full mb-4">
-                <span className="text-2xl font-bold text-green">3</span>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-teal/20 rounded-full mb-4">
+                <span className="text-2xl font-bold text-teal">3</span>
               </div>
               <h3 className="text-lg font-semibold text-lightest-slate mb-2">Reveal & Contact</h3>
               <p className="text-slate">
@@ -154,22 +154,22 @@ const WelcomePage = () => {
         {/* Stats Section */}
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           <div className="text-center">
-            <div className="text-3xl font-bold text-green mb-2">50-100</div>
+            <div className="text-3xl font-bold text-teal mb-2">50-100</div>
             <div className="text-slate">Properties you can reveal with your free credits</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green mb-2">1-2</div>
+            <div className="text-3xl font-bold text-teal mb-2">1-2</div>
             <div className="text-slate">Credits per property reveal</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-green mb-2">24/7</div>
+            <div className="text-3xl font-bold text-teal mb-2">24/7</div>
             <div className="text-slate">Lead discovery and updates</div>
           </div>
         </div>
 
         {/* Call to Action */}
         <div className="text-center">
-          <div className="bg-gradient-to-r from-green/10 to-green/5 border border-green/20 rounded-2xl p-8 mb-8">
+          <div className="bg-gradient-to-r from-teal/10 to-teal/5 border border-teal/20 rounded-2xl p-8 mb-8">
             <h2 className="text-2xl font-heading font-bold text-lightest-slate mb-4">
               Ready to Start Finding Leads?
             </h2>
@@ -180,7 +180,7 @@ const WelcomePage = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 onClick={handleGetStarted}
-                className="bg-green text-deep-navy hover:bg-green/90 px-8 py-3 text-lg"
+                className="bg-teal text-deep-navy hover:bg-teal/90 px-8 py-3 text-lg"
                 size="lg"
               >
                 <Users className="mr-2 h-5 w-5" />

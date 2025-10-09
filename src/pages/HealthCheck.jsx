@@ -34,7 +34,7 @@ const HealthCheck = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-teal-500" />;
       case 'error':
         return <XCircle className="h-5 w-5 text-red-500" />;
       default:
@@ -80,7 +80,7 @@ const HealthCheck = () => {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center gap-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-green" />
+            <RefreshCw className="h-6 w-6 animate-spin text-teal" />
             <span className="text-lg">Running health checks...</span>
           </div>
         </div>
@@ -93,7 +93,7 @@ const HealthCheck = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-lightest-slate flex items-center gap-2">
-            <Zap className="h-8 w-8 text-green" />
+            <Zap className="h-8 w-8 text-teal" />
             System Health Check
           </h1>
           <p className="text-slate mt-2">
@@ -103,7 +103,7 @@ const HealthCheck = () => {
         <Button 
           onClick={runHealthCheck} 
           disabled={loading}
-          className="bg-green text-deep-navy hover:bg-green/90"
+          className="bg-teal text-deep-navy hover:bg-teal/90"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -134,7 +134,7 @@ const HealthCheck = () => {
               <div className="text-sm text-slate">Checks Performed</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-green">
+              <div className="text-2xl font-bold text-teal">
                 {healthData?.checks ? Object.values(healthData.checks).filter(c => c.status === 'healthy').length : 0}
               </div>
               <div className="text-sm text-slate">Healthy Services</div>
@@ -191,12 +191,12 @@ const HealthCheck = () => {
               <div className="space-y-2">
                 <div className="text-sm">
                   <span className="text-slate">Connected:</span>
-                  <span className={`ml-2 ${healthData.checks.supabase.connected ? 'text-green' : 'text-red-400'}`}>
+                  <span className={`ml-2 ${healthData.checks.supabase.connected ? 'text-teal' : 'text-red-400'}`}>
                     {healthData.checks.supabase.connected ? 'Yes' : 'No'}
                   </span>
                 </div>
                 {healthData.checks.supabase.message && (
-                  <div className="text-sm text-green">
+                  <div className="text-sm text-teal">
                     {healthData.checks.supabase.message}
                   </div>
                 )}
@@ -286,7 +286,7 @@ const HealthCheck = () => {
               <div className="space-y-2">
                 <div className="text-sm">
                   <span className="text-slate">Mode:</span>
-                  <span className={`ml-2 ${healthData.checks.payment.testMode ? 'text-yellow-400' : 'text-green'}`}>
+                  <span className={`ml-2 ${healthData.checks.payment.testMode ? 'text-yellow-400' : 'text-teal'}`}>
                     {healthData.checks.payment.testMode ? 'Test' : 'Live'}
                   </span>
                 </div>
@@ -299,7 +299,7 @@ const HealthCheck = () => {
                       <div key={planKey} className="text-sm flex justify-between">
                         <span className="text-slate capitalize">{planKey}:</span>
                         <span className={`${
-                          status === 'working' ? 'text-green' :
+                          status === 'working' ? 'text-teal' :
                           status === 'requires_auth' ? 'text-yellow-400' :
                           'text-red-400'
                         }`}>
@@ -313,7 +313,7 @@ const HealthCheck = () => {
                       <div className="text-sm">
                         <span className="text-slate">Subscriptions:</span>
                         <span className={`ml-2 ${
-                          healthData.checks.payment.subscriptionCheckout === 'working' ? 'text-green' :
+                          healthData.checks.payment.subscriptionCheckout === 'working' ? 'text-teal' :
                           healthData.checks.payment.subscriptionCheckout === 'customer_migration_needed' ? 'text-yellow-400' :
                           'text-red-400'
                         }`}>
@@ -324,11 +324,11 @@ const HealthCheck = () => {
                 {healthData.checks.payment.oneTimePayment && (
                   <div className="text-sm">
                     <span className="text-slate">One-time:</span>
-                    <span className="text-green ml-2">{healthData.checks.payment.oneTimePayment}</span>
+                    <span className="text-teal ml-2">{healthData.checks.payment.oneTimePayment}</span>
                   </div>
                 )}
                 {healthData.checks.payment.message && (
-                  <div className="text-sm text-green">
+                  <div className="text-sm text-teal">
                     {healthData.checks.payment.message}
                   </div>
                 )}

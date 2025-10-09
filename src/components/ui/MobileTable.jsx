@@ -60,7 +60,7 @@ const MobileTable = ({
                       {listing.statustext || 'Property'}
                     </span>
                     {isRevealed(listing.id) && (
-                      <Badge variant="outline" className="text-xs text-green border-green/30">
+                      <Badge variant="outline" className="text-xs text-teal border-teal/30">
                         Revealed
                       </Badge>
                     )}
@@ -80,7 +80,7 @@ const MobileTable = ({
                 </div>
                 
                 <div className="text-right">
-                  <div className="text-lg font-bold text-green">
+                  <div className="text-lg font-bold text-teal">
                     {isRevealed(listing.id) 
                       ? formatPrice(listing.unformattedprice, true)
                       : '*****'
@@ -137,7 +137,7 @@ const MobileTable = ({
                     onClick={() => onViewDetails(listing.id)}
                     size="sm"
                     variant="outline"
-                    className="flex-1 border-green text-green hover:bg-green/10"
+                    className="flex-1 border-teal text-teal hover:bg-teal/10"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
@@ -147,7 +147,7 @@ const MobileTable = ({
                     onClick={() => onReveal(listing.id)}
                     disabled={isRevealing}
                     size="sm"
-                    className="flex-1 bg-green text-deep-navy hover:bg-green/90"
+                    className="flex-1 bg-teal text-deep-navy hover:bg-teal/90"
                   >
                     <Zap className="h-4 w-4 mr-2" />
                     Reveal (1 credit)

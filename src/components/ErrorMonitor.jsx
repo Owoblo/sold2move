@@ -97,7 +97,7 @@ const ErrorMonitor = ({ isOpen, onClose }) => {
       case 'medium':
         return 'bg-yellow-500';
       case 'low':
-        return 'bg-green-500';
+        return 'bg-teal-500';
       default:
         return 'bg-slate';
     }
@@ -160,7 +160,7 @@ const ErrorMonitor = ({ isOpen, onClose }) => {
                 <Card className="bg-deep-navy/30">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2">
-                      <Server className="h-5 w-5 text-green" />
+                      <Server className="h-5 w-5 text-teal" />
                       <span className="text-sm text-slate">This Week</span>
                     </div>
                     <div className="text-2xl font-bold text-lightest-slate mt-2">
@@ -194,7 +194,7 @@ const ErrorMonitor = ({ isOpen, onClose }) => {
               <div className="space-y-3">
                 {errors.length === 0 ? (
                   <div className="text-center py-8">
-                    <CheckCircle className="h-12 w-12 text-green mx-auto mb-4" />
+                    <CheckCircle className="h-12 w-12 text-teal mx-auto mb-4" />
                     <p className="text-slate">No errors recorded</p>
                   </div>
                 ) : (

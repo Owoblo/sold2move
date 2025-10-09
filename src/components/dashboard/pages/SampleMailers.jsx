@@ -86,7 +86,7 @@ const SampleMailers = () => {
 
       <Card className="bg-light-navy border-lightest-navy/20">
         <CardHeader>
-          <CardTitle className="text-2xl text-green">Postcard Designs</CardTitle>
+          <CardTitle className="text-2xl text-teal">Postcard Designs</CardTitle>
           <CardDescription>
             These samples showcase effective designs for "Just Listed" and "Just Sold" announcements.
           </CardDescription>
@@ -97,7 +97,7 @@ const SampleMailers = () => {
               {mailerSamples.map((mailer) => (
                 <DialogTrigger asChild key={mailer.id} onClick={() => setSelectedImage(mailer)}>
                   <motion.div
-                    className="relative rounded-lg overflow-hidden cursor-pointer group border-2 border-transparent hover:border-green transition-all duration-300"
+                    className="relative rounded-lg overflow-hidden cursor-pointer group border-2 border-transparent hover:border-teal transition-all duration-300"
                     whileHover={{ y: -5 }}
                   >
                     <img 
@@ -112,7 +112,7 @@ const SampleMailers = () => {
               ))}
             </div>
             {selectedImage && (
-              <DialogContent className="max-w-4xl bg-light-navy border-green">
+              <DialogContent className="max-w-4xl bg-light-navy border-teal">
                  <img 
                     className="w-full h-auto rounded-md"
                     alt={selectedImage.alt}

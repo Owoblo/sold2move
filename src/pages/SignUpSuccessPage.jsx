@@ -14,8 +14,8 @@ const SignUpSuccessPage = () => {
       <div className="container mx-auto px-6 py-20 flex justify-center items-center min-h-[calc(100vh-200px)]">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
-            <div className="mx-auto bg-green/10 rounded-full p-3 w-fit">
-              <MailCheck className="h-10 w-10 text-green" />
+            <div className="mx-auto bg-teal/10 rounded-full p-3 w-fit">
+              <MailCheck className="h-10 w-10 text-teal" />
             </div>
             <CardTitle className="text-3xl font-heading mt-4">Check your inbox!</CardTitle>
             <CardDescription className="text-slate text-base mt-2">
@@ -26,7 +26,7 @@ const SignUpSuccessPage = () => {
             <p className="text-sm text-slate">
               Once verified, you can sign in to your account.
             </p>
-            <Button asChild className="w-full bg-green text-deep-navy hover:bg-green/90">
+            <Button asChild className="w-full bg-teal text-deep-navy hover:bg-teal/90">
               <Link to="/login">Go to Sign In</Link>
             </Button>
             <p className="text-xs text-muted-foreground pt-4">

@@ -20,14 +20,14 @@ const Slider = React.forwardRef(({ className, ...props }, ref) => (
         height: 20px;
         width: 20px;
         border-radius: 50%;
-        background: var(--green);
+        background: var(--teal);
         cursor: pointer;
         border: 2px solid var(--deep-navy);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
       
       .slider::-webkit-slider-thumb:hover {
-        background: var(--green-hover);
+        background: var(--teal-hover);
         transform: scale(1.1);
       }
       
@@ -35,14 +35,14 @@ const Slider = React.forwardRef(({ className, ...props }, ref) => (
         height: 20px;
         width: 20px;
         border-radius: 50%;
-        background: var(--green);
+        background: var(--teal);
         cursor: pointer;
         border: 2px solid var(--deep-navy);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
       
       .slider::-moz-range-thumb:hover {
-        background: var(--green-hover);
+        background: var(--teal-hover);
         transform: scale(1.1);
       }
     `}</style>

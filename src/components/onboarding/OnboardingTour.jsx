@@ -39,8 +39,8 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
       content: (
         <div className="space-y-4">
           <div className="text-center">
-            <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Home className="h-8 w-8 text-green" />
+            <div className="w-16 h-16 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Home className="h-8 w-8 text-teal" />
             </div>
             <h3 className="text-lg font-semibold text-lightest-slate mb-2">
               Your Lead Generation Dashboard
@@ -51,7 +51,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
           </div>
           <div className="bg-deep-navy/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Zap className="h-4 w-4 text-green" />
+              <Zap className="h-4 w-4 text-teal" />
               <span className="text-sm font-medium text-lightest-slate">You have 100 free credits to start!</span>
             </div>
             <p className="text-xs text-slate">
@@ -72,7 +72,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-deep-navy/30 rounded-lg">
-              <Building className="h-6 w-6 text-green mx-auto mb-2" />
+              <Building className="h-6 w-6 text-teal mx-auto mb-2" />
               <h4 className="text-sm font-medium text-lightest-slate">Just Listed</h4>
               <p className="text-xs text-slate">New properties on the market</p>
               <Badge className="mt-1 text-xs">1 credit each</Badge>
@@ -84,8 +84,8 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
               <Badge className="mt-1 text-xs bg-amber-400/10 text-amber-400">2 credits each</Badge>
             </div>
           </div>
-          <div className="bg-green/5 border border-green/20 rounded-lg p-3">
-            <p className="text-sm text-green">
+          <div className="bg-teal/5 border border-teal/20 rounded-lg p-3">
+            <p className="text-sm text-teal">
               <strong>Pro Tip:</strong> Focus on recently sold properties - these homeowners are most likely to move soon!
             </p>
           </div>
@@ -113,7 +113,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
               <ArrowRight className="h-4 w-4 text-slate" />
               <div className="flex-1">
                 <p className="text-sm text-slate">After reveal:</p>
-                <p className="text-sm font-medium text-green">123 Main Street</p>
+                <p className="text-sm font-medium text-teal">123 Main Street</p>
               </div>
             </div>
           </div>
@@ -136,19 +136,19 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
         <div className="space-y-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-2 bg-deep-navy/30 rounded">
-              <Search className="h-4 w-4 text-green" />
+              <Search className="h-4 w-4 text-teal" />
               <span className="text-sm text-lightest-slate">Search by address or city</span>
             </div>
             <div className="flex items-center gap-2 p-2 bg-deep-navy/30 rounded">
-              <DollarSign className="h-4 w-4 text-green" />
+              <DollarSign className="h-4 w-4 text-teal" />
               <span className="text-sm text-lightest-slate">Filter by price range</span>
             </div>
             <div className="flex items-center gap-2 p-2 bg-deep-navy/30 rounded">
-              <Building className="h-4 w-4 text-green" />
+              <Building className="h-4 w-4 text-teal" />
               <span className="text-sm text-lightest-slate">Property type and size</span>
             </div>
             <div className="flex items-center gap-2 p-2 bg-deep-navy/30 rounded">
-              <Star className="h-4 w-4 text-green" />
+              <Star className="h-4 w-4 text-teal" />
               <span className="text-sm text-lightest-slate">Save your favorite searches</span>
             </div>
           </div>
@@ -171,29 +171,29 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3">
             <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
-              <Download className="h-5 w-5 text-green" />
+              <Download className="h-5 w-5 text-teal" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Export to CSV</p>
                 <p className="text-xs text-slate">Include contact information</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
-              <Settings className="h-5 w-5 text-green" />
+              <Settings className="h-5 w-5 text-teal" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">CRM Integration</p>
                 <p className="text-xs text-slate">Connect to Salesforce, HubSpot</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
-              <Play className="h-5 w-5 text-green" />
+              <Play className="h-5 w-5 text-teal" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Email Templates</p>
                 <p className="text-xs text-slate">Pre-built outreach messages</p>
               </div>
             </div>
           </div>
-          <div className="bg-green/5 border border-green/20 rounded-lg p-3">
-            <p className="text-sm text-green">
+          <div className="bg-teal/5 border border-teal/20 rounded-lg p-3">
+            <p className="text-sm text-teal">
               <strong>Success Tip:</strong> Follow up quickly! Most moving companies contact new leads within 24-48 hours of a sale.
             </p>
           </div>
@@ -209,8 +209,8 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
       icon: CheckCircle,
       content: (
         <div className="space-y-4 text-center">
-          <div className="w-16 h-16 bg-green/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-green" />
+          <div className="w-16 h-16 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-teal" />
           </div>
           <h3 className="text-lg font-semibold text-lightest-slate">
             Ready to Find Your First Leads?
@@ -222,7 +222,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
           <div className="bg-deep-navy/30 rounded-lg p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate">Your starting credits:</span>
-              <span className="text-green font-semibold">100 credits</span>
+              <span className="text-teal font-semibold">100 credits</span>
             </div>
             <div className="flex items-center justify-between text-sm mt-1">
               <span className="text-slate">Estimated reveals:</span>
@@ -297,7 +297,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   {React.createElement(currentStepData.icon, { 
-                    className: "h-5 w-5 text-green" 
+                    className: "h-5 w-5 text-teal" 
                   })}
                   <span className="text-sm text-slate">
                     Step {currentStep + 1} of {tourSteps.length}
@@ -328,7 +328,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
                 </div>
                 <div className="w-full bg-deep-navy/30 rounded-full h-2">
                   <motion.div
-                    className="bg-green h-2 rounded-full"
+                    className="bg-teal h-2 rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3 }}
@@ -359,9 +359,9 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
                       key={index}
                       className={`w-2 h-2 rounded-full ${
                         index === currentStep 
-                          ? 'bg-green' 
+                          ? 'bg-teal' 
                           : completedSteps.has(index)
-                          ? 'bg-green/50'
+                          ? 'bg-teal/50'
                           : 'bg-slate/30'
                       }`}
                     />
@@ -370,7 +370,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
                 
                 <Button
                   onClick={handleNext}
-                  className="bg-green text-deep-navy hover:bg-green/90 flex items-center gap-2"
+                  className="bg-teal text-deep-navy hover:bg-teal/90 flex items-center gap-2"
                 >
                   {currentStepData.action}
                   <ChevronRight className="h-4 w-4" />

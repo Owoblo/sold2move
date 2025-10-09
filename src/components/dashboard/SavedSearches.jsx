@@ -203,7 +203,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg text-lightest-slate flex items-center gap-2">
-                <Star className="h-5 w-5 text-green" />
+                <Star className="h-5 w-5 text-teal" />
                 Saved Searches
               </CardTitle>
               <CardDescription className="text-slate">
@@ -213,7 +213,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
             <Button
               onClick={() => setShowSaveDialog(true)}
               size="sm"
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Current
@@ -232,7 +232,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
               </p>
               <Button
                 onClick={() => setShowSaveDialog(true)}
-                className="bg-green text-deep-navy hover:bg-green/90"
+                className="bg-teal text-deep-navy hover:bg-teal/90"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Save Current Search
@@ -276,7 +276,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
                               onClick={() => loadSearch(search)}
                               size="sm"
                               variant="outline"
-                              className="border-green text-green hover:bg-green/10"
+                              className="border-teal text-teal hover:bg-teal/10"
                             >
                               <Play className="h-4 w-4 mr-1" />
                               Load
@@ -311,7 +311,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
         <DialogContent className="bg-light-navy border-lightest-navy/20">
           <DialogHeader>
             <DialogTitle className="text-lightest-slate flex items-center gap-2">
-              <Save className="h-5 w-5 text-green" />
+              <Save className="h-5 w-5 text-teal" />
               Save Current Search
             </DialogTitle>
             <DialogDescription className="text-slate">
@@ -366,7 +366,7 @@ const SavedSearches = ({ onLoadSearch, currentFilters }) => {
               onClick={saveCurrentSearch}
               disabled={!searchName.trim() || isSaving}
               isLoading={isSaving}
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Search

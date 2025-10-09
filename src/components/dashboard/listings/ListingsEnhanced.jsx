@@ -235,7 +235,7 @@ const ListingsEnhanced = ({ filters }) => {
         <p className="text-slate text-center max-w-md">
           Please complete your onboarding to start viewing listings in your area.
         </p>
-        <Button asChild className="bg-green text-deep-navy hover:bg-green/90">
+        <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
           <Link to="/onboarding">Complete Setup</Link>
         </Button>
       </motion.div>
@@ -252,7 +252,7 @@ const ListingsEnhanced = ({ filters }) => {
         <AlertCircle className="h-12 w-12 text-red-500" />
         <h2 className="text-xl font-semibold text-lightest-slate">Error Loading Listings</h2>
         <p className="text-slate text-center max-w-md">{error}</p>
-        <Button onClick={fetchListings} className="bg-green text-deep-navy hover:bg-green/90">
+        <Button onClick={fetchListings} className="bg-teal text-deep-navy hover:bg-teal/90">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
         </Button>
@@ -284,7 +284,7 @@ const ListingsEnhanced = ({ filters }) => {
             onClick={handleExport}
             disabled={!pagedListings.length}
             variant="outline"
-            className="border-green text-green hover:bg-green/10"
+            className="border-teal text-teal hover:bg-teal/10"
           >
             <Download className="h-4 w-4 mr-2" />
             Export ({pagedListings.length})
@@ -379,7 +379,7 @@ const ListingsEnhanced = ({ filters }) => {
                   <Button 
                     onClick={() => setSearchTerm('')}
                     variant="outline"
-                    className="border-green text-green hover:bg-green/10"
+                    className="border-teal text-teal hover:bg-teal/10"
                   >
                     Clear Search
                   </Button>
@@ -416,7 +416,7 @@ const ListingsEnhanced = ({ filters }) => {
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-light-navy rounded-md">
-                                <Home className="h-4 w-4 text-green" />
+                                <Home className="h-4 w-4 text-teal" />
                               </div>
                               <div>
                                 <div className="text-lightest-slate font-medium">
@@ -429,7 +429,7 @@ const ListingsEnhanced = ({ filters }) => {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-green font-semibold text-lg">
+                            <div className="text-teal font-semibold text-lg">
                               {listing.price ? `$${listing.price.toLocaleString()}` : 'N/A'}
                             </div>
                             {listing.unformattedPrice && listing.unformattedPrice !== listing.price && (
@@ -464,14 +464,14 @@ const ListingsEnhanced = ({ filters }) => {
                           <TableCell>
                             <Badge 
                               variant={isRevealed ? "default" : "secondary"}
-                              className={isRevealed ? "bg-green/10 text-green border-green/20" : ""}
+                              className={isRevealed ? "bg-teal/10 text-teal border-teal/20" : ""}
                             >
                               {isRevealed ? 'Revealed' : 'Hidden'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {isRevealed ? (
-                              <div className="flex items-center gap-2 text-green">
+                              <div className="flex items-center gap-2 text-teal">
                                 <Eye className="h-4 w-4" />
                                 <span className="text-sm">View Details</span>
                               </div>
@@ -481,7 +481,7 @@ const ListingsEnhanced = ({ filters }) => {
                                 isLoading={isRevealing}
                                 disabled={isRevealing}
                                 size="sm"
-                                className="bg-green text-deep-navy hover:bg-green/90"
+                                className="bg-teal text-deep-navy hover:bg-teal/90"
                               >
                                 <Zap className="h-4 w-4 mr-2" />
                                 Reveal
@@ -518,7 +518,7 @@ const ListingsEnhanced = ({ filters }) => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-green" />
+              <Zap className="h-5 w-5 text-teal" />
               Credits Required
             </DialogTitle>
             <DialogDescription>
@@ -547,7 +547,7 @@ const ListingsEnhanced = ({ filters }) => {
                 setShowUpgradeModal(false);
                 navigate('/pricing');
               }}
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               Upgrade Plan
             </Button>

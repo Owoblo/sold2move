@@ -4,7 +4,7 @@ import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const spinnerVariants = cva(
-  'animate-spin text-green',
+  'animate-spin text-teal',
   {
     variants: {
       size: {

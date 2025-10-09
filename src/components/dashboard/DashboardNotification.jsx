@@ -23,11 +23,11 @@ const DashboardNotification = ({ notification, onDismiss }) => {
         animate={{ opacity: 1, y: 0, height: 'auto' }}
         exit={{ opacity: 0, y: -20, height: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-gradient-to-r from-teal-500/20 to-green/20 border border-green/30 rounded-lg p-4 mb-6 shadow-lg overflow-hidden"
+        className="bg-gradient-to-r from-teal-500/20 to-teal/20 border border-teal/30 rounded-lg p-4 mb-6 shadow-lg overflow-hidden"
       >
         <div className="flex items-start">
           <div className="flex-shrink-0">
-            <Sparkles className="h-6 w-6 text-green animate-pulse" />
+            <Sparkles className="h-6 w-6 text-teal animate-pulse" />
           </div>
           <div className="ml-4 flex-1">
             <div className="flex justify-between items-center">
@@ -37,19 +37,19 @@ const DashboardNotification = ({ notification, onDismiss }) => {
             <p className="mt-1 text-lightest-slate">
               {hasJustListed && (
                 <>
-                  <span className="font-bold text-green">{just_listed_count}</span> new properties just listed
+                  <span className="font-bold text-teal">{just_listed_count}</span> new properties just listed
                   {hasSold ? ' and ' : ' '}
                 </>
               )}
               {hasSold && (
                 <>
-                  <span className="font-bold text-green">{sold_count}</span> properties recently sold
+                  <span className="font-bold text-teal">{sold_count}</span> properties recently sold
                 </>
               )}
               in <span className="font-semibold">{city_name}</span>.
             </p>
             <div className="mt-3 flex gap-4">
-              <Button asChild size="sm" className="bg-green text-deep-navy hover:bg-green/90">
+              <Button asChild size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/dashboard/listings">View Listings</Link>
               </Button>
             </div>
@@ -57,7 +57,7 @@ const DashboardNotification = ({ notification, onDismiss }) => {
           <div className="ml-4 flex-shrink-0 flex">
             <button
               onClick={() => onDismiss(id)}
-              className="inline-flex text-slate rounded-md p-1 hover:bg-lightest-navy/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-deep-navy focus:ring-green"
+              className="inline-flex text-slate rounded-md p-1 hover:bg-lightest-navy/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-deep-navy focus:ring-teal"
             >
               <span className="sr-only">Dismiss</span>
               <X className="h-5 w-5" aria-hidden="true" />

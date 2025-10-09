@@ -63,7 +63,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
 
   const baseLinkClasses = "flex items-center p-2 rounded-md transition-colors duration-200";
   const inactiveLinkClasses = "text-slate hover:bg-lightest-navy/10 hover:text-lightest-slate";
-  const activeLinkClasses = "bg-green/10 text-green font-semibold";
+  const activeLinkClasses = "bg-teal/10 text-teal font-semibold";
 
   return (
     <>
@@ -76,7 +76,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           <div className="flex items-center justify-between mb-6 px-2">
             <Link to="/" className="flex items-center space-x-2 group">
               <div className="p-2 bg-deep-navy rounded-md">
-                <Home className="h-6 w-6 text-green" />
+                <Home className="h-6 w-6 text-teal" />
               </div>
               {isSidebarOpen && (
                 <span className="text-xl font-bold text-lightest-slate font-heading">Sold2Move</span>

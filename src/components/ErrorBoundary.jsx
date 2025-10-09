@@ -96,7 +96,7 @@ class ErrorBoundary extends React.Component {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button
                   onClick={this.handleRetry}
-                  className="bg-green text-deep-navy hover:bg-green/90"
+                  className="bg-teal text-deep-navy hover:bg-teal/90"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Try Again
@@ -105,7 +105,7 @@ class ErrorBoundary extends React.Component {
                 <Button
                   onClick={this.handleReload}
                   variant="outline"
-                  className="border-green text-green hover:bg-green/10"
+                  className="border-teal text-teal hover:bg-teal/10"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Reload Page

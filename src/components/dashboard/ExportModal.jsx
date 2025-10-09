@@ -133,7 +133,7 @@ const ExportModal = ({
       <DialogContent className="max-w-2xl bg-light-navy border-lightest-navy/20">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lightest-slate">
-            <Download className="h-5 w-5 text-green" />
+            <Download className="h-5 w-5 text-teal" />
             Export Listings
           </DialogTitle>
           <DialogDescription className="text-slate">
@@ -159,14 +159,14 @@ const ExportModal = ({
                     >
                       <Card className={`cursor-pointer transition-all duration-200 ${
                         exportFormat === option.id 
-                          ? 'bg-green/10 border-green/50' 
+                          ? 'bg-teal/10 border-teal/50' 
                           : 'bg-deep-navy/30 border-lightest-navy/20 hover:bg-deep-navy/50'
                       }`}>
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
                             <RadioGroupItem value={option.id} id={option.id} />
                             <div className="p-2 bg-light-navy rounded-md">
-                              <IconComponent className="h-5 w-5 text-green" />
+                              <IconComponent className="h-5 w-5 text-teal" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ const ExportModal = ({
                                   {option.title}
                                 </Label>
                                 {option.recommended && (
-                                  <span className="text-xs bg-green text-deep-navy px-2 py-1 rounded-full">
+                                  <span className="text-xs bg-teal text-deep-navy px-2 py-1 rounded-full">
                                     Recommended
                                   </span>
                                 )}
@@ -260,10 +260,10 @@ const ExportModal = ({
           )}
 
           {/* Export Summary */}
-          <Card className="bg-green/5 border-green/20">
+          <Card className="bg-teal/5 border-teal/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green" />
+                <CheckCircle className="h-4 w-4 text-teal" />
                 <span className="text-sm font-medium text-lightest-slate">Export Summary</span>
               </div>
               <div className="text-sm text-slate">
@@ -298,7 +298,7 @@ const ExportModal = ({
               onClick={handleExport}
               disabled={!listings || listings.length === 0 || isExporting}
               isLoading={isExporting}
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               <Download className="h-4 w-4 mr-2" />
               Export {listings?.length || 0} Listings

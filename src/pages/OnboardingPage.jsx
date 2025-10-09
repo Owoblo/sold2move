@@ -125,8 +125,8 @@ const OnboardingPage = () => {
       <div className="container mx-auto flex items-center justify-center min-h-screen py-12">
         <Card className="w-full max-w-2xl bg-light-navy border-lightest-navy/20 text-lightest-slate">
           <CardHeader className="text-center">
-            <div className="mx-auto bg-green/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="w-8 h-8 text-green" />
+            <div className="mx-auto bg-teal/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-8 h-8 text-teal" />
             </div>
             <CardTitle className="text-3xl font-bold font-heading">Just a few more details...</CardTitle>
             <CardDescription className="text-slate">
@@ -141,7 +141,7 @@ const OnboardingPage = () => {
                   name="companyName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel><Building className="inline-block mr-2 h-4 w-4 text-green" />Company Name</FormLabel>
+                      <FormLabel><Building className="inline-block mr-2 h-4 w-4 text-teal" />Company Name</FormLabel>
                       <FormControl><Input placeholder="e.g., Acme Moving Co." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -149,7 +149,7 @@ const OnboardingPage = () => {
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormItem>
-                    <FormLabel><Mail className="inline-block mr-2 h-4 w-4 text-green" />Business Email</FormLabel>
+                    <FormLabel><Mail className="inline-block mr-2 h-4 w-4 text-teal" />Business Email</FormLabel>
                     <FormControl><Input type="email" value={session.user.email} disabled className="bg-deep-navy/50" /></FormControl>
                   </FormItem>
                   <FormField
@@ -157,7 +157,7 @@ const OnboardingPage = () => {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel><Phone className="inline-block mr-2 h-4 w-4 text-green" />Phone Number</FormLabel>
+                        <FormLabel><Phone className="inline-block mr-2 h-4 w-4 text-teal" />Phone Number</FormLabel>
                         <FormControl><Input type="tel" placeholder="(555) 123-4567" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -165,7 +165,7 @@ const OnboardingPage = () => {
                   />
                 </div>
                 <div className="space-y-4 rounded-lg border border-lightest-navy/20 p-4">
-                  <h3 className="font-semibold text-lightest-slate flex items-center"><MapPin className="inline-block mr-2 h-4 w-4 text-green" />Primary Service Area</h3>
+                  <h3 className="font-semibold text-lightest-slate flex items-center"><MapPin className="inline-block mr-2 h-4 w-4 text-teal" />Primary Service Area</h3>
                   <p className="text-sm text-slate">We'll use this to find leads in your main operational area.</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
@@ -173,7 +173,7 @@ const OnboardingPage = () => {
                       name="countryCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel><Globe className="inline-block mr-2 h-4 w-4 text-green" />Country</FormLabel>
+                          <FormLabel><Globe className="inline-block mr-2 h-4 w-4 text-teal" />Country</FormLabel>
                           <FormControl>
                             <Combobox options={countries} value={field.value} onChange={(val) => { field.onChange(val); setValue('stateCode', ''); setValue('cityName', ''); }} placeholder="Select Country..." />
                           </FormControl>
@@ -217,7 +217,7 @@ const OnboardingPage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
-                        <Plus className="h-4 w-4 text-green" />
+                        <Plus className="h-4 w-4 text-teal" />
                         Service Areas (Cities from your listings)
                       </FormLabel>
                       <FormControl>
@@ -237,7 +237,7 @@ const OnboardingPage = () => {
                   )}
                 />
                 <CardFooter className="p-0 pt-6">
-                  <LoadingButton type="submit" className="w-full bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting}>
+                  <LoadingButton type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting}>
                     Complete Setup & Enter Dashboard
                   </LoadingButton>
                 </CardFooter>

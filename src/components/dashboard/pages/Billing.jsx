@@ -58,8 +58,8 @@ const Billing = () => {
           {hasSubscription ? (
             <div className="space-y-4">
               <div className="flex justify-between items-center p-4 bg-deep-navy rounded-lg">
-                <span className="font-bold text-lg text-green">{plan_tier.charAt(0).toUpperCase() + plan_tier.slice(1)} Plan</span>
-                <span className="capitalize font-semibold text-green">{subscription_status}</span>
+                <span className="font-bold text-lg text-teal">{plan_tier.charAt(0).toUpperCase() + plan_tier.slice(1)} Plan</span>
+                <span className="capitalize font-semibold text-teal">{subscription_status}</span>
               </div>
               <div className="text-sm text-slate">
                 <p>Your plan renews on: {new Date(current_period_end).toLocaleDateString()}</p>
@@ -70,7 +70,7 @@ const Billing = () => {
               <AlertCircle className="mx-auto h-12 w-12 text-amber-400" />
               <h3 className="mt-2 text-lg font-medium text-lightest-slate">No Active Subscription</h3>
               <p className="mt-1 text-sm text-slate">You are currently on the Free plan with {profile.credits_remaining} credits.</p>
-              <LoadingButton asChild className="mt-4 bg-green text-deep-navy hover:bg-green/90">
+              <LoadingButton asChild className="mt-4 bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/pricing">Upgrade Plan</Link>
               </LoadingButton>
             </div>
@@ -124,7 +124,7 @@ const Billing = () => {
                 <LoadingButton onClick={handleManageSubscription} variant="outline" isLoading={portalLoading}>
                   Manage Subscription
                 </LoadingButton>
-                <LoadingButton asChild variant="link" className="text-green">
+                <LoadingButton asChild variant="link" className="text-teal">
                     <Link to="/pricing">Change Plan</Link>
                 </LoadingButton>
               </CardFooter>
@@ -136,13 +136,13 @@ const Billing = () => {
           <Card className="bg-light-navy border-lightest-navy/20">
             <CardHeader>
               <CardTitle className="text-xl text-lightest-slate flex items-center gap-2">
-                <Zap className="text-green" /> Your Credits
+                <Zap className="text-teal" /> Your Credits
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className={`text-6xl font-bold ${profile?.unlimited ? 'text-green' : 'text-lightest-slate'} font-heading`}>{profile?.unlimited ? '∞' : (profile?.credits_remaining || 0)}</p>
+              <p className={`text-6xl font-bold ${profile?.unlimited ? 'text-teal' : 'text-lightest-slate'} font-heading`}>{profile?.unlimited ? '∞' : (profile?.credits_remaining || 0)}</p>
               <p className="text-slate">{profile?.unlimited ? 'Unlimited Credits' : 'credits remaining'}</p>
-              <LoadingButton asChild className="mt-4 w-full bg-green text-deep-navy hover:bg-green/90">
+              <LoadingButton asChild className="mt-4 w-full bg-teal text-deep-navy hover:bg-teal/90">
                 <Link to="/pricing">Buy More Credits</Link>
               </LoadingButton>
             </CardContent>
@@ -159,7 +159,7 @@ const Billing = () => {
       <Card className="mt-6 bg-light-navy border-lightest-navy/20">
         <CardHeader>
           <CardTitle className="text-xl text-lightest-slate flex items-center gap-2">
-            <FileText className="text-green" /> Payment History
+            <FileText className="text-teal" /> Payment History
           </CardTitle>
         </CardHeader>
         <CardContent>

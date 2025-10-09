@@ -33,7 +33,7 @@ const Pagination = ({
         size="sm"
         onClick={handlePrevious}
         disabled={currentPage === 1}
-        className="border-green text-green hover:bg-green/10 hover:text-green disabled:opacity-50"
+        className="border-teal text-teal hover:bg-teal/10 hover:text-teal disabled:opacity-50"
       >
         <ChevronLeft className="h-4 w-4 mr-1" />
         Previous
@@ -46,7 +46,7 @@ const Pagination = ({
         size="sm"
         onClick={handleNext}
         disabled={currentPage === totalPages}
-        className="border-green text-green hover:bg-green/10 hover:text-green disabled:opacity-50"
+        className="border-teal text-teal hover:bg-teal/10 hover:text-teal disabled:opacity-50"
       >
         Next
         <ChevronRight className="h-4 w-4 ml-1" />

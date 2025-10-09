@@ -113,7 +113,7 @@ const MultiCitySettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-green" />
+            <Globe className="h-5 w-5 text-teal" />
             Service Areas
           </CardTitle>
         </CardHeader>
@@ -157,7 +157,7 @@ const MultiCitySettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-green" />
+            <Globe className="h-5 w-5 text-teal" />
             Service Areas
           </CardTitle>
           <p className="text-slate text-sm">
@@ -167,9 +167,9 @@ const MultiCitySettings = () => {
         <CardContent className="space-y-6">
           {/* Current Selection Summary */}
           {selectedCities.length > 0 && (
-            <div className="p-4 bg-light-navy/30 rounded-lg border border-green/20">
+            <div className="p-4 bg-light-navy/30 rounded-lg border border-teal/20">
               <h4 className="text-sm font-medium text-lightest-slate mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-green" />
+                <MapPin className="h-4 w-4 text-teal" />
                 Your Service Areas ({selectedCities.length} cities)
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -178,8 +178,8 @@ const MultiCitySettings = () => {
                     key={city}
                     variant="secondary"
                     className={cn(
-                      "bg-green/20 text-green border-green/30",
-                      index === 0 && "ring-2 ring-green/50" // Highlight primary city
+                      "bg-teal/20 text-teal border-teal/30",
+                      index === 0 && "ring-2 ring-teal/50" // Highlight primary city
                     )}
                   >
                     {index === 0 && "📍 "}
@@ -238,7 +238,7 @@ const MultiCitySettings = () => {
               <Button
                 onClick={handleSave}
                 disabled={isSaving || selectedCities.length === 0 || !hasChanges}
-                className="bg-green text-deep-navy hover:bg-green/90"
+                className="bg-teal text-deep-navy hover:bg-teal/90"
               >
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save Changes"}

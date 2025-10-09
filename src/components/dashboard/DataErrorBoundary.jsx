@@ -74,7 +74,7 @@ class DataErrorBoundary extends React.Component {
                 <div className="space-y-2">
                   <Button 
                     onClick={this.handleRetry}
-                    className="w-full bg-green text-deep-navy hover:bg-green/90"
+                    className="w-full bg-teal text-deep-navy hover:bg-teal/90"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Try Again ({retryCount + 1}/{maxRetries})

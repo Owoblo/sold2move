@@ -131,7 +131,7 @@ const SignUpPage = () => {
                     </FormItem>
                   )}
                 />
-                <LoadingButton type="submit" className="w-full bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting} disabled={googleLoading}>
+                <LoadingButton type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting} disabled={googleLoading}>
                   Sign Up
                 </LoadingButton>
               </form>
@@ -153,7 +153,7 @@ const SignUpPage = () => {
 
             <p className="mt-6 text-center text-sm text-slate">
               Already have an account?{' '}
-              <Link to="/login" className="font-semibold text-green hover:text-green/90">
+              <Link to="/login" className="font-semibold text-teal hover:text-teal/90">
                 Sign in
               </Link>
             </p>

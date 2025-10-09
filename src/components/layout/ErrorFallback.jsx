@@ -24,7 +24,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }) => {
           </div>
         </CardContent>
         <CardFooter className="flex justify-center gap-4">
-          <Button onClick={resetErrorBoundary} className="bg-green text-deep-navy hover:bg-green/90">
+          <Button onClick={resetErrorBoundary} className="bg-teal text-deep-navy hover:bg-teal/90">
             <RefreshCw className="mr-2 h-4 w-4" />
             Try Again
           </Button>

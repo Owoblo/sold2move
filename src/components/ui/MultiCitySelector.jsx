@@ -172,19 +172,19 @@ const MultiCitySelector = ({
       <div className={cn("relative", className)} ref={dropdownRef}>
         <motion.button
           onClick={() => setIsOpen(!isOpen)}
-          className="group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-light-navy/30 border border-transparent hover:border-green/20"
+          className="group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-light-navy/30 border border-transparent hover:border-teal/20"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Globe className="h-4 w-4 text-green" />
-          <span className="text-green font-semibold group-hover:text-green/80 transition-colors">
+          <Globe className="h-4 w-4 text-teal" />
+          <span className="text-teal font-semibold group-hover:text-teal/80 transition-colors">
             {getDisplayText()}
           </span>
           <motion.div
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ChevronDown className="h-4 w-4 text-green" />
+            <ChevronDown className="h-4 w-4 text-teal" />
           </motion.div>
         </motion.button>
 
@@ -268,12 +268,12 @@ const MultiCitySelector = ({
     <div className={cn("relative", className)} ref={dropdownRef}>
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-green/50 transition-all duration-300 hover:bg-light-navy/30"
+        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-teal/50 transition-all duration-300 hover:bg-light-navy/30"
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
       >
         <div className="flex items-center gap-3">
-          <Globe className="h-5 w-5 text-green" />
+          <Globe className="h-5 w-5 text-teal" />
           <span className="text-lightest-slate font-medium">
             {getDisplayText()}
           </span>
@@ -293,7 +293,7 @@ const MultiCitySelector = ({
             <Badge
               key={city}
               variant="secondary"
-              className="bg-green/20 text-green border-green/30 hover:bg-green/30 transition-colors"
+              className="bg-teal/20 text-teal border-teal/30 hover:bg-teal/30 transition-colors"
             >
               <MapPin className="h-3 w-3 mr-1" />
               {city}
@@ -354,11 +354,11 @@ const MultiCitySelector = ({
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-                            isGroupFullySelected ? "bg-green border-green" : 
-                            isGroupPartiallySelected ? "bg-green/20 border-green" : "border-slate/40"
+                            isGroupFullySelected ? "bg-teal border-teal" : 
+                            isGroupPartiallySelected ? "bg-teal/20 border-teal" : "border-slate/40"
                           )}>
                             {isGroupFullySelected && <Check className="h-3 w-3 text-white" />}
-                            {isGroupPartiallySelected && <div className="w-2 h-2 bg-green rounded-full" />}
+                            {isGroupPartiallySelected && <div className="w-2 h-2 bg-teal rounded-full" />}
                           </div>
                           <span className="font-semibold text-lightest-slate">{groupName}</span>
                           <span className="text-sm text-slate">
@@ -415,7 +415,7 @@ const MultiCitySelector = ({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="border-green text-green hover:bg-green/10"
+                  className="border-teal text-teal hover:bg-teal/10"
                 >
                   Done
                 </Button>
@@ -434,14 +434,14 @@ const CityItem = ({ city, isSelected, onToggle, isMain }) => (
     onClick={onToggle}
     className={cn(
       "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left",
-      isSelected && "bg-green/10"
+      isSelected && "bg-teal/10"
     )}
     whileHover={{ x: 4 }}
     whileTap={{ scale: 0.98 }}
   >
     <div className={cn(
       "w-4 h-4 rounded border-2 flex items-center justify-center transition-colors",
-      isSelected ? "bg-green border-green" : "border-slate/40"
+      isSelected ? "bg-teal border-teal" : "border-slate/40"
     )}>
       {isSelected && <Check className="h-3 w-3 text-white" />}
     </div>
@@ -452,7 +452,7 @@ const CityItem = ({ city, isSelected, onToggle, isMain }) => (
           <span className={cn(
             "font-medium",
             isMain ? "text-lightest-slate" : "text-slate",
-            isSelected && "text-green"
+            isSelected && "text-teal"
           )}>
             {city.name}
           </span>
@@ -462,7 +462,7 @@ const CityItem = ({ city, isSelected, onToggle, isMain }) => (
             </span>
           )}
           {isMain && (
-            <Badge variant="outline" className="text-xs border-green/30 text-green">
+            <Badge variant="outline" className="text-xs border-teal/30 text-teal">
               Main
             </Badge>
           )}

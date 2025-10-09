@@ -47,7 +47,7 @@ export default function Success() {
       case 'loading':
         return (
           <>
-            <Loader2 className="h-12 w-12 text-green animate-spin" />
+            <Loader2 className="h-12 w-12 text-teal animate-spin" />
             <h1 className="text-2xl font-bold text-lightest-slate mt-4">Finalizing your subscription...</h1>
             <p className="text-slate mt-2">Please wait while we confirm your payment.</p>
           </>
@@ -55,10 +55,10 @@ export default function Success() {
       case 'success':
         return (
           <>
-            <CheckCircle className="h-16 w-16 text-green" />
+            <CheckCircle className="h-16 w-16 text-teal" />
             <h1 className="text-3xl font-bold text-lightest-slate mt-4">Payment Successful!</h1>
             <p className="text-slate mt-2">Your subscription is now active. Welcome aboard!</p>
-            <Button asChild className="mt-6 bg-green text-deep-navy hover:bg-green/90">
+            <Button asChild className="mt-6 bg-teal text-deep-navy hover:bg-teal/90">
               <Link to="/dashboard">Go to Dashboard</Link>
             </Button>
           </>
@@ -66,10 +66,10 @@ export default function Success() {
       case 'timeout':
         return (
           <>
-            <CheckCircle className="h-16 w-16 text-green" />
+            <CheckCircle className="h-16 w-16 text-teal" />
             <h1 className="text-3xl font-bold text-lightest-slate mt-4">Payment Received!</h1>
             <p className="text-slate mt-2">We've confirmed your payment. Your account will be updated shortly.</p>
-            <Button asChild className="mt-6 bg-green text-deep-navy hover:bg-green/90">
+            <Button asChild className="mt-6 bg-teal text-deep-navy hover:bg-teal/90">
               <Link to="/dashboard">Go to Dashboard</Link>
             </Button>
           </>

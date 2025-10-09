@@ -125,7 +125,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
       return {
         status: 'unlimited',
         message: 'Unlimited credits',
-        color: 'text-green',
+        color: 'text-teal',
         icon: CheckCircle
       };
     }
@@ -160,7 +160,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
     return {
       status: 'good',
       message: `Credits will last ${daysUntilCreditsRunOut} days`,
-      color: 'text-green',
+      color: 'text-teal',
       icon: CheckCircle
     };
   };
@@ -213,7 +213,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-semibold text-lightest-slate flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-green" />
+            <BarChart3 className="h-5 w-5 text-teal" />
             Usage Analytics
           </h3>
           <p className="text-slate text-sm">
@@ -227,7 +227,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
               variant={timeRange === range ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTimeRange(range)}
-              className={timeRange === range ? 'bg-green text-deep-navy' : ''}
+              className={timeRange === range ? 'bg-teal text-deep-navy' : ''}
             >
               {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
             </Button>
@@ -244,7 +244,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
           <Card className={`border-l-4 ${
             creditStatus.status === 'critical' ? 'border-red-500 bg-red-500/5' :
             creditStatus.status === 'warning' ? 'border-amber-500 bg-amber-500/5' :
-            creditStatus.status === 'unlimited' ? 'border-green bg-green/5' :
+            creditStatus.status === 'unlimited' ? 'border-teal bg-teal/5' :
             'border-slate bg-slate/5'
           }`}>
             <CardContent className="p-4">
@@ -283,8 +283,8 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
                     {analytics?.totalReveals || 0}
                   </p>
                 </div>
-                <div className="p-2 bg-green/10 rounded-lg">
-                  <Zap className="h-5 w-5 text-green" />
+                <div className="p-2 bg-teal/10 rounded-lg">
+                  <Zap className="h-5 w-5 text-teal" />
                 </div>
               </div>
               <p className="text-xs text-slate mt-2">
@@ -363,8 +363,8 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
                     }
                   </p>
                 </div>
-                <div className="p-2 bg-green/10 rounded-lg">
-                  <Target className="h-5 w-5 text-green" />
+                <div className="p-2 bg-teal/10 rounded-lg">
+                  <Target className="h-5 w-5 text-teal" />
                 </div>
               </div>
               <p className="text-xs text-slate mt-2">
@@ -385,7 +385,7 @@ const UsageAnalytics = ({ profile, refreshProfile }) => {
           <Card className="bg-light-navy border-lightest-navy/20">
             <CardHeader>
               <CardTitle className="text-lg text-lightest-slate flex items-center gap-2">
-                <Target className="h-5 w-5 text-green" />
+                <Target className="h-5 w-5 text-teal" />
                 Recommendations
               </CardTitle>
             </CardHeader>

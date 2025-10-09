@@ -12,7 +12,7 @@ export default function RouteGuard({ children }) {
   if (authLoading || profileLoading) {
     return (
       <div className="h-screen grid place-items-center bg-deep-navy">
-        <Loader2 className="h-8 w-8 animate-spin text-green" />
+        <Loader2 className="h-8 w-8 animate-spin text-teal" />
       </div>
     );
   }

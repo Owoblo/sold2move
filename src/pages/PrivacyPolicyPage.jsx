@@ -38,7 +38,7 @@ const PrivacyPolicyPage = () => {
             <p>We implement a variety of security measures to maintain the safety of your personal information. Your personal information is contained behind secured networks and is only accessible by a limited number of persons who have special access rights to such systems, and are required to keep the information confidential.</p>
 
             <h2 className="text-2xl font-semibold text-light-slate pt-4 font-heading">6. Contact Us</h2>
-            <p>If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@sold2move.com" className="text-green hover:underline">privacy@sold2move.com</a>.</p>
+            <p>If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@sold2move.com" className="text-teal hover:underline">privacy@sold2move.com</a>.</p>
           </div>
         </div>
       </div>

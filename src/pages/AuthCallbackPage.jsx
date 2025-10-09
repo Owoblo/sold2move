@@ -153,7 +153,7 @@ const AuthCallbackPage = () => {
     <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
       {isProcessing ? (
         <>
-          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-green mb-4"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal mb-4"></div>
           <h1 className="text-2xl font-bold font-heading">Finalizing sign in...</h1>
           <p className="text-slate">Please wait while we securely connect to your account.</p>
         </>

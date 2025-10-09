@@ -212,7 +212,7 @@ const ProfileSettings = () => {
             </div>
 
             <div className="md:col-span-2 mt-4">
-              <LoadingButton type="submit" className="w-full md:w-auto bg-green text-deep-navy hover:bg-green/90" isLoading={isSubmitting}>
+              <LoadingButton type="submit" className="w-full md:w-auto bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting}>
                 Save Changes
               </LoadingButton>
             </div>

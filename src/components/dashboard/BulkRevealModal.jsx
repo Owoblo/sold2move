@@ -77,7 +77,7 @@ const BulkRevealModal = ({
       <DialogContent className="max-w-4xl max-h-[80vh] bg-light-navy border-lightest-navy/20">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lightest-slate">
-            <Zap className="h-5 w-5 text-green" />
+            <Zap className="h-5 w-5 text-teal" />
             Bulk Reveal Listings
           </DialogTitle>
           <DialogDescription className="text-slate">
@@ -87,7 +87,7 @@ const BulkRevealModal = ({
 
         <div className="space-y-4">
           {/* Summary Card */}
-          <Card className="bg-deep-navy/50 border-green/20">
+          <Card className="bg-deep-navy/50 border-teal/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -98,7 +98,7 @@ const BulkRevealModal = ({
                     <div className="text-xs text-slate">Available</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green">
+                    <div className="text-2xl font-bold text-teal">
                       {selectedListings.size}
                     </div>
                     <div className="text-xs text-slate">Selected</div>
@@ -138,7 +138,7 @@ const BulkRevealModal = ({
                 >
                   <Card className={`transition-all duration-200 ${
                     selectedListings.has(listing.id) 
-                      ? 'bg-green/10 border-green/50' 
+                      ? 'bg-teal/10 border-teal/50' 
                       : 'bg-deep-navy/30 border-lightest-navy/20 hover:bg-deep-navy/50'
                   }`}>
                     <CardContent className="p-4">
@@ -152,7 +152,7 @@ const BulkRevealModal = ({
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-light-navy rounded-md">
-                              <Home className="h-4 w-4 text-green" />
+                              <Home className="h-4 w-4 text-teal" />
                             </div>
                             <div>
                               <div className="font-medium text-lightest-slate">
@@ -168,8 +168,8 @@ const BulkRevealModal = ({
                           </div>
                           
                           <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green" />
-                            <span className="text-green font-semibold">
+                            <DollarSign className="h-4 w-4 text-teal" />
+                            <span className="text-teal font-semibold">
                               {selectedListings.has(listing.id) 
                                 ? formatPrice(listing.unformattedprice, true)
                                 : '*****'
@@ -195,7 +195,7 @@ const BulkRevealModal = ({
                           </div>
                         </div>
                         
-                        <Badge variant="outline" className="text-green border-green/30">
+                        <Badge variant="outline" className="text-teal border-teal/30">
                           {creditCost} credit{creditCost !== 1 ? 's' : ''}
                         </Badge>
                       </div>
@@ -208,7 +208,7 @@ const BulkRevealModal = ({
 
           {availableListings.length === 0 && (
             <div className="text-center py-8">
-              <CheckCircle className="h-16 w-16 text-green mx-auto mb-4" />
+              <CheckCircle className="h-16 w-16 text-teal mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-lightest-slate mb-2">
                 All Listings Revealed
               </h3>
@@ -237,7 +237,7 @@ const BulkRevealModal = ({
               onClick={handleBulkReveal}
               disabled={selectedListings.size === 0 || isRevealing}
               isLoading={isRevealing}
-              className="bg-green text-deep-navy hover:bg-green/90"
+              className="bg-teal text-deep-navy hover:bg-teal/90"
             >
               <Zap className="h-4 w-4 mr-2" />
               Reveal {selectedListings.size} Listings ({totalCost} credits)
