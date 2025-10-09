@@ -45,12 +45,12 @@ const PricingCard = ({ plan, isYearly, handleCheckout, loadingPriceId, isPaid, i
       transition={{ duration: 0.5, delay: plan.delay * 0.1 }}
       className="h-full"
     >
-      <Card className={`h-full flex flex-col bg-light-navy border ${isPopular ? 'border-green shadow-2xl shadow-green/10' : 'border-lightest-navy/20'} ${isCurrentPlan ? 'ring-2 ring-green' : ''}`}>
+      <Card className={`h-full flex flex-col bg-light-navy border ${isPopular ? 'border-teal shadow-2xl shadow-teal/10' : 'border-lightest-navy/20'} ${isCurrentPlan ? 'ring-2 ring-teal' : ''}`}>
         {isPopular && (
-          <div className="bg-green text-deep-navy text-sm font-bold text-center py-1.5 rounded-t-lg">MOST POPULAR</div>
+          <div className="bg-teal text-deep-navy text-sm font-bold text-center py-1.5 rounded-t-lg">MOST POPULAR</div>
         )}
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-green font-heading">{plan.title}</CardTitle>
+          <CardTitle className="text-2xl text-teal font-heading">{plan.title}</CardTitle>
           <CardDescription className="text-slate min-h-[40px]">{plan.description}</CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col items-center">
@@ -58,12 +58,12 @@ const PricingCard = ({ plan, isYearly, handleCheckout, loadingPriceId, isPaid, i
             <span className="text-5xl font-bold text-lightest-slate font-heading">${price.amount}</span>
             <span className="text-slate">{price.interval}</span>
             {isYearly && plan.prices.monthly.amount > 0 && (
-                <p className="text-sm text-green h-4 mt-1">Save ${plan.prices.monthly.amount * 12 - price.amount}!</p>
+                <p className="text-sm text-teal h-4 mt-1">Save ${plan.prices.monthly.amount * 12 - price.amount}!</p>
             )}
             {(!isYearly || plan.prices.monthly.amount === 0) && <div className="h-4 mt-1"></div>}
           </div>
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center bg-green/10 text-green font-bold py-2 px-4 rounded-full">
+            <div className="inline-flex items-center justify-center bg-teal/10 text-teal font-bold py-2 px-4 rounded-full">
               <Zap className="w-5 h-5 mr-2" />
               <span>{plan.credits}</span>
             </div>
@@ -71,7 +71,7 @@ const PricingCard = ({ plan, isYearly, handleCheckout, loadingPriceId, isPaid, i
           <ul className="space-y-3 text-left w-full">
             {plan.features.map((feature, i) => (
               <li key={i} className="flex items-start">
-                <CheckCircle className="h-5 w-5 text-green mr-3 mt-1 flex-shrink-0" />
+                <CheckCircle className="h-5 w-5 text-teal mr-3 mt-1 flex-shrink-0" />
                 <span className="text-slate">{feature}</span>
               </li>
             ))}
@@ -81,7 +81,7 @@ const PricingCard = ({ plan, isYearly, handleCheckout, loadingPriceId, isPaid, i
           <Button
             onClick={handleButtonClick}
             disabled={loadingPriceId === (price.id || 'free_trial') || isCurrentPlan}
-            className={`w-full text-lg py-6 ${isPopular ? 'bg-green text-deep-navy hover:bg-green/90' : 'bg-lightest-navy text-lightest-slate hover:bg-lightest-navy/80'} disabled:opacity-50`}
+            className={`w-full text-lg py-6 ${isPopular ? 'bg-teal text-deep-navy hover:bg-teal/90' : 'bg-lightest-navy text-lightest-slate hover:bg-lightest-navy/80'} disabled:opacity-50`}
           >
             {getButtonText()}
           </Button>

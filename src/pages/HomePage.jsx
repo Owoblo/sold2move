@@ -13,35 +13,35 @@ import CallToAction from '@/components/CallToAction';
 const HomePage = () => {
   const problems = [
     {
-      icon: <XCircle className="h-8 w-8 text-green-500" />,
-      title: 'Stale Leads',
-      description: 'Are you tired of calling homeowners who moved months ago? Your competitors are already there.',
+      icon: <XCircle className="h-8 w-8 text-teal" />,
+      title: 'Low-Quality Leads',
+      description: 'Moving companies struggle with unreliable data sources and high customer acquisition costs.',
     },
     {
-      icon: <XCircle className="h-8 w-8 text-green-500" />,
-      title: 'Wasted Marketing Spend',
-      description: 'Sending mailers to random addresses or outdated lists means your budget goes nowhere.',
+      icon: <XCircle className="h-8 w-8 text-teal" />,
+      title: 'Missing Canadian Market',
+      description: 'You\'re missing out on the entire Canadian market - inaccessible data your competitors can\'t reach.',
     },
     {
-      icon: <XCircle className="h-8 w-8 text-green-500" />,
-      title: 'Manual Research',
-      description: 'Spending hours sifting through public records or unreliable sources for new moving leads.',
+      icon: <XCircle className="h-8 w-8 text-teal" />,
+      title: 'No Competitive Advantage',
+      description: 'Without exclusive, verified data, you can\'t predict revenue or optimize operations effectively.',
     },
   ];
 
   const testimonials = [
     {
-      quote: "Sold2Move has been a game-changer for our business. We're reaching new homeowners before anyone else.",
+      quote: "Sold2Move is the only platform with verified cross-border listings. We're dominating the North American market.",
       author: 'John Doe, CEO of MoveItNow',
       avatar: 'JD',
     },
     {
-      quote: 'The quality of leads is unmatched. Our conversion rates have skyrocketed since we started using the platform.',
+      quote: '99% data accuracy and guaranteed growth. Our ROI increased 300% in the first 30 days.',
       author: 'Jane Smith, Marketing Director at Swift Movers',
       avatar: 'JS',
     },
     {
-      quote: 'Finally, a tool that understands the pain of finding fresh moving leads. Sold2Move delivers!',
+      quote: 'The exclusive Canadian data gives us the competitive advantage we needed. Predictable revenue, optimized operations.',
       author: 'Mike Johnson, Owner of Elite Relocations',
       avatar: 'MJ',
     },
@@ -49,8 +49,8 @@ const HomePage = () => {
 
   return (
     <PageWrapper
-      title="Real-Time Moving Leads"
-      description="Be the first to reach new homeowners with Sold2Move's real-time sold listing leads and direct mail tools for moving companies in the US & Canada."
+      title="Your Exclusive North American Moving Pipeline"
+      description="The only moving data you can't afford to compete without. Verified, timely, and geo-targeted listings opening up the entire North American moving market, including inaccessible Canadian data."
     >
       {/* Hero Section */}
       <Hero />
@@ -60,10 +60,10 @@ const HomePage = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
-              The Problem: Finding Fresh Moving Leads
+              The Problem: Competing Without Exclusive Data
             </h2>
             <p className="text-lg text-slate mt-2 max-w-3xl mx-auto">
-              Traditional lead generation methods are slow, inefficient, and costly. You're missing out on prime opportunities.
+              Moving companies struggle with low-quality leads, high customer acquisition costs, and missing out on the entire Canadian market.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -75,10 +75,10 @@ const HomePage = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.2 }}
               >
-                <Card className="h-full text-center bg-deep-navy border-green-500/20 hover:border-green-500/50 transition-colors duration-300 transform hover:-translate-y-2">
+                <Card className="h-full text-center bg-deep-navy border-teal/20 hover:border-teal/50 transition-colors duration-300 transform hover:-translate-y-2">
                   <CardHeader>
-                    <div className="mx-auto bg-green-500/10 p-4 rounded-full w-fit mb-4">{problem.icon}</div>
-                    <CardTitle className="font-heading text-green-300">{problem.title}</CardTitle>
+                    <div className="mx-auto bg-teal/10 p-4 rounded-full w-fit mb-4">{problem.icon}</div>
+                    <CardTitle className="font-heading text-teal">{problem.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-slate">{problem.description}</p>
@@ -97,8 +97,8 @@ const HomePage = () => {
       <section className="py-20 bg-deep-navy">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">Trusted by Leading Movers</h2>
-            <p className="text-lg text-slate mt-2">Here's what our partners are saying.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">Trusted by Industry Leaders</h2>
+            <p className="text-lg text-slate mt-2">See how Sold2Move delivers guaranteed growth and competitive advantage.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
@@ -113,7 +113,7 @@ const HomePage = () => {
                   <CardContent className="pt-6">
                     <p className="text-light-slate italic mb-4">"{testimonial.quote}"</p>
                     <div className="flex items-center">
-                      <div className="w-12 h-12 rounded-full bg-green/20 text-green flex items-center justify-center font-bold text-lg mr-4 font-mono">
+                      <div className="w-12 h-12 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-lg mr-4 font-mono">
                         {testimonial.avatar}
                       </div>
                       <div>
@@ -135,12 +135,12 @@ const HomePage = () => {
       <section className="py-20 bg-light-navy">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate mb-4 font-heading">
-            Got Questions? We've Got Answers.
+            Ready to Dominate Your Market?
           </h2>
           <p className="text-lg text-slate max-w-2xl mx-auto mb-8">
-            From data sources to pricing, find all the information you need to get started with Sold2Move.
+            Get the exclusive data that drives your fleet and lands you the business. See your ROI in 30 days.
           </p>
-          <Button asChild size="lg" variant="outline" className="border-green text-green hover:bg-green/10 hover:text-green">
+          <Button asChild size="lg" variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal">
             <Link to="/faq">
               View All FAQs <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
@@ -152,7 +152,7 @@ const HomePage = () => {
       <section className="py-20 bg-deep-navy">
         <div className="container mx-auto px-6 text-center">
           <CallToAction
-            text="Ready to stop chasing old leads and start growing your moving business today?"
+            text="Ready to get the exclusive North American moving data your competitors can't access?"
             link="/signup"
             ctaText="Start Your Free Trial"
           />

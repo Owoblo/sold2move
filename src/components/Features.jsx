@@ -1,45 +1,45 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Shield, Cpu, Globe, Palette, BarChart3 } from 'lucide-react';
+import { Target, Shield, Cpu, Globe, TrendingUp, BarChart3 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 const Features = () => {
   const features = [
     {
-      icon: Zap,
-      title: "Real-time Data",
-      description: "Access fresh, verified sold listing data as it happens, giving you an unbeatable head start.",
-      gradient: "from-green-400 to-emerald-500"
+      icon: Target,
+      title: "Exclusive Canadian Data",
+      description: "The only platform with verified cross-border listings. Access the entire North American market your competitors can't reach.",
+      gradient: "from-teal to-navy-accent"
     },
     {
       icon: Shield,
-      title: "Automated Mailings",
-      description: "Effortlessly send personalized direct mail campaigns to new homeowners with just a few clicks.",
-      gradient: "from-green-400 to-emerald-500"
+      title: "99% Data Accuracy",
+      description: "Guaranteed verified, timely, and geo-targeted listings. No more cold calling - get warm leads delivered daily.",
+      gradient: "from-teal to-navy-accent"
     },
     {
       icon: Cpu,
-      title: "Smart Filtering",
-      description: "Target high-value homes, specific neighborhoods, or properties with unique characteristics using AI-powered filters.",
-      gradient: "from-green-400 to-emerald-500"
+      title: "Predictable Revenue",
+      description: "Optimized operations with AI-powered filters targeting high-value homes and specific neighborhoods for maximum ROI.",
+      gradient: "from-teal to-navy-accent"
     },
     {
       icon: Globe,
-      title: "Nationwide Coverage",
-      description: "Expand your reach across the US & Canada with comprehensive data from all major markets.",
-      gradient: "from-green-400 to-emerald-500"
+      title: "Dominant Regional Footprint",
+      description: "Expand your reach across the entire North American moving market with comprehensive data from all major markets.",
+      gradient: "from-teal to-navy-accent"
     },
     {
-      icon: Palette,
-      title: "Customizable Templates",
-      description: "Design stunning, branded mailers with our easy-to-use templates or upload your own designs.",
-      gradient: "from-green-400 to-emerald-500"
+      icon: TrendingUp,
+      title: "Competitive Advantage",
+      description: "See your ROI in 30 days. Get the exclusive data that drives your fleet and lands you the business.",
+      gradient: "from-teal to-navy-accent"
     },
     {
       icon: BarChart3,
       title: "Performance Tracking",
-      description: "Monitor your campaign's effectiveness with detailed analytics and optimize for maximum ROI.",
-      gradient: "from-green-400 to-emerald-500"
+      description: "Monitor your campaign's effectiveness with detailed analytics and optimize for guaranteed growth.",
+      gradient: "from-teal to-navy-accent"
     }
   ];
 
@@ -62,12 +62,12 @@ const Features = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-              How Sold2Move Works
+            <span className="bg-gradient-to-r from-teal to-navy-accent bg-clip-text text-transparent">
+              We Find the Moves. You Land the Business.
             </span>
           </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Our platform simplifies lead generation and direct mail, so you can focus on growing your moving business.
+          <p className="text-xl text-slate max-w-3xl mx-auto">
+            The exclusive, indispensable source of qualified leads and growth in a highly competitive industry.
           </p>
         </motion.div>
 
@@ -83,24 +83,24 @@ const Features = () => {
               onClick={() => handleFeatureClick(feature.title)}
               className="group cursor-pointer"
             >
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-green-500/20 rounded-2xl p-8 h-full shadow-xl hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-teal/20 rounded-2xl p-8 h-full shadow-xl hover:shadow-2xl hover:shadow-teal/10 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-teal/5 to-navy-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
                 <div className="relative z-10">
                   <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     <feature.icon className="h-8 w-8 text-white" />
                   </div>
                   
-                  <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-green-300 transition-colors duration-300">
+                  <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-teal transition-colors duration-300">
                     {feature.title}
                   </h3>
                   
-                  <p className="text-gray-400 leading-relaxed group-hover:text-gray-300 transition-colors duration-300">
+                  <p className="text-slate leading-relaxed group-hover:text-light-slate transition-colors duration-300">
                     {feature.description}
                   </p>
                 </div>
 
-                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-teal/10 to-navy-accent/10 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
             </motion.div>
           ))}

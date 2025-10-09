@@ -1,32 +1,32 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, Award, Zap, Globe } from 'lucide-react';
+import { Target, Shield, TrendingUp, Globe } from 'lucide-react';
 
 const Stats = () => {
   const stats = [
     {
-      icon: Users,
-      number: "50K+",
-      label: "Homeowners Reached",
-      gradient: "from-blue-400 to-cyan-500"
+      icon: Target,
+      number: "100%",
+      label: "Exclusive Canadian Data",
+      gradient: "from-teal to-navy-accent"
     },
     {
-      icon: Award,
+      icon: Shield,
       number: "99%",
-      label: "Data Accuracy",
-      gradient: "from-green-400 to-emerald-500"
+      label: "Data Accuracy Guaranteed",
+      gradient: "from-teal to-navy-accent"
     },
     {
-      icon: Zap,
-      number: "24/7",
-      label: "Real-time Updates",
-      gradient: "from-yellow-400 to-orange-500"
+      icon: TrendingUp,
+      number: "300%",
+      label: "ROI in 30 Days",
+      gradient: "from-teal to-navy-accent"
     },
     {
       icon: Globe,
-      number: "50+",
-      label: "States Covered",
-      gradient: "from-green-400 to-teal-500"
+      number: "2",
+      label: "Countries Covered",
+      gradient: "from-teal to-navy-accent"
     }
   ];
 
@@ -41,12 +41,12 @@ const Stats = () => {
           className="text-center mb-16"
         >
           <h2 className="text-4xl lg:text-6xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-              Why Movers Trust Sold2Move
+            <span className="bg-gradient-to-r from-teal to-navy-accent bg-clip-text text-transparent">
+              The Only Moving Data You Can't Afford to Compete Without
             </span>
           </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            We provide the most accurate and timely data to help you connect with new customers.
+          <p className="text-xl text-slate max-w-3xl mx-auto">
+            Guaranteed growth and competitive advantage with verified, timely, and geo-targeted listings.
           </p>
         </motion.div>
 
@@ -61,8 +61,8 @@ const Stats = () => {
               whileHover={{ scale: 1.05 }}
               className="text-center group"
             >
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-green-500/20 rounded-2xl p-8 shadow-xl hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-300">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-teal/20 rounded-2xl p-8 shadow-xl hover:shadow-2xl hover:shadow-teal/10 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-teal/5 to-navy-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
                 <div className="relative z-10">
                   <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${stat.gradient} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
@@ -74,12 +74,12 @@ const Stats = () => {
                     whileInView={{ opacity: 1 }}
                     transition={{ duration: 1, delay: index * 0.2 + 0.5 }}
                     viewport={{ once: true }}
-                    className="text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent"
+                    className="text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-white to-teal bg-clip-text text-transparent"
                   >
                     {stat.number}
                   </motion.div>
                   
-                  <p className="text-gray-400 font-medium group-hover:text-gray-300 transition-colors duration-300">
+                  <p className="text-slate font-medium group-hover:text-light-slate transition-colors duration-300">
                     {stat.label}
                   </p>
                 </div>

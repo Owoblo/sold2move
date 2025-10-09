@@ -17,38 +17,39 @@
     --popover: 222 84% 4.9%;
     --popover-foreground: 210 40% 98%;
  
-    --primary: 163 94% 70%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 220 100% 20%; /* Deep Navy Blue */
+    --primary-foreground: 210 40% 98%;
  
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 180 100% 50%; /* Vibrant Teal/Aqua */
+    --secondary-foreground: 220 100% 20%;
  
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
  
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 0 0% 75%; /* Silver/Light Gray */
+    --accent-foreground: 220 100% 20%;
  
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 163 94% 70%;
+    --ring: 180 100% 50%; /* Vibrant Teal/Aqua for focus rings */
  
     --radius: 0.5rem;
 
-    /* Custom colors for dark mode */
-    --deep-navy: #0A192F;
-    --light-navy: #112240;
-    --lightest-navy: #233554;
-    --slate: #8892b0;
-    --light-slate: #a8b2d1;
-    --lightest-slate: #ccd6f6;
-    --white: #e6f1ff;
-    --green: #64FFDA;
-    --green-hover: rgba(100, 255, 218, 0.8);
-    --green-selection: rgba(100, 255, 218, 0.2);
+    /* Brand colors - Deep Navy Blue (primary), Vibrant Teal/Aqua (secondary), Silver/Light Gray (accent) */
+    --deep-navy: #0A192F; /* Deep Navy Blue - Confidence, Trust, Stability */
+    --light-navy: #1E3A8A; /* Lighter Navy for cards */
+    --lightest-navy: #3B82F6; /* Even lighter navy for borders */
+    --slate: #94A3B8; /* Silver/Light Gray - Sophistication, Tech, Cleanliness */
+    --light-slate: #CBD5E1; /* Lighter silver */
+    --lightest-slate: #F1F5F9; /* Lightest silver */
+    --white: #FFFFFF;
+    --teal: #14B8A6; /* Vibrant Teal/Aqua - Innovation, Technology, Clarity */
+    --teal-hover: rgba(20, 184, 166, 0.8);
+    --teal-selection: rgba(20, 184, 166, 0.2);
+    --navy-accent: #1E40AF; /* Navy accent for buttons */
   }
 
   [data-theme='light'] {
@@ -61,16 +62,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 8.9% 10.8%;
  
-    --primary: 222.2 47.4% 11.2%; /* Dark blue for primary */
+    --primary: 220 100% 20%; /* Deep Navy Blue */
     --primary-foreground: 210 40% 98%; /* White text on primary */
  
-    --secondary: 210 40% 96.1%; /* Light gray */
-    --secondary-foreground: 220 8.9% 10.8%;
+    --secondary: 180 100% 50%; /* Vibrant Teal/Aqua */
+    --secondary-foreground: 220 100% 20%;
  
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 210 40% 96.1%;
+    --accent: 0 0% 75%; /* Silver/Light Gray */
     --accent-foreground: 220 8.9% 10.8%;
  
     --destructive: 0 84.2% 60.2%;
@@ -78,19 +79,20 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 47.4% 11.2%;
+    --ring: 180 100% 50%; /* Vibrant Teal/Aqua for focus rings */
     
-    /* Custom colors for light mode - adjusted for better contrast */
-    --deep-navy: #F0F2F5; /* Light background */
+    /* Brand colors for light mode - maintaining brand consistency */
+    --deep-navy: #F8FAFC; /* Light background */
     --light-navy: #FFFFFF; /* White cards/elements */
-    --lightest-navy: #E0E2E5; /* Lighter borders/accents */
-    --slate: #4A5568; /* Darker gray text */
-    --light-slate: #2D3748; /* Even darker gray text */
-    --lightest-slate: #1A202C; /* Very dark text, almost black */
+    --lightest-navy: #E2E8F0; /* Light borders/accents */
+    --slate: #475569; /* Darker gray text */
+    --light-slate: #334155; /* Even darker gray text */
+    --lightest-slate: #1E293B; /* Very dark text */
     --white: #000000; /* Black for contrast */
-    --green: #10B981; /* A vibrant green */
-    --green-hover: rgba(16, 185, 129, 0.8);
-    --green-selection: rgba(16, 185, 129, 0.2);
+    --teal: #0D9488; /* Vibrant Teal/Aqua - slightly darker for light mode */
+    --teal-hover: rgba(13, 148, 136, 0.8);
+    --teal-selection: rgba(13, 148, 136, 0.2);
+    --navy-accent: #1E40AF; /* Navy accent for buttons */
   }
 }
 
@@ -118,11 +120,11 @@
 
 ::-webkit-scrollbar-thumb {
   @apply rounded-full;
-  background-color: var(--green);
+  background-color: var(--teal);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--green-hover);
+  background-color: var(--teal-hover);
 }
 
 /* Horizontal scrollbar for tables */
@@ -135,12 +137,12 @@
 }
 
 .table-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 255, 218, 0.3);
+  background-color: rgba(20, 184, 166, 0.3);
   border-radius: 4px;
 }
 
 .table-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 255, 218, 0.5);
+  background-color: rgba(20, 184, 166, 0.5);
 }
 
 /* Smooth scrolling for tables */
@@ -157,6 +159,6 @@
 }
 
 ::selection {
-  background-color: var(--green-selection);
-  color: var(--green);
+  background-color: var(--teal-selection);
+  color: var(--teal);
 }
