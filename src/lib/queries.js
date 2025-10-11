@@ -134,7 +134,7 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
       id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
-      detailUrl: r.detailurl,
+      detailUrl: ensureZillowUrl(r.detailurl),
       addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
@@ -237,7 +237,7 @@ export async function fetchSoldSincePrev(currentRunId, prevRunId, cityName, filt
       id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
-      detailUrl: r.detailurl,
+      detailUrl: ensureZillowUrl(r.detailurl),
       addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
@@ -284,7 +284,69 @@ export async function fetchListingById(listingId) {
     data = soldData;
   }
 
-  return data;
+  if (!data) {
+    return null;
+  }
+
+  // Map database column names to expected property names (consistent with other fetch functions)
+  const mappedData = {
+    id: data.id, // Keep as number to match database BIGINT
+    zpid: data.zpid,
+    imgSrc: data.imgsrc,
+    detailUrl: ensureZillowUrl(data.detailurl),
+    addressStreet: data.addressstreet, // Map lowercase DB column to camelCase frontend property
+    lastcity: data.lastcity,
+    addresscity: data.addresscity,
+    addressstate: data.addressstate,
+    addressZipcode: data.addresszipcode,
+    price: data.price,
+    unformattedprice: data.unformattedprice, // Use lowercase to match component
+    beds: data.beds,
+    baths: data.baths,
+    area: data.area,
+    statustext: data.statustext, // Use lowercase to match component
+    lastseenat: data.lastseenat,
+    created_at: data.created_at,
+    run_id: data.run_id || data.lastrunid,
+    isjustlisted: data.isjustlisted,
+    
+    // JSONB fields (parse if they're strings)
+    latlong: typeof data.latlong === 'string' 
+      ? JSON.parse(data.latlong) 
+      : data.latlong,
+    hdpData: typeof data.hdpdata === 'string' 
+      ? JSON.parse(data.hdpdata) 
+      : data.hdpdata,
+    carouselPhotos: typeof data.carouselphotos === 'string' 
+      ? JSON.parse(data.carouselphotos) 
+      : data.carouselphotos,
+    
+    // Additional fields that might be needed
+    brokerName: data.brokername || data.broker_name,
+    detailurl: ensureZillowUrl(data.detailurl), // Ensure URL points to Zillow.com
+  };
+
+  return mappedData;
+}
+
+/**
+ * Ensures that detail URLs point to Zillow.com instead of sold2move.com
+ * This fixes URLs that might have been incorrectly stored in the database
+ */
+function ensureZillowUrl(detailUrl) {
+  if (!detailUrl) return detailUrl;
+  
+  // If the URL contains sold2move.com, replace it with zillow.com
+  if (detailUrl.includes('sold2move.com')) {
+    return detailUrl.replace('sold2move.com', 'zillow.com');
+  }
+  
+  // If the URL doesn't start with http/https, assume it's a relative path and prepend zillow.com
+  if (!detailUrl.startsWith('http')) {
+    return `https://www.zillow.com${detailUrl.startsWith('/') ? '' : '/'}${detailUrl}`;
+  }
+  
+  return detailUrl;
 }
 
 export async function fetchRevealedListings(userId, listingIds) {
