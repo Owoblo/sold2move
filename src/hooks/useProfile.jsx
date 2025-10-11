@@ -15,15 +15,20 @@ export const useProfile = () => {
   const [lowCreditNotified, setLowCreditNotified] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    console.log('🔍 useProfile: fetchProfile called');
-    console.log('🔍 Session state:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id
-    });
+    // Only log in development to reduce console noise
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 useProfile: fetchProfile called');
+      console.log('🔍 Session state:', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id
+      });
+    }
 
     if (session?.user) {
-      console.log('🔄 Fetching profile for user:', session.user.id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Fetching profile for user:', session.user.id);
+      }
       setLoading(true);
       
       const { data, error } = await supabase
@@ -32,18 +37,20 @@ export const useProfile = () => {
         .eq('id', session.user.id)
         .single();
       
-      console.log('🔍 Profile fetch result:', {
-        hasData: !!data,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        profileData: data ? {
-          id: data.id,
-          company_name: data.company_name,
-          credits_remaining: data.credits_remaining,
-          onboarding_complete: data.onboarding_complete,
-          trial_granted: data.trial_granted
-        } : null
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Profile fetch result:', {
+          hasData: !!data,
+          errorCode: error?.code,
+          errorMessage: error?.message,
+          profileData: data ? {
+            id: data.id,
+            company_name: data.company_name,
+            credits_remaining: data.credits_remaining,
+            onboarding_complete: data.onboarding_complete,
+            trial_granted: data.trial_granted
+          } : null
+        });
+      }
       
       if (error && error.code !== 'PGRST116') {
         console.error('❌ Error fetching profile:', {
@@ -79,11 +86,13 @@ export const useProfile = () => {
 
       setLoading(false);
     } else {
-      console.log('🔍 No session/user, clearing profile');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 No session/user, clearing profile');
+      }
       setLoading(false);
       setProfile(null);
     }
-  }, [session, supabase, toast, lowCreditNotified]);
+  }, [session?.user?.id, supabase, toast, lowCreditNotified]);
 
   useEffect(() => {
     fetchProfile();

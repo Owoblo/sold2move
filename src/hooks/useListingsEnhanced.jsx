@@ -200,13 +200,16 @@ export const useRevealListingEnhanced = () => {
       }
 
       // Check if already revealed
-      console.log('🔍 Checking if listing is already revealed:', {
-        userId,
-        listingId,
-        listingIdType: typeof listingId,
-        listingIdNumber: Number(listingId),
-        listingIdString: String(listingId)
-      });
+      // Only log in development to reduce console noise
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Checking if listing is already revealed:', {
+          userId,
+          listingId,
+          listingIdType: typeof listingId,
+          listingIdNumber: Number(listingId),
+          listingIdString: String(listingId)
+        });
+      }
       
       // Try number first, then string as fallback
       let existingReveal, checkError;
@@ -221,7 +224,9 @@ export const useRevealListingEnhanced = () => {
         
       if (error1 && error1.code === 'PGRST116') {
         // Not found with number, try with string
-        console.log('🔍 Trying with string as fallback...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 Trying with string as fallback...');
+        }
         const { data: data2, error: error2 } = await supabase
           .from('listing_reveals')
           .select('id')
@@ -236,12 +241,14 @@ export const useRevealListingEnhanced = () => {
         checkError = error1;
       }
         
-      console.log('🔍 Check result:', {
-        hasData: !!existingReveal,
-        error: checkError,
-        errorCode: checkError?.code,
-        errorMessage: checkError?.message
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Check result:', {
+          hasData: !!existingReveal,
+          error: checkError,
+          errorCode: checkError?.code,
+          errorMessage: checkError?.message
+        });
+      }
 
       if (existingReveal) {
         return { listingId, userId, alreadyRevealed: true };

@@ -262,11 +262,18 @@ export async function fetchSoldSincePrev(currentRunId, prevRunId, cityName, filt
 }
 
 export async function fetchListingById(listingId) {
+  // Ensure listingId is a number for proper database query
+  const numericId = Number(listingId);
+  
+  if (isNaN(numericId)) {
+    throw new Error('Invalid listing ID');
+  }
+
   // Try to find the listing in just_listed first, then sold_listings
   let { data, error } = await supabase
     .from('just_listed')
     .select('*')
-    .eq('id', listingId)
+    .eq('id', numericId)
     .single();
 
   if (error || !data) {
@@ -274,7 +281,7 @@ export async function fetchListingById(listingId) {
     const { data: soldData, error: soldError } = await supabase
       .from('sold_listings')
       .select('*')
-      .eq('id', listingId)
+      .eq('id', numericId)
       .single();
     
     if (soldError) {
@@ -353,11 +360,26 @@ export async function fetchRevealedListings(userId, listingIds) {
   if (!userId || !listingIds || listingIds.length === 0) {
     return [];
   }
+  
+  // Ensure all listing IDs are numbers
+  const numericListingIds = listingIds.map(id => {
+    const numId = Number(id);
+    if (isNaN(numId)) {
+      console.warn('Invalid listing ID:', id);
+      return null;
+    }
+    return numId;
+  }).filter(Boolean);
+
+  if (numericListingIds.length === 0) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('listing_reveals')
     .select('listing_id')
     .eq('user_id', userId)
-    .in('listing_id', listingIds.map(id => Number(id)));
+    .in('listing_id', numericListingIds);
 
   if (error) {
     console.error('Error fetching revealed listings:', error);
