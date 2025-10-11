@@ -81,8 +81,8 @@ const PropertyDetailPage = () => {
   return (
     <PageWrapper>
       <Helmet>
-        <title>{listing.addressstreet} | Property Details</title>
-        <meta name="description" content={`Details for property at ${listing.addressstreet}`} />
+        <title>{listing.addressstreet || 'Property'} | Property Details</title>
+        <meta name="description" content={`Details for property at ${listing.addressstreet || 'this location'}`} />
       </Helmet>
       
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>

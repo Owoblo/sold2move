@@ -17,13 +17,19 @@ const HealthCheck = ({ onStatusChange }) => {
 
   const checkSupabaseHealth = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
         method: 'HEAD',
         headers: {
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         return { status: 'healthy', message: 'Supabase is responding' };
@@ -38,10 +44,16 @@ const HealthCheck = ({ onStatusChange }) => {
 
   const checkNetworkHealth = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
       const response = await fetch('https://httpbin.org/status/200', {
         method: 'GET',
-        mode: 'no-cors'
+        mode: 'no-cors',
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       return { status: 'healthy', message: 'Network connection is working' };
     } catch (error) {
       handleHealthCheckError(error, 'Network');
@@ -51,13 +63,19 @@ const HealthCheck = ({ onStatusChange }) => {
 
   const checkApiHealth = async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       // Check if we can make a simple query to our database
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/runs?select=id&limit=1`, {
         headers: {
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         return { status: 'healthy', message: 'API queries are working' };
@@ -116,8 +134,8 @@ const HealthCheck = ({ onStatusChange }) => {
   useEffect(() => {
     runHealthCheck();
     
-    // Run health check every 5 minutes
-    const interval = setInterval(runHealthCheck, 5 * 60 * 1000);
+    // Run health check every 10 minutes to reduce performance impact
+    const interval = setInterval(runHealthCheck, 10 * 60 * 1000);
     
     return () => clearInterval(interval);
   }, []);
