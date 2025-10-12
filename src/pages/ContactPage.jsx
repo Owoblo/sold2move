@@ -48,12 +48,12 @@ const ContactPage = () => {
 
   return (
     <PageWrapper
-      title="Contact Us"
-      description="Request a demo or get in touch with the Sold2Move team. We're here to answer your questions and help you get started."
+      title="Contact Sold2Move | Get Help with Moving Company Data"
+      description="Contact Sold2Move for moving company data solutions. Get support, request demos, and learn how to access real-time sold listings in Canada and USA."
     >
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-lightest-slate font-heading">Get in Touch</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-lightest-slate font-heading">Contact Sold2Move for Moving Company Data Solutions</h1>
           <p className="text-lg text-slate mt-4 max-w-3xl mx-auto">
             Ready to see Sold2Move in action? Fill out the form to request a personalized demo.
           </p>

@@ -27,7 +27,7 @@ const Hero = () => {
           className="text-5xl lg:text-7xl font-bold mb-8 leading-tight"
         >
           <span className="bg-gradient-to-r from-white via-teal to-navy-accent bg-clip-text text-transparent">
-            Your Exclusive North American Moving Pipeline
+            Real-Time Sold Listings for Movers in Canada & the U.S.
           </span>
         </motion.h1>
 

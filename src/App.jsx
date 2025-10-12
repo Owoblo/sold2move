@@ -49,6 +49,8 @@ const PostAuthPage = lazy(() => import('@/pages/PostAuthPage'));
 const PaymentSuccess = lazy(() => import('@/pages/PaymentSuccess'));
 const Success = lazy(() => import('@/pages/Success'));
 const RequestDemoPage = lazy(() => import('@/pages/RequestDemoPage'));
+const HowMovingCompaniesCanUseSoldListings = lazy(() => import('@/pages/HowMovingCompaniesCanUseSoldListings'));
+const SoldHouseListingsGuide = lazy(() => import('@/pages/SoldHouseListingsGuide'));
 const RouteGuard = lazy(() => import('@/components/layout/RouteGuard'));
 
 const SuspenseFallback = () => (
@@ -100,6 +102,10 @@ function App() {
                 <Route path="/request-demo" element={<RequestDemoPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                
+                {/* SEO Content Pages */}
+                <Route path="/how-moving-companies-can-use-sold-listings-ontario" element={<HowMovingCompaniesCanUseSoldListings />} />
+                <Route path="/sold-house-listings-canada-guide-movers" element={<SoldHouseListingsGuide />} />
                 
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />

@@ -6,8 +6,8 @@ import { Users, Target, Rocket } from 'lucide-react';
 const AboutPage = () => {
   return (
     <PageWrapper
-      title="About Us"
-      description="Learn about Sold2Move's mission to empower moving companies with the best real-time data and marketing tools to fuel their growth."
+      title="About Sold2Move | Real-Time Data for Moving Companies"
+      description="Learn about Sold2Move's mission to empower moving companies across Canada and USA with real-time sold listings data and marketing tools to fuel their growth."
     >
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
@@ -17,7 +17,7 @@ const AboutPage = () => {
             transition={{ duration: 0.5 }}
             className="text-4xl md:text-5xl font-bold text-lightest-slate font-heading"
           >
-            Connecting Movers with Movers
+            Empowering Moving Companies with Real-Time Data Across North America
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}

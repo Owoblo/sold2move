@@ -49,8 +49,8 @@ const HomePage = () => {
 
   return (
     <PageWrapper
-      title="Your Exclusive North American Moving Pipeline"
-      description="The only moving data you can't afford to compete without. Verified, timely, and geo-targeted listings opening up the entire North American moving market, including inaccessible Canadian data."
+      title="Real-Time Sold Listings & Leads for Moving Companies in Canada & USA"
+      description="Get mover-ready sold listings and real-time leads in Ontario, Canada, and the U.S. Filter by price, location, and more. Perfect for moving companies."
     >
       {/* Hero Section */}
       <Hero />
@@ -60,7 +60,7 @@ const HomePage = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
-              The Problem: Competing Without Exclusive Data
+              How Sold2Move Helps Ontario Moving Companies Win More Jobs
             </h2>
             <p className="text-lg text-slate mt-2 max-w-3xl mx-auto">
               Moving companies struggle with low-quality leads, high customer acquisition costs, and missing out on the entire Canadian market.
