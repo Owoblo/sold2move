@@ -3,6 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
+  "_comment": "Force fresh Vercel build - authentication fixes deployed",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
