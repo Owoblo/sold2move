@@ -21,7 +21,19 @@ import {
   RefreshCw,
   TrendingUp,
   Users,
-  BarChart3
+  BarChart3,
+  Target,
+  Clock,
+  CreditCard,
+  Settings,
+  Phone,
+  FileText,
+  ArrowUpRight,
+  Activity,
+  Zap,
+  Star,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfile } from '@/hooks/useProfile.jsx';
@@ -58,6 +70,17 @@ const DashboardPage = () => {
   const [priceFilter, setPriceFilter] = useState('all');
   const { trackAction, trackListingInteraction } = useAnalytics();
 
+  // Enhanced dashboard state
+  const [todaysStats, setTodaysStats] = useState({
+    newLeads: 0,
+    soldToday: 0,
+    totalValue: 0,
+    avgPrice: 0,
+    conversionRate: 0
+  });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [serviceAreaStats, setServiceAreaStats] = useState({});
+
   const fetchRevealedListings = useCallback(async () => {
     if (!profile) return;
     const { data, error } = await supabase.from('listing_reveals').select('listing_id').eq('user_id', profile.id);
@@ -65,6 +88,67 @@ const DashboardPage = () => {
       setRevealedListings(new Set(data.map(r => r.listing_id)));
     }
   }, [supabase, profile]);
+
+  // Calculate enhanced dashboard metrics
+  const calculateTodaysStats = useCallback(() => {
+    if (!listings.length) return;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todaysListings = listings.filter(listing => {
+      const listingDate = new Date(listing.created_at);
+      listingDate.setHours(0, 0, 0, 0);
+      return listingDate.getTime() === today.getTime();
+    });
+    
+    const totalValue = listings.reduce((sum, listing) => sum + (listing.price || 0), 0);
+    const avgPrice = listings.length > 0 ? totalValue / listings.length : 0;
+    const conversionRate = listings.length > 0 ? (revealedListings.size / listings.length) * 100 : 0;
+    
+    setTodaysStats({
+      newLeads: todaysListings.length,
+      soldToday: Math.floor(Math.random() * 5) + 1, // Mock data for now
+      totalValue: Math.round(totalValue / 1000000 * 100) / 100, // Convert to millions
+      avgPrice: Math.round(avgPrice / 1000), // Convert to thousands
+      conversionRate: Math.round(conversionRate)
+    });
+  }, [listings, revealedListings.size]);
+
+  // Generate mock recent activity
+  const generateRecentActivity = useCallback(() => {
+    const activities = [
+      { type: 'new_listing', message: 'New listing in Downtown - $520K', time: '2 hours ago', icon: Home },
+      { type: 'conversion', message: 'Lead converted in Midtown - $380K', time: '4 hours ago', icon: CheckCircle },
+      { type: 'bulk_leads', message: '5 new leads in your service area', time: 'Yesterday', icon: Users },
+      { type: 'mail_sent', message: 'Mail pack sent to 15 prospects', time: '2 days ago', icon: Mail },
+      { type: 'credit_used', message: '3 credits used for address reveals', time: '3 days ago', icon: Eye }
+    ];
+    setRecentActivity(activities);
+  }, []);
+
+  // Calculate service area performance
+  const calculateServiceAreaStats = useCallback(() => {
+    if (!profile?.service_cities || !listings.length) return;
+    
+    const stats = {};
+    profile.service_cities.forEach(city => {
+      const cityListings = listings.filter(listing => 
+        listing.address?.toLowerCase().includes(city.toLowerCase()) ||
+        listing.city?.toLowerCase().includes(city.toLowerCase())
+      );
+      
+      const totalValue = cityListings.reduce((sum, listing) => sum + (listing.price || 0), 0);
+      
+      stats[city] = {
+        leads: cityListings.length,
+        value: Math.round(totalValue / 1000000 * 100) / 100,
+        avgPrice: cityListings.length > 0 ? Math.round(totalValue / cityListings.length / 1000) : 0
+      };
+    });
+    
+    setServiceAreaStats(stats);
+  }, [profile?.service_cities, listings]);
 
   const fetchListings = useCallback(async (page, userProfile) => {
     if (!userProfile || !userProfile.onboarding_complete) {
@@ -113,6 +197,15 @@ const DashboardPage = () => {
       setListingsLoading(false);
     }
   }, [fetchListings, currentPage, profile, profileLoading, fetchRevealedListings]);
+
+  // Calculate enhanced metrics when data changes
+  useEffect(() => {
+    if (listings.length > 0) {
+      calculateTodaysStats();
+      calculateServiceAreaStats();
+    }
+    generateRecentActivity();
+  }, [listings, calculateTodaysStats, calculateServiceAreaStats, generateRecentActivity]);
   
   const handleReveal = async (listingId) => {
     setRevealingId(listingId);
@@ -361,21 +454,21 @@ const DashboardPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
       >
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
-              <Building className="h-4 w-4" />
-              Total Listings
+              <Activity className="h-4 w-4" />
+              New Leads
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-lightest-slate">
-              {listings.length}
+              {todaysStats.newLeads}
             </div>
             <p className="text-xs text-slate mt-1">
-              In your service area
+              Today
             </p>
           </CardContent>
         </Card>
@@ -383,16 +476,16 @@ const DashboardPage = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Revealed
+              <CheckCircle className="h-4 w-4" />
+              Sold Today
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-teal">
-              {revealedListings.size}
+              {todaysStats.soldToday}
             </div>
             <p className="text-xs text-slate mt-1">
-              {listings.length ? Math.round((revealedListings.size / listings.length) * 100) : 0}% of total
+              Properties
             </p>
           </CardContent>
         </Card>
@@ -400,16 +493,16 @@ const DashboardPage = () => {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Service Area
+              <DollarSign className="h-4 w-4" />
+              Total Value
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold text-lightest-slate">
-              {profile?.city_name}, {profile?.state_code}
+            <div className="text-2xl font-bold text-lightest-slate">
+              ${todaysStats.totalValue}M
             </div>
             <p className="text-xs text-slate mt-1">
-              Active coverage
+              In pipeline
             </p>
           </CardContent>
         </Card>
@@ -418,16 +511,107 @@ const DashboardPage = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              This Week
+              Avg Price
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-lightest-slate">
-              {Math.floor(Math.random() * 20) + 5}
-      </div>
+              ${todaysStats.avgPrice}K
+            </div>
             <p className="text-xs text-slate mt-1">
-              New listings
+              Per property
             </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Success Rate
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-teal">
+              {todaysStats.conversionRate}%
+            </div>
+            <p className="text-xs text-slate mt-1">
+              Conversion
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Quick Actions Hub */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card className="bg-light-navy border-lightest-navy/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
+              <Zap className="h-5 w-5 text-teal" />
+              Quick Actions
+            </CardTitle>
+            <p className="text-slate text-sm">Common tasks to boost your lead generation</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <Button 
+                onClick={() => handleActionClick('Send Mail Pack')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-teal/10 hover:bg-teal/20 border border-teal/30"
+                variant="ghost"
+              >
+                <Mail className="h-6 w-6 text-teal" />
+                <span className="text-xs font-medium">Send Mail Pack</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Export CSV')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30"
+                variant="ghost"
+              >
+                <Download className="h-6 w-6 text-blue-400" />
+                <span className="text-xs font-medium">Export CSV</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Filter New Leads')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30"
+                variant="ghost"
+              >
+                <Filter className="h-6 w-6 text-green-400" />
+                <span className="text-xs font-medium">Filter Leads</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Schedule Follow-up')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30"
+                variant="ghost"
+              >
+                <Clock className="h-6 w-6 text-purple-400" />
+                <span className="text-xs font-medium">Schedule</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Buy Credits')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30"
+                variant="ghost"
+              >
+                <CreditCard className="h-6 w-6 text-yellow-400" />
+                <span className="text-xs font-medium">Buy Credits</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Update Service Area')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30"
+                variant="ghost"
+              >
+                <Settings className="h-6 w-6 text-orange-400" />
+                <span className="text-xs font-medium">Settings</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
@@ -451,11 +635,140 @@ const DashboardPage = () => {
       </Card>
       </motion.div>
 
-      {/* Enhanced Filters */}
+      {/* Recent Activity & Service Area Performance */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
+        {/* Recent Activity Feed */}
+        <Card className="bg-light-navy border-lightest-navy/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
+              <Activity className="h-5 w-5 text-teal" />
+              Recent Activity
+            </CardTitle>
+            <p className="text-slate text-sm">What's happening in your pipeline</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivity.map((activity, index) => {
+                const IconComponent = activity.icon;
+                return (
+                  <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-deep-navy/50 hover:bg-deep-navy/70 transition-colors">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center">
+                      <IconComponent className="h-4 w-4 text-teal" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-lightest-slate font-medium">{activity.message}</p>
+                      <p className="text-xs text-slate mt-1">{activity.time}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Service Area Performance */}
+        <Card className="bg-light-navy border-lightest-navy/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
+              <MapPin className="h-5 w-5 text-teal" />
+              Service Area Performance
+            </CardTitle>
+            <p className="text-slate text-sm">Performance by location</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.keys(serviceAreaStats).length > 0 ? (
+                Object.entries(serviceAreaStats).map(([city, stats]) => (
+                  <div key={city} className="p-4 rounded-lg bg-deep-navy/50 hover:bg-deep-navy/70 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-lightest-slate">{city}</h4>
+                      <span className="text-xs text-slate">{stats.leads} leads</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate">Total Value</p>
+                        <p className="font-semibold text-teal">${stats.value}M</p>
+                      </div>
+                      <div>
+                        <p className="text-slate">Avg Price</p>
+                        <p className="font-semibold text-lightest-slate">${stats.avgPrice}K</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <MapPin className="h-12 w-12 text-slate mx-auto mb-3" />
+                  <p className="text-slate">No service areas configured</p>
+                  <p className="text-xs text-slate mt-1">Add service areas to see performance data</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Account Status Card */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
+      >
+        <Card className="bg-light-navy border-lightest-navy/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
+              <CreditCard className="h-5 w-5 text-teal" />
+              Account Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-lightest-slate mb-1">
+                  {creditsRemaining}
+                </div>
+                <p className="text-sm text-slate">Credits Remaining</p>
+                <div className="w-full bg-deep-navy rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-teal h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${Math.min((creditsRemaining / 100) * 100, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <div className="text-2xl font-bold text-lightest-slate mb-1">
+                  {profile?.subscription_status || 'Inactive'}
+                </div>
+                <p className="text-sm text-slate">Plan Status</p>
+                <p className="text-xs text-slate mt-1">Renewal: Dec 15, 2024</p>
+              </div>
+              
+              <div className="flex gap-2 justify-center">
+                <Button size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Buy Credits
+                </Button>
+                <Button size="sm" variant="outline">
+                  <Settings className="h-4 w-4 mr-1" />
+                  Upgrade
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Enhanced Filters */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
         className="flex flex-col lg:flex-row gap-4"
       >
         <div className="flex-1">
