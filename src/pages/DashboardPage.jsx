@@ -76,13 +76,19 @@ const DashboardPage = () => {
     try {
       const from = (page - 1) * LISTINGS_PER_PAGE;
       const to = from + LISTINGS_PER_PAGE - 1;
-      let query = supabase.from('current_listings').select('id, address, created_at, price, pgapt', { count: 'exact' });
-      if (userProfile.state_code) query = query.eq('addressstate', userProfile.state_code);
-      if (userProfile.city_name) query = query.eq('lastcity', userProfile.city_name);
-      const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
+      
+      // Use just_listed table instead of current_listings
+      let query = supabase
+        .from('just_listed')
+        .select('id, address_street as address, last_seen_at as created_at, unformatted_price as price, status_text as pgapt', { count: 'exact' });
+      
+      if (userProfile.state_code) query = query.eq('address_state', userProfile.state_code);
+      if (userProfile.city_name) query = query.eq('address_city', userProfile.city_name);
+      
+      const { data, error, count } = await query.order('last_seen_at', { ascending: false }).range(from, to);
       if (error) throw error;
-      setListings(data);
-      setTotalPages(Math.ceil(count / LISTINGS_PER_PAGE));
+      setListings(data || []);
+      setTotalPages(Math.ceil((count || 0) / LISTINGS_PER_PAGE));
     } catch (err) {
       setError(err.message);
       toast({ variant: "destructive", title: "Error fetching listings", description: err.message });
@@ -103,23 +109,37 @@ const DashboardPage = () => {
   const handleReveal = async (listingId) => {
     setRevealingId(listingId);
     
-    trackAction('listing_reveal_attempt', { 
-      listingId, 
-      page: currentPage,
-      totalListings: listings.length 
-    });
+    try {
+      trackAction('listing_reveal_attempt', { 
+        listingId, 
+        page: currentPage,
+        totalListings: listings.length 
+      });
+    } catch (error) {
+      console.error('Analytics error:', error);
+    }
     
     try {
-      const { data, error } = await supabase.rpc('reveal_listing', { p_listing_id: listingId });
+      // Convert listingId to number if it's a string
+      const numericListingId = Number(listingId);
+      if (isNaN(numericListingId)) {
+        throw new Error('Invalid listing ID');
+      }
+      
+      const { data, error } = await supabase.rpc('reveal_listing', { p_listing_id: numericListingId });
       if (error) throw error;
       if (data.ok) {
         toast({ title: "Address Revealed!", description: data.already_revealed ? "You've already revealed this address." : "1 credit has been deducted." });
         setRevealedListings(prev => new Set(prev).add(listingId));
         
-        trackListingInteraction('reveal', listingId, {
-          page: currentPage,
-          totalListings: listings.length,
-        });
+        try {
+          trackListingInteraction('reveal', listingId, {
+            page: currentPage,
+            totalListings: listings.length,
+          });
+        } catch (error) {
+          console.error('Analytics error:', error);
+        }
         
         if (!data.already_revealed && !data.unlimited) {
           refreshProfile();
@@ -139,7 +159,11 @@ const DashboardPage = () => {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
-    trackAction('pagination', { page: newPage, section: 'dashboard' });
+    try {
+      trackAction('pagination', { page: newPage, section: 'dashboard' });
+    } catch (error) {
+      console.error('Analytics error:', error);
+    }
   };
 
   // Filter and sort listings
@@ -196,7 +220,11 @@ const DashboardPage = () => {
   }, [listings, searchTerm, priceFilter, sortBy, sortOrder]);
 
   const handleActionClick = (action) => {
-    trackAction('feature_click', { feature: action });
+    try {
+      trackAction('feature_click', { feature: action });
+    } catch (error) {
+      console.error('Analytics error:', error);
+    }
     toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
   };
   
@@ -208,15 +236,27 @@ const DashboardPage = () => {
     if (!profile) return null;
     const { city_name, state_code, country_code } = profile;
     if (!city_name || !state_code || !country_code) return <p className="text-amber-400">Please complete your profile to see filtered listings.</p>;
-    const countryName = Country.getCountryByCode(country_code)?.name;
-    const stateName = State.getStateByCodeAndCountry(state_code, country_code)?.name;
-    return (
-      <div className="flex items-center gap-4 text-slate">
-        <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
-        <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
-        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
-      </div>
-    );
+    
+    try {
+      const countryName = Country.getCountryByCode(country_code)?.name || country_code;
+      const stateName = State.getStateByCodeAndCountry(state_code, country_code)?.name || state_code;
+      return (
+        <div className="flex items-center gap-4 text-slate">
+          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
+          <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
+        </div>
+      );
+    } catch (error) {
+      console.error('Error in LocationDisplay:', error);
+      return (
+        <div className="flex items-center gap-4 text-slate">
+          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{country_code}</span></div>
+          <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{state_code}</span></div>
+          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
+        </div>
+      );
+    }
   };
   
   const OutOfCredits = () => (
