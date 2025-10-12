@@ -129,13 +129,22 @@ const DashboardPage = () => {
 
   // Calculate service area performance
   const calculateServiceAreaStats = useCallback(() => {
-    if (!profile?.service_cities || !listings.length) return;
+    if (!profile || !listings.length) return;
     
     const stats = {};
-    profile.service_cities.forEach(city => {
+    
+    // Use the main service area (city_name, state_code) if no service_cities array
+    const serviceAreas = profile.service_cities && profile.service_cities.length > 0 
+      ? profile.service_cities 
+      : [profile.city_name];
+    
+    serviceAreas.forEach(city => {
+      if (!city) return;
+      
+      // Filter listings by city name (case insensitive)
       const cityListings = listings.filter(listing => 
         listing.address?.toLowerCase().includes(city.toLowerCase()) ||
-        listing.city?.toLowerCase().includes(city.toLowerCase())
+        listing.pgapt?.toLowerCase().includes(city.toLowerCase())
       );
       
       const totalValue = cityListings.reduce((sum, listing) => sum + (listing.price || 0), 0);
@@ -148,7 +157,7 @@ const DashboardPage = () => {
     });
     
     setServiceAreaStats(stats);
-  }, [profile?.service_cities, listings]);
+  }, [profile, listings]);
 
   const fetchListings = useCallback(async (page, userProfile) => {
     if (!userProfile || !userProfile.onboarding_complete) {
@@ -164,7 +173,7 @@ const DashboardPage = () => {
       // Use just_listed table instead of current_listings
       let query = supabase
         .from('just_listed')
-        .select('id, addressstreet as address, lastseenat as created_at, unformattedprice as price, statustext as pgapt', { count: 'exact' });
+        .select('id, addressstreet, lastseenat, unformattedprice, statustext', { count: 'exact' });
       
       if (userProfile.state_code) query = query.eq('addressstate', userProfile.state_code);
       if (userProfile.city_name) query = query.eq('lastcity', userProfile.city_name);
@@ -174,7 +183,15 @@ const DashboardPage = () => {
         console.error('Database query error:', error);
         throw error;
       }
-      setListings(data || []);
+      // Map the data to match expected format
+      const mappedData = (data || []).map(item => ({
+        id: item.id,
+        address: item.addressstreet,
+        created_at: item.lastseenat,
+        price: item.unformattedprice,
+        pgapt: item.statustext
+      }));
+      setListings(mappedData);
       setTotalPages(Math.ceil((count || 0) / LISTINGS_PER_PAGE));
     } catch (err) {
       console.error('Error in fetchListings:', err);
@@ -743,10 +760,15 @@ const DashboardPage = () => {
               
               <div className="text-center">
                 <div className="text-2xl font-bold text-lightest-slate mb-1">
-                  {profile?.subscription_status || 'Inactive'}
+                  {profile?.subscription_status === 'free' || !profile?.subscription_status ? 'Free' : profile.subscription_status}
                 </div>
                 <p className="text-sm text-slate">Plan Status</p>
-                <p className="text-xs text-slate mt-1">Renewal: Dec 15, 2024</p>
+                <p className="text-xs text-slate mt-1">
+                  {profile?.subscription_status === 'free' || !profile?.subscription_status 
+                    ? 'Upgrade anytime' 
+                    : 'Renewal: Dec 15, 2024'
+                  }
+                </p>
               </div>
               
               <div className="flex gap-2 justify-center">

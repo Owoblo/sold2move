@@ -73,10 +73,10 @@ export const Combobox = ({
                   onSelect={() => handleSelect(option.value)}
                   className={cn(
                     "cursor-pointer transition-all duration-200",
-                    "hover:bg-teal/10 hover:text-teal",
+                    "hover:bg-teal/10 hover:text-teal hover:scale-[1.02]",
                     "active:bg-teal/20 active:scale-[0.98]",
-                    "focus:bg-teal/10 focus:text-teal",
-                    value === option.value && "bg-teal/20 text-teal font-medium"
+                    "focus:bg-teal/10 focus:text-teal focus:ring-2 focus:ring-teal/20",
+                    value === option.value && "bg-teal/20 text-teal font-medium ring-2 ring-teal/30"
                   )}
                 >
                   <Check

@@ -14,6 +14,7 @@ import { ChevronDown, User, LogOut, Settings, CreditCard, Menu, X } from 'lucide
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import DashboardNotification from '@/components/dashboard/DashboardNotification';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 const CreditMeter = lazy(() => import('@/components/dashboard/CreditMeter'));
 
@@ -41,6 +42,7 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
         <DashboardNotification />
       </div>
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         <Suspense fallback={<SkeletonLoader className="h-8 w-28 rounded-full" />}>
           <CreditMeter />
         </Suspense>
