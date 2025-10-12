@@ -80,12 +80,12 @@ const DashboardPage = () => {
       // Use just_listed table instead of current_listings
       let query = supabase
         .from('just_listed')
-        .select('id, address_street as address, last_seen_at as created_at, unformatted_price as price, status_text as pgapt', { count: 'exact' });
+        .select('id, addressstreet as address, lastseenat as created_at, unformattedprice as price, statustext as pgapt', { count: 'exact' });
       
-      if (userProfile.state_code) query = query.eq('address_state', userProfile.state_code);
-      if (userProfile.city_name) query = query.eq('address_city', userProfile.city_name);
+      if (userProfile.state_code) query = query.eq('addressstate', userProfile.state_code);
+      if (userProfile.city_name) query = query.eq('lastcity', userProfile.city_name);
       
-      const { data, error, count } = await query.order('last_seen_at', { ascending: false }).range(from, to);
+      const { data, error, count } = await query.order('lastseenat', { ascending: false }).range(from, to);
       if (error) throw error;
       setListings(data || []);
       setTotalPages(Math.ceil((count || 0) / LISTINGS_PER_PAGE));
@@ -110,11 +110,11 @@ const DashboardPage = () => {
     setRevealingId(listingId);
     
     try {
-      trackAction('listing_reveal_attempt', { 
-        listingId, 
-        page: currentPage,
-        totalListings: listings.length 
-      });
+    trackAction('listing_reveal_attempt', { 
+      listingId, 
+      page: currentPage,
+      totalListings: listings.length 
+    });
     } catch (error) {
       console.error('Analytics error:', error);
     }
@@ -133,10 +133,10 @@ const DashboardPage = () => {
         setRevealedListings(prev => new Set(prev).add(listingId));
         
         try {
-          trackListingInteraction('reveal', listingId, {
-            page: currentPage,
-            totalListings: listings.length,
-          });
+        trackListingInteraction('reveal', listingId, {
+          page: currentPage,
+          totalListings: listings.length,
+        });
         } catch (error) {
           console.error('Analytics error:', error);
         }
@@ -160,7 +160,7 @@ const DashboardPage = () => {
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
     try {
-      trackAction('pagination', { page: newPage, section: 'dashboard' });
+    trackAction('pagination', { page: newPage, section: 'dashboard' });
     } catch (error) {
       console.error('Analytics error:', error);
     }
@@ -221,7 +221,7 @@ const DashboardPage = () => {
 
   const handleActionClick = (action) => {
     try {
-      trackAction('feature_click', { feature: action });
+    trackAction('feature_click', { feature: action });
     } catch (error) {
       console.error('Analytics error:', error);
     }
@@ -240,13 +240,13 @@ const DashboardPage = () => {
     try {
       const countryName = Country.getCountryByCode(country_code)?.name || country_code;
       const stateName = State.getStateByCodeAndCountry(state_code, country_code)?.name || state_code;
-      return (
-        <div className="flex items-center gap-4 text-slate">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
-          <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
-          <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
-        </div>
-      );
+    return (
+      <div className="flex items-center gap-4 text-slate">
+        <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
+        <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
+        <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
+      </div>
+    );
     } catch (error) {
       console.error('Error in LocationDisplay:', error);
       return (
