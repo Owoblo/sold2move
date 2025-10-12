@@ -207,10 +207,15 @@ const PostAuthPage = () => {
       if (profile.onboarding_complete) {
         const from = location.state?.from?.pathname || '/dashboard';
         console.log('Redirecting to dashboard:', from);
-        navigate(from, { replace: true });
+        // Add a small delay to ensure the profile state is fully updated
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 100);
       } else {
         console.log('Redirecting to welcome page');
-        navigate('/welcome', { replace: true });
+        setTimeout(() => {
+          navigate('/welcome', { replace: true });
+        }, 100);
       }
     }
   }, [profile, profileLoading, navigate, location.state]);

@@ -86,12 +86,20 @@ const DashboardPage = () => {
       if (userProfile.city_name) query = query.eq('lastcity', userProfile.city_name);
       
       const { data, error, count } = await query.order('lastseenat', { ascending: false }).range(from, to);
-      if (error) throw error;
+      if (error) {
+        console.error('Database query error:', error);
+        throw error;
+      }
       setListings(data || []);
       setTotalPages(Math.ceil((count || 0) / LISTINGS_PER_PAGE));
     } catch (err) {
-      setError(err.message);
-      toast({ variant: "destructive", title: "Error fetching listings", description: err.message });
+      console.error('Error in fetchListings:', err);
+      setError(err.message || 'Failed to fetch listings');
+      toast({ 
+        variant: "destructive", 
+        title: "Error fetching listings", 
+        description: err.message || 'Please try again later' 
+      });
     } finally {
       setListingsLoading(false);
     }
@@ -290,6 +298,30 @@ const DashboardPage = () => {
   const creditsRemaining = profile?.credits_remaining ?? 0;
   const isUnlimited = profile?.unlimited ?? false;
   const outOfCredits = !isUnlimited && creditsRemaining <= 0;
+
+  // Show loading if profile is still loading
+  if (profileLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // Show error if there's a critical error and no profile
+  if (!profile && !profileLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <h3 className="text-lg font-semibold text-lightest-slate">Profile Not Found</h3>
+        <p className="text-slate text-center">Unable to load your profile. Please try refreshing the page.</p>
+        <Button onClick={() => window.location.reload()} className="bg-teal text-deep-navy hover:bg-teal/90">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh Page
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
