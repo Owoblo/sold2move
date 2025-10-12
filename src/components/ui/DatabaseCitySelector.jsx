@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { ChevronDown, MapPin, Check, X, Search, Globe, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { DATABASE_CITIES, getCitiesByState, searchCities } from '@/data/databaseCities';
+
+// Lazy load the heavy data
+const loadDatabaseCities = () => import('@/data/databaseCities');
 
 const DatabaseCitySelector = ({ 
   selectedCities = [], 
@@ -19,7 +21,25 @@ const DatabaseCitySelector = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [citiesData, setCitiesData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Load cities data when component mounts
+  useEffect(() => {
+    if (!citiesData && !loading) {
+      setLoading(true);
+      loadDatabaseCities()
+        .then(module => {
+          setCitiesData(module);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Failed to load cities data:', error);
+          setLoading(false);
+        });
+    }
+  }, [citiesData, loading]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -35,8 +55,8 @@ const DatabaseCitySelector = ({
   }, []);
 
   // Filter cities based on search term
-  const filteredCities = searchTerm ? searchCities(searchTerm) : DATABASE_CITIES;
-  const groupedCities = getCitiesByState();
+  const filteredCities = citiesData && searchTerm ? citiesData.searchCities(searchTerm) : (citiesData?.DATABASE_CITIES || []);
+  const groupedCities = citiesData ? citiesData.getCitiesByState() : {};
 
   // Handle city selection/deselection
   const handleCityToggle = (cityName, stateCode) => {
@@ -107,6 +127,16 @@ const DatabaseCitySelector = ({
         )} />
       </motion.button>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="absolute top-full left-0 right-0 mt-1 p-4 bg-deep-navy border border-slate/30 rounded-lg shadow-lg z-50">
+          <div className="flex items-center justify-center gap-2 text-slate">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal"></div>
+            <span>Loading cities...</span>
+          </div>
+        </div>
+      )}
+
       {/* Selected Cities Display */}
       {selectedCities.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
@@ -141,7 +171,7 @@ const DatabaseCitySelector = ({
 
       {/* Dropdown */}
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && citiesData && !loading && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

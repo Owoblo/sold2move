@@ -10,6 +10,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
 import { ErrorProvider } from '@/contexts/ErrorContext';
 import { QueryProvider } from '@/providers/QueryProvider';
+import { registerServiceWorker } from '@/utils/serviceWorker';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -30,3 +31,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Register service worker for caching
+registerServiceWorker();
