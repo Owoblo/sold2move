@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useProfile } from '@/hooks/useProfile.jsx';
-import { useSession } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 export const useOnboarding = () => {
-  const session = useSession();
+  const { session } = useAuth();
   const { profile } = useProfile();
   const [showTour, setShowTour] = useState(false);
   const [hasCompletedTour, setHasCompletedTour] = useState(false);

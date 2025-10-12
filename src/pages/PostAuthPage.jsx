@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '@/hooks/useProfile.jsx';
-import { useSupabaseClient, useSession } from '@supabase/auth-helpers-react';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -11,7 +12,7 @@ const PostAuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const supabase = useSupabaseClient();
-  const session = useSession();
+  const { session } = useAuth();
   const { toast } = useToast();
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 

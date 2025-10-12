@@ -29,10 +29,15 @@ export const AuthProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (session !== undefined) {
-      setLoading(false);
-      setIsInitialized(true);
-    }
+    // Add a small delay to ensure session is fully loaded
+    const timer = setTimeout(() => {
+      if (session !== undefined) {
+        setLoading(false);
+        setIsInitialized(true);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [session]);
 
   const signUp = useCallback(async (email, password) => {

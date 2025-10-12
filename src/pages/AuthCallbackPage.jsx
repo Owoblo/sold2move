@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useSupabaseClient, useSession } from '@supabase/auth-helpers-react';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 
 const AuthCallbackPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const session = useSession();
+  const { session } = useAuth();
   const supabase = useSupabaseClient();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState(null);

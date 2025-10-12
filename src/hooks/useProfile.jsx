@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -7,7 +8,7 @@ import { Link } from 'react-router-dom';
 const LOW_CREDIT_THRESHOLD = 50;
 
 export const useProfile = () => {
-  const session = useSession();
+  const { session } = useAuth();
   const supabase = useSupabaseClient();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);

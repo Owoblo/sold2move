@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { useSession } from '@supabase/auth-helpers-react';
 import { Toaster as ShadToaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -10,6 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -59,7 +59,7 @@ const SuspenseFallback = () => (
 
 function App() {
   const location = useLocation();
-  const session = useSession();
+  const { session, loading } = useAuth();
   const { 
     showTour, 
     showWelcomeMessage, 
@@ -70,13 +70,16 @@ function App() {
 
   // Debug session changes
   useEffect(() => {
-    console.log('🔍 App: Session changed', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      currentPath: location.pathname
-    });
-  }, [session, location.pathname]);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 App: Session changed', {
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        currentPath: location.pathname,
+        loading
+      });
+    }
+  }, [session, location.pathname, loading]);
 
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || location.pathname === '/onboarding';
 
