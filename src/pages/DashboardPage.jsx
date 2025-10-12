@@ -33,7 +33,8 @@ import {
   Zap,
   Star,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Bell
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfile } from '@/hooks/useProfile.jsx';
@@ -50,6 +51,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
+import EmailAlertsSettings from '@/components/dashboard/EmailAlertsSettings';
 
 const LISTINGS_PER_PAGE = 15;
 
@@ -80,6 +82,7 @@ const DashboardPage = () => {
   });
   const [recentActivity, setRecentActivity] = useState([]);
   const [serviceAreaStats, setServiceAreaStats] = useState({});
+  const [showEmailAlerts, setShowEmailAlerts] = useState(false);
 
   const fetchRevealedListings = useCallback(async () => {
     if (!profile) return;
@@ -339,11 +342,35 @@ const DashboardPage = () => {
 
   const handleActionClick = (action) => {
     try {
-    trackAction('feature_click', { feature: action });
+      trackAction('feature_click', { feature: action });
     } catch (error) {
       console.error('Analytics error:', error);
     }
-    toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+    
+    // Handle specific actions
+    switch (action) {
+      case 'Email Alerts':
+        setShowEmailAlerts(true);
+        break;
+      case 'Export CSV':
+        // TODO: Connect to existing ExportModal
+        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        break;
+      case 'Send Mail Pack':
+        // TODO: Connect to existing mail pack generation
+        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        break;
+      case 'Buy Credits':
+        // TODO: Connect to existing credit purchase flow
+        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        break;
+      case 'Update Service Area':
+        // TODO: Connect to existing settings
+        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        break;
+      default:
+        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+    }
   };
   
   const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
@@ -446,6 +473,10 @@ const DashboardPage = () => {
             Welcome, {profile?.company_name || 'Mover'}!
           </h1>
           <p className="text-lg text-slate mt-2">Here are your latest real-time leads.</p>
+          <div className="flex items-center gap-2 mt-2 text-sm text-slate">
+            <Eye className="h-4 w-4 text-teal" />
+            <span>Showing {revealedListings.size} revealed listings (unlock more with credits)</span>
+          </div>
         </div>
         <div className="flex gap-2 mt-4 md:mt-0">
           <Button 
@@ -574,7 +605,7 @@ const DashboardPage = () => {
             <p className="text-slate text-sm">Common tasks to boost your lead generation</p>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
               <Button 
                 onClick={() => handleActionClick('Send Mail Pack')} 
                 className="h-20 flex flex-col items-center justify-center gap-2 bg-teal/10 hover:bg-teal/20 border border-teal/30"
@@ -627,6 +658,15 @@ const DashboardPage = () => {
               >
                 <Settings className="h-6 w-6 text-orange-400" />
                 <span className="text-xs font-medium">Settings</span>
+              </Button>
+              
+              <Button 
+                onClick={() => handleActionClick('Email Alerts')} 
+                className="h-20 flex flex-col items-center justify-center gap-2 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30"
+                variant="ghost"
+              >
+                <Bell className="h-6 w-6 text-pink-400" />
+                <span className="text-xs font-medium">Email Alerts</span>
               </Button>
             </div>
           </CardContent>
@@ -843,6 +883,35 @@ const DashboardPage = () => {
         </Button>
       </motion.div>
 
+      {/* Credit Notice */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <Card className="bg-teal/10 border-teal/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Eye className="h-5 w-5 text-teal" />
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">
+                  Credit-Based Data Access
+                </p>
+                <p className="text-xs text-slate">
+                  You're viewing {revealedListings.size} revealed listings. Use credits to unlock more leads and get full contact details.
+                </p>
+              </div>
+              <div className="ml-auto">
+                <Button size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Buy Credits
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Enhanced Listings Table */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -998,6 +1067,12 @@ const DashboardPage = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Email Alerts Settings Modal */}
+      <EmailAlertsSettings 
+        isOpen={showEmailAlerts} 
+        onClose={() => setShowEmailAlerts(false)} 
+      />
     </div>
   );
 };
