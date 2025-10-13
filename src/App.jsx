@@ -51,6 +51,11 @@ const Success = lazy(() => import('@/pages/Success'));
 const RequestDemoPage = lazy(() => import('@/pages/RequestDemoPage'));
 const HowMovingCompaniesCanUseSoldListings = lazy(() => import('@/pages/HowMovingCompaniesCanUseSoldListings'));
 const SoldHouseListingsGuide = lazy(() => import('@/pages/SoldHouseListingsGuide'));
+const OntarioSoldListings = lazy(() => import('@/pages/OntarioSoldListings'));
+const CanadaSoldListings = lazy(() => import('@/pages/CanadaSoldListings'));
+const USASoldListings = lazy(() => import('@/pages/USASoldListings'));
+const TorontoSoldListings = lazy(() => import('@/pages/TorontoSoldListings'));
+const VancouverSoldListings = lazy(() => import('@/pages/VancouverSoldListings'));
 const RouteGuard = lazy(() => import('@/components/layout/RouteGuard'));
 
 const SuspenseFallback = () => (
@@ -106,6 +111,13 @@ function App() {
                 {/* SEO Content Pages */}
                 <Route path="/how-moving-companies-can-use-sold-listings-ontario" element={<HowMovingCompaniesCanUseSoldListings />} />
                 <Route path="/sold-house-listings-canada-guide-movers" element={<SoldHouseListingsGuide />} />
+                
+                {/* Local SEO Landing Pages */}
+                <Route path="/ontario-sold-listings" element={<OntarioSoldListings />} />
+                <Route path="/canada-sold-listings" element={<CanadaSoldListings />} />
+                <Route path="/usa-sold-listings" element={<USASoldListings />} />
+                <Route path="/toronto-sold-listings" element={<TorontoSoldListings />} />
+                <Route path="/vancouver-sold-listings" element={<VancouverSoldListings />} />
                 
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />
