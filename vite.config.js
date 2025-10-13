@@ -241,48 +241,46 @@ export default defineConfig({
 				'@babel/types'
 			],
 			output: {
-				manualChunks: (id) => {
-					// Vendor chunks for better caching
-					if (id.includes('node_modules')) {
-						if (id.includes('react') || id.includes('react-dom')) {
-							return 'vendor-react';
-						}
-						if (id.includes('react-router')) {
-							return 'vendor-router';
-						}
-						if (id.includes('framer-motion') || id.includes('lucide-react')) {
-							return 'vendor-ui';
-						}
-						if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-							return 'vendor-forms';
-						}
-						if (id.includes('@supabase')) {
-							return 'vendor-supabase';
-						}
-						if (id.includes('recharts')) {
-							return 'vendor-charts';
-						}
-						if (id.includes('@stripe')) {
-							return 'vendor-stripe';
-						}
-						return 'vendor';
-					}
-					
-					// Separate large data files
-					if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
-						return 'data-cities';
-					}
-					
-					// Dashboard components
-					if (id.includes('/components/dashboard/')) {
-						return 'dashboard';
-					}
-					
-					// UI components
-					if (id.includes('/components/ui/')) {
-						return 'ui-components';
-					}
-				}
+				// Temporarily disable manual chunks to fix React bundling issues
+				// manualChunks: (id) => {
+				// 	// Vendor chunks for better caching
+				// 	if (id.includes('node_modules')) {
+				// 		if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+				// 			return 'vendor-react';
+				// 		}
+				// 		if (id.includes('framer-motion') || id.includes('lucide-react')) {
+				// 			return 'vendor-ui';
+				// 		}
+				// 		if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+				// 			return 'vendor-forms';
+				// 		}
+				// 		if (id.includes('@supabase')) {
+				// 			return 'vendor-supabase';
+				// 		}
+				// 		if (id.includes('recharts')) {
+				// 			return 'vendor-charts';
+				// 		}
+				// 		if (id.includes('@stripe')) {
+				// 			return 'vendor-stripe';
+				// 		}
+				// 		return 'vendor';
+				// 	}
+				// 	
+				// 	// Separate large data files
+				// 	if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
+				// 		return 'data-cities';
+				// 	}
+				// 	
+				// 	// Dashboard components
+				// 	if (id.includes('/components/dashboard/')) {
+				// 		return 'dashboard';
+				// 	}
+				// 	
+				// 	// UI components
+				// 	if (id.includes('/components/ui/')) {
+				// 		return 'ui-components';
+				// 	}
+				// }
 			}
 		},
 		// Optimize bundle size
