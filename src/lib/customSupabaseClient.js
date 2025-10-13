@@ -5,7 +5,31 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 
 // Get site URL from environment or fallback to current origin
 export const getSiteUrl = () => {
-  return import.meta.env.VITE_SITE_URL || window.location.origin;
+  // Use environment variable if available
+  if (import.meta.env.VITE_SITE_URL) {
+    return import.meta.env.VITE_SITE_URL;
+  }
+  
+  // For mobile devices and PWAs, ensure we use the correct origin
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    
+    // Handle mobile-specific cases
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return origin; // Development
+    }
+    
+    // Production - ensure we use the correct domain
+    if (origin.includes('sold2move.com')) {
+      return 'https://sold2move.com';
+    }
+    
+    // Fallback to current origin
+    return origin;
+  }
+  
+  // Server-side fallback
+  return 'https://sold2move.com';
 };
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

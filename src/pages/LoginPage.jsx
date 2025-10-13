@@ -91,15 +91,32 @@ const LoginPage = () => {
     setAuthError(null); // Clear any previous errors
     try {
       const siteUrl = getSiteUrl();
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      console.log('🔄 LoginPage: Initiating Google OAuth sign-in', {
+        siteUrl,
+        isMobile,
+        userAgent: navigator.userAgent,
+        currentOrigin: window.location.origin
+      });
+
+      const oauthOptions = {
+        redirectTo: `${siteUrl}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      };
+
+      // Add mobile-specific options
+      if (isMobile) {
+        oauthOptions.queryParams.prompt = 'select_account';
+        console.log('📱 Mobile device detected, using select_account prompt');
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${siteUrl}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+        options: oauthOptions,
       });
 
       if (error) {
@@ -129,6 +146,15 @@ const LoginPage = () => {
     // Clear URL parameters
     navigate('/login', { replace: true });
     setTimeout(() => setIsRetrying(false), 1000);
+  };
+
+  const handleMobileFallback = () => {
+    // For mobile users having OAuth issues, show a message to use email/password
+    toast({
+      title: "Mobile Sign-in Tip",
+      description: "If Google sign-in isn't working on your mobile device, please use the email and password form below.",
+      duration: 5000,
+    });
   };
 
   const handleGoBack = () => {

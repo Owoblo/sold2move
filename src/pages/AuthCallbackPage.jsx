@@ -15,9 +15,20 @@ const AuthCallbackPage = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      
       console.log('🔍 AuthCallbackPage: Starting auth callback handling');
       console.log('🔍 Current URL:', window.location.href);
       console.log('🔍 Current session:', session ? 'exists' : 'none');
+      console.log('🔍 Device info:', {
+        isMobile,
+        isPWA,
+        userAgent: navigator.userAgent,
+        origin: window.location.origin,
+        pathname: window.location.pathname,
+        search: window.location.search
+      });
       
       try {
         // Get the URL parameters
@@ -36,7 +47,21 @@ const AuthCallbackPage = () => {
         // Handle OAuth errors
         if (error) {
           console.error('❌ OAuth error detected:', { error, errorDescription });
-          setError(`auth_failed`);
+          
+          // Provide more specific error messages for mobile users
+          if (isMobile) {
+            console.log('📱 Mobile OAuth error detected');
+            if (error === 'access_denied') {
+              setError('mobile_access_denied');
+            } else if (error === 'popup_closed_by_user') {
+              setError('mobile_popup_closed');
+            } else {
+              setError('mobile_auth_failed');
+            }
+          } else {
+            setError('auth_failed');
+          }
+          
           setIsProcessing(false);
           return;
         }
@@ -121,20 +146,19 @@ const AuthCallbackPage = () => {
     });
 
     // Set a timeout to handle cases where auth doesn't complete
-    const timeout = setTimeout(() => {
-      console.log('Auth callback timeout');
-      if (!session && !error) {
-        setError('timeout');
-        setIsProcessing(false);
-      }
-    }, 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Auth callback timeout - redirecting to login');
+      setError('timeout');
+      setIsProcessing(false);
+    }, 10000); // 10 second timeout
 
     // Process the callback
     handleAuthCallback();
 
+    // Clean up timeout when component unmounts or auth completes
     return () => {
+      clearTimeout(timeoutId);
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, [supabase, navigate, location, session]);
 

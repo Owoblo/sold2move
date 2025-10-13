@@ -217,7 +217,22 @@ export default defineConfig({
 	plugins: [
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), iframeRouteRestorationPlugin()] : []),
 		react(),
-		addTransformIndexHtml
+		addTransformIndexHtml,
+		// CSS optimization plugin for production
+		...(isDev ? [] : [{
+			name: 'inline-critical-css',
+			transformIndexHtml(html) {
+				// Add critical CSS inlining for above-the-fold content
+				const criticalCSS = `
+					/* Critical CSS for initial render */
+					* { box-sizing: border-box; }
+					body { margin: 0; font-family: 'Inter', sans-serif; background: #ffffff; }
+					#root { min-height: 100vh; }
+					.loading { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+				`;
+				return html.replace('<head>', `<head><style>${criticalCSS}</style>`);
+			}
+		}])
 	],
 	server: {
 		cors: true,
@@ -241,46 +256,57 @@ export default defineConfig({
 				'@babel/types'
 			],
 			output: {
-				// Temporarily disable manual chunks to fix React bundling issues
-				// manualChunks: (id) => {
-				// 	// Vendor chunks for better caching
-				// 	if (id.includes('node_modules')) {
-				// 		if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-				// 			return 'vendor-react';
-				// 		}
-				// 		if (id.includes('framer-motion') || id.includes('lucide-react')) {
-				// 			return 'vendor-ui';
-				// 		}
-				// 		if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-				// 			return 'vendor-forms';
-				// 		}
-				// 		if (id.includes('@supabase')) {
-				// 			return 'vendor-supabase';
-				// 		}
-				// 		if (id.includes('recharts')) {
-				// 			return 'vendor-charts';
-				// 		}
-				// 		if (id.includes('@stripe')) {
-				// 			return 'vendor-stripe';
-				// 		}
-				// 		return 'vendor';
-				// 	}
-				// 	
-				// 	// Separate large data files
-				// 	if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
-				// 		return 'data-cities';
-				// 	}
-				// 	
-				// 	// Dashboard components
-				// 	if (id.includes('/components/dashboard/')) {
-				// 		return 'dashboard';
-				// 	}
-				// 	
-				// 	// UI components
-				// 	if (id.includes('/components/ui/')) {
-				// 		return 'ui-components';
-				// 	}
-				// }
+				manualChunks: (id) => {
+					// Vendor chunks for better caching and performance
+					if (id.includes('node_modules')) {
+						// Core React ecosystem
+						if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+							return 'vendor-react';
+						}
+						// UI libraries
+						if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('@radix-ui')) {
+							return 'vendor-ui';
+						}
+						// Form handling
+						if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+							return 'vendor-forms';
+						}
+						// Backend services
+						if (id.includes('@supabase')) {
+							return 'vendor-supabase';
+						}
+						// Payment processing
+						if (id.includes('@stripe') || id.includes('stripe')) {
+							return 'vendor-stripe';
+						}
+						// Data fetching
+						if (id.includes('@tanstack/react-query')) {
+							return 'vendor-query';
+						}
+						// Other vendor libraries
+						return 'vendor';
+					}
+					
+					// Separate large data files
+					if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
+						return 'data-cities';
+					}
+					
+					// Dashboard components (lazy loaded)
+					if (id.includes('/components/dashboard/')) {
+						return 'dashboard';
+					}
+					
+					// UI components
+					if (id.includes('/components/ui/')) {
+						return 'ui-components';
+					}
+					
+					// Page components (lazy loaded)
+					if (id.includes('/pages/')) {
+						return 'pages';
+					}
+				}
 			}
 		},
 		// Optimize bundle size
@@ -292,8 +318,15 @@ export default defineConfig({
 		terserOptions: {
 			compress: {
 				drop_console: true,
-				drop_debugger: true
+				drop_debugger: true,
+				pure_funcs: ['console.log', 'console.info', 'console.debug']
+			},
+			mangle: {
+				safari10: true
 			}
-		}
+		},
+		// CSS optimization
+		cssCodeSplit: true,
+		cssMinify: true
 	}
 });

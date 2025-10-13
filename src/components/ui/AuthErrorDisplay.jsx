@@ -41,6 +41,33 @@ const AuthErrorDisplay = ({ error, onRetry, onGoBack, isRetrying = false }) => {
       };
     }
     
+    if (error.includes('mobile_access_denied')) {
+      return {
+        title: 'Access Denied on Mobile',
+        description: 'Google sign-in was cancelled or denied on your mobile device.',
+        suggestion: 'Please try again or use the email and password form below for a more reliable mobile experience.',
+        icon: '📱'
+      };
+    }
+    
+    if (error.includes('mobile_popup_closed')) {
+      return {
+        title: 'Sign-in Window Closed',
+        description: 'The Google sign-in window was closed before completing authentication.',
+        suggestion: 'Please try again or use the email and password form below for a more reliable mobile experience.',
+        icon: '📱'
+      };
+    }
+    
+    if (error.includes('mobile_auth_failed')) {
+      return {
+        title: 'Mobile Sign-in Failed',
+        description: 'Google sign-in encountered an issue on your mobile device.',
+        suggestion: 'Please try the email and password form below for a more reliable mobile experience.',
+        icon: '📱'
+      };
+    }
+    
     if (error.includes('unexpected')) {
       return {
         title: 'Unexpected Error',

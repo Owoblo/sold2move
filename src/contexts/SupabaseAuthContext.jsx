@@ -111,22 +111,37 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = useCallback(async () => {
     try {
       const siteUrl = getSiteUrl();
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      
       console.log('🔄 Initiating Google OAuth sign-in');
       console.log('🔄 OAuth configuration:', {
         siteUrl,
         redirectTo: `${siteUrl}/auth/callback`,
-        provider: 'google'
+        provider: 'google',
+        isMobile,
+        isPWA,
+        userAgent: navigator.userAgent,
+        currentOrigin: window.location.origin
       });
       
+      const oauthOptions = {
+        redirectTo: `${siteUrl}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      };
+
+      // Add mobile-specific options
+      if (isMobile) {
+        oauthOptions.queryParams.prompt = 'select_account';
+        console.log('📱 Mobile device detected, using select_account prompt');
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${siteUrl}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+        options: oauthOptions,
       });
 
       if (error) {
