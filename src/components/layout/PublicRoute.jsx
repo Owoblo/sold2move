@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Loader2 } from 'lucide-react';
+import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 
 const PublicRoute = ({ children }) => {
   const { session, loading } = useAuth();

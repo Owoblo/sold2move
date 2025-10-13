@@ -11,6 +11,8 @@ import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { storeIntendedDestination } from '@/utils/authUtils';
+import { testAuthFlow } from '@/utils/authDebugger';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -87,7 +89,7 @@ function App() {
     }
   }, [location.pathname, location.search]);
 
-  // Debug session changes
+  // Debug session changes and run auth flow test
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 App: Session changed', {
@@ -97,6 +99,9 @@ function App() {
         currentPath: location.pathname,
         loading
       });
+      
+      // Run comprehensive auth flow test
+      testAuthFlow(supabase);
     }
   }, [session, location.pathname, loading]);
 

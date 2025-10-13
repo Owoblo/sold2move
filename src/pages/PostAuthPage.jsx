@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui/use-toast';
 import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
+import { debugAuthFlow, debugSupabaseError, debugUserState, debugProfileState, debugDatabaseOperation, debugNavigationFlow } from '@/utils/authDebugger';
 
 const PostAuthPage = () => {
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
@@ -19,8 +20,7 @@ const PostAuthPage = () => {
 
   // Create profile if it doesn't exist
   const createProfileIfNeeded = async () => {
-    console.log('🔍 PostAuthPage: Checking if profile creation is needed');
-    console.log('🔍 Current state:', {
+    debugAuthFlow('PROFILE_CREATION_CHECK', {
       hasSession: !!session,
       hasUser: !!session?.user,
       userId: session?.user?.id,
@@ -39,13 +39,7 @@ const PostAuthPage = () => {
       return;
     }
 
-    console.log('🔄 Creating profile for user:', session.user.id);
-    console.log('🔄 User details:', {
-      id: session.user.id,
-      email: session.user.email,
-      created_at: session.user.created_at,
-      last_sign_in_at: session.user.last_sign_in_at
-    });
+    debugUserState(session.user, 'Creating Profile For');
     
     // First, verify the user exists in auth.users
     console.log('🔍 Verifying user exists in auth.users...');
@@ -101,20 +95,15 @@ const PostAuthPage = () => {
         updated_at: new Date().toISOString(),
       };
 
-      console.log('🔄 Inserting profile data:', profileData);
+      debugDatabaseOperation('INSERT', 'profiles', profileData);
 
       const { error } = await supabase
         .from('profiles')
         .insert(profileData);
 
       if (error) {
-        console.error('❌ Error creating profile:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          fullError: error
-        });
+        debugSupabaseError(error, 'Profile Creation');
+        debugDatabaseOperation('INSERT', 'profiles', profileData, error);
         
         // If it's a duplicate key error, the profile was created by another process
         if (error.code === '23505') {
@@ -204,24 +193,20 @@ const PostAuthPage = () => {
 
   useEffect(() => {
     if (!profileLoading && profile) {
-      console.log('Profile loaded:', profile);
+      debugProfileState(profile, 'Profile Loaded');
       if (profile.onboarding_complete) {
         // Check for intended destination first, then location state, then default
         const intendedDestination = getAndClearIntendedDestination();
         const from = intendedDestination || location.state?.from?.pathname || getDefaultAuthenticatedPath();
         
-        console.log('Redirecting after authentication:', {
-          intendedDestination,
-          fromState: location.state?.from?.pathname,
-          finalDestination: from
-        });
+        debugNavigationFlow('PostAuthPage', from, 'Onboarding Complete');
         
         // Add a small delay to ensure the profile state is fully updated
         setTimeout(() => {
           navigate(from, { replace: true });
         }, 100);
       } else {
-        console.log('Redirecting to welcome page for onboarding');
+        debugNavigationFlow('PostAuthPage', '/welcome', 'Onboarding Required');
         setTimeout(() => {
           navigate('/welcome', { replace: true });
         }, 100);

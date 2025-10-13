@@ -15,6 +15,7 @@ import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 import { getSiteUrl } from '@/lib/customSupabaseClient';
 import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 import { useOffline } from '@/hooks/useOffline';
+import { debugAuthFlow, debugSupabaseError, debugNavigationFlow } from '@/utils/authDebugger';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
@@ -26,8 +27,8 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { isOffline, wasOffline, setWasOffline } = useOffline();
 
-  // Get intended destination from localStorage or location state
-  const intendedDestination = getAndClearIntendedDestination();
+  // Get intended destination from localStorage or location state (don't clear it yet)
+  const intendedDestination = localStorage.getItem('intendedDestination');
   const from = intendedDestination || location.state?.from?.pathname || "/post-auth";
 
   // Handle URL error parameters
@@ -62,6 +63,8 @@ const LoginPage = () => {
   const { isSubmitting } = form.formState;
 
   const signInWithPassword = async (values) => {
+    debugAuthFlow('LOGIN_ATTEMPT', { email: values.email, from });
+    
     // Check for offline state
     if (isOffline) {
       toast({
@@ -73,12 +76,21 @@ const LoginPage = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
       });
 
+      debugAuthFlow('LOGIN_RESPONSE', { 
+        hasData: !!data, 
+        hasError: !!error, 
+        userEmail: data?.user?.email,
+        emailConfirmed: data?.user?.email_confirmed_at 
+      });
+
       if (error) {
+        debugSupabaseError(error, 'Login Password');
+        
         // Enhanced error handling
         let errorMessage = "Something went wrong";
         let errorTitle = "Sign in Failed";
@@ -102,6 +114,7 @@ const LoginPage = () => {
           description: errorMessage,
         });
       } else {
+        debugNavigationFlow('LoginPage', from, 'Successful Login');
         navigate(from, { replace: true });
       }
     } catch (err) {

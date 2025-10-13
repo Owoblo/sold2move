@@ -4,6 +4,7 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 import { useOffline } from '@/hooks/useOffline';
+import { debugAuthFlow, debugSupabaseError, debugAuthCallback, debugNavigationFlow } from '@/utils/authDebugger';
 
 const AuthCallbackPage = () => {
   const navigate = useNavigate();
@@ -47,12 +48,7 @@ const AuthCallbackPage = () => {
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
 
-        console.log('🔍 URL Parameters:', {
-          code: code ? 'present' : 'missing',
-          error: error || 'none',
-          errorDescription: errorDescription || 'none',
-          fullSearch: location.search
-        });
+        debugAuthCallback(urlParams, 'OAuth Callback');
 
         // Handle OAuth errors
         if (error) {
