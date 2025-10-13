@@ -78,7 +78,11 @@ function App() {
 
   // Store intended destination for deep links and protected routes
   useEffect(() => {
-    if (location.pathname && location.pathname !== '/login' && location.pathname !== '/signup') {
+    if (location.pathname && 
+        location.pathname !== '/login' && 
+        location.pathname !== '/signup' && 
+        location.pathname !== '/' &&
+        location.pathname !== '/auth/callback') {
       storeIntendedDestination(location.pathname + location.search);
     }
   }, [location.pathname, location.search]);

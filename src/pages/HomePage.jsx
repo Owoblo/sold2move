@@ -11,6 +11,16 @@ import Features from '@/components/Features';
 import CallToAction from '@/components/CallToAction';
 
 const HomePage = () => {
+  // Debug logging for mobile issues
+  console.log('🏠 HomePage: Component rendering', {
+    userAgent: navigator.userAgent,
+    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    }
+  });
+
   const problems = [
     {
       icon: <XCircle className="h-8 w-8 text-teal" />,
@@ -52,6 +62,12 @@ const HomePage = () => {
       title="Real-Time Sold Listings & Leads for Moving Companies in Canada & USA"
       description="Get mover-ready sold listings and real-time leads in Ontario, Canada, and the U.S. Filter by price, location, and more. Perfect for moving companies."
     >
+      {/* Debug: Simple test div for mobile */}
+      <div className="bg-red-500 text-white p-4 text-center">
+        <h1>Mobile Test - HomePage is rendering!</h1>
+        <p>If you can see this, the component is working.</p>
+      </div>
+      
       {/* Hero Section */}
       <Hero />
 
