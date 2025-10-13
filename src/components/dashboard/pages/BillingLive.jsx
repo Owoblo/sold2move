@@ -4,7 +4,7 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, DollarSign, CreditCard, RefreshCw, Zap, ArrowRight, Star, TrendingUp, Package, Info, AlertTriangle, ExternalLink } from 'lucide-react';
+import { CheckCircle, DollarSign, CreditCard, RefreshCw, Zap, ArrowRight, Star, TrendingUp, Package, ExternalLink } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
@@ -60,34 +60,6 @@ const BillingLive = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingPackageId, setLoadingPackageId] = useState(null);
-  const [stripeConfig, setStripeConfig] = useState(null);
-
-  // Check Stripe configuration
-  useEffect(() => {
-    const checkStripeConfig = async () => {
-      try {
-        const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-        if (!publishableKey) {
-          setStripeConfig({ error: 'Stripe publishable key not found' });
-          return;
-        }
-
-        const stripe = await getStripe();
-        if (stripe) {
-          setStripeConfig({
-            publishableKey: publishableKey.substring(0, 20) + '...',
-            isLive: publishableKey.startsWith('pk_live_'),
-            isTest: publishableKey.startsWith('pk_test_'),
-            status: 'ready'
-          });
-        }
-      } catch (error) {
-        setStripeConfig({ error: `Stripe client error: ${error.message}` });
-      }
-    };
-
-    checkStripeConfig();
-  }, []);
 
   const handleCheckout = async (priceId, mode = 'subscription') => {
     setLoadingPackageId(priceId);
@@ -177,42 +149,6 @@ const BillingLive = () => {
           <p className="text-slate">Manage your subscription, credits, and billing details</p>
         </div>
 
-        {/* Stripe Configuration Status */}
-        {stripeConfig && (
-          <Card className="bg-light-navy border-lightest-navy/20">
-            <CardHeader>
-              <CardTitle className="text-lightest-slate flex items-center gap-2">
-                <Info className="h-5 w-5 text-teal" />
-                Stripe Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {stripeConfig.error ? (
-                <div className="flex items-center gap-2 text-red-400">
-                  <XCircle className="h-4 w-4" />
-                  <span>{stripeConfig.error}</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-deep-navy/30 rounded-lg">
-                    <p className="text-slate text-sm">Publishable Key</p>
-                    <p className="text-lightest-slate font-semibold">{stripeConfig.publishableKey}</p>
-                  </div>
-                  <div className="text-center p-4 bg-deep-navy/30 rounded-lg">
-                    <p className="text-slate text-sm">Mode</p>
-                    <p className="text-lightest-slate font-semibold">
-                      {stripeConfig.isLive ? 'LIVE' : stripeConfig.isTest ? 'TEST' : 'UNKNOWN'}
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-deep-navy/30 rounded-lg">
-                    <p className="text-slate text-sm">Status</p>
-                    <p className="text-teal font-semibold">READY</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Current Plan Status */}
         <Card className="bg-light-navy border-lightest-navy/20">
@@ -259,39 +195,6 @@ const BillingLive = () => {
           </CardContent>
         </Card>
 
-        {/* Setup Instructions */}
-        <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
-            <CardTitle className="text-lightest-slate flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Setup Required
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-slate">
-              To enable billing functionality, you need to complete the Stripe setup:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <h4 className="text-lightest-slate font-semibold">1. Get Stripe Secret Key:</h4>
-                <ul className="text-slate text-sm space-y-1">
-                  <li>• Go to: <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">Stripe API Keys</a></li>
-                  <li>• Copy the "Secret key" (starts with sk_live_)</li>
-                  <li>• Set it as: export STRIPE_SECRET_KEY="your_secret_key"</li>
-                </ul>
-              </div>
-              
-              <div className="space-y-2">
-                <h4 className="text-lightest-slate font-semibold">2. Create Products:</h4>
-                <ul className="text-slate text-sm space-y-1">
-                  <li>• Run: node scripts/setup-live-stripe.js create</li>
-                  <li>• This creates subscription plans and credit packages</li>
-                  <li>• Copy the generated price IDs to this component</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Subscription Plans */}
         <h2 className="text-3xl font-bold text-lightest-slate font-heading mt-12 mb-6">Choose Your Plan</h2>
