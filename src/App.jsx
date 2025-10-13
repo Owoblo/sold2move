@@ -10,6 +10,7 @@ import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { storeIntendedDestination } from '@/utils/authUtils';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -74,6 +75,13 @@ function App() {
     completeTour, 
     skipTour 
   } = useOnboarding();
+
+  // Store intended destination for deep links and protected routes
+  useEffect(() => {
+    if (location.pathname && location.pathname !== '/login' && location.pathname !== '/signup') {
+      storeIntendedDestination(location.pathname + location.search);
+    }
+  }, [location.pathname, location.search]);
 
   // Debug session changes
   useEffect(() => {

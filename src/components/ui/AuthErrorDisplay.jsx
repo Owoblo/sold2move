@@ -68,6 +68,15 @@ const AuthErrorDisplay = ({ error, onRetry, onGoBack, isRetrying = false }) => {
       };
     }
     
+    if (error.includes('offline')) {
+      return {
+        title: 'No Internet Connection',
+        description: 'You need an internet connection to sign in.',
+        suggestion: 'Please check your internet connection and try again.',
+        icon: '📶'
+      };
+    }
+    
     if (error.includes('unexpected')) {
       return {
         title: 'Unexpected Error',

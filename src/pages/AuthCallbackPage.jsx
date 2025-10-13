@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
+import { useOffline } from '@/hooks/useOffline';
 
 const AuthCallbackPage = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const AuthCallbackPage = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const { isOffline } = useOffline();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -30,6 +32,14 @@ const AuthCallbackPage = () => {
         search: window.location.search
       });
       
+      // Check for offline state
+      if (isOffline) {
+        console.warn('⚠️ Device is offline during auth callback');
+        setError('offline');
+        setIsProcessing(false);
+        return;
+      }
+
       try {
         // Get the URL parameters
         const urlParams = new URLSearchParams(location.search);

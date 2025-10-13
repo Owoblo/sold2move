@@ -36,6 +36,32 @@ export const AuthProvider = ({ children }) => {
     }
   }, [session]);
 
+  // Handle auth state changes and session persistence
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change:', event, session ? 'Session exists' : 'No session');
+      
+      if (event === 'SIGNED_IN' && session) {
+        console.log('✅ User signed in successfully');
+        // Session will be automatically updated by useSession hook
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+        // Clear any stored intended destination
+        localStorage.removeItem('intendedDestination');
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        console.log('🔄 Token refreshed successfully');
+      } else if (event === 'PASSWORD_RECOVERY') {
+        console.log('🔑 Password recovery initiated');
+      } else if (event === 'SIGNED_OUT' && !session) {
+        console.log('🔄 Session expired or invalid');
+        // Clear any stored intended destination on session expiry
+        localStorage.removeItem('intendedDestination');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
   const signUp = useCallback(async (email, password) => {
     try {
       const { data, error } = await supabase.auth.signUp({

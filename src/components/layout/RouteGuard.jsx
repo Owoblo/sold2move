@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { Loader2 } from 'lucide-react';
+import { storeIntendedDestination, isProtectedRoute, isPublicRoute, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 
 export default function RouteGuard({ children }) {
   const { session, loading: authLoading, isInitialized } = useAuth();
@@ -18,8 +19,12 @@ export default function RouteGuard({ children }) {
     );
   }
 
-  // If no session, redirect to login
+  // If no session, store intended destination and redirect to login
   if (!session) {
+    // Store the intended destination for post-authentication redirect
+    if (isProtectedRoute(location.pathname)) {
+      storeIntendedDestination(location.pathname + location.search);
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

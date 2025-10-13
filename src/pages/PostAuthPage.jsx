@@ -6,6 +6,7 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui/use-toast';
+import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 
 const PostAuthPage = () => {
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
@@ -205,14 +206,22 @@ const PostAuthPage = () => {
     if (!profileLoading && profile) {
       console.log('Profile loaded:', profile);
       if (profile.onboarding_complete) {
-        const from = location.state?.from?.pathname || '/dashboard';
-        console.log('Redirecting to dashboard:', from);
+        // Check for intended destination first, then location state, then default
+        const intendedDestination = getAndClearIntendedDestination();
+        const from = intendedDestination || location.state?.from?.pathname || getDefaultAuthenticatedPath();
+        
+        console.log('Redirecting after authentication:', {
+          intendedDestination,
+          fromState: location.state?.from?.pathname,
+          finalDestination: from
+        });
+        
         // Add a small delay to ensure the profile state is fully updated
         setTimeout(() => {
           navigate(from, { replace: true });
         }, 100);
       } else {
-        console.log('Redirecting to welcome page');
+        console.log('Redirecting to welcome page for onboarding');
         setTimeout(() => {
           navigate('/welcome', { replace: true });
         }, 100);

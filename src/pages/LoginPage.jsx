@@ -13,6 +13,8 @@ import GoogleIcon from '@/components/icons/GoogleIcon';
 import LoadingButton from '@/components/ui/LoadingButton';
 import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 import { getSiteUrl } from '@/lib/customSupabaseClient';
+import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
+import { useOffline } from '@/hooks/useOffline';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
@@ -22,8 +24,11 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { isOffline, wasOffline, setWasOffline } = useOffline();
 
-  const from = location.state?.from?.pathname || "/post-auth";
+  // Get intended destination from localStorage or location state
+  const intendedDestination = getAndClearIntendedDestination();
+  const from = intendedDestination || location.state?.from?.pathname || "/post-auth";
 
   // Handle URL error parameters
   useEffect(() => {
@@ -33,6 +38,18 @@ const LoginPage = () => {
       setAuthError(error);
     }
   }, [location.search]);
+
+  // Handle offline/online state changes
+  useEffect(() => {
+    if (wasOffline && !isOffline) {
+      toast({
+        title: "Connection Restored",
+        description: "You're back online. You can now sign in.",
+        duration: 3000,
+      });
+      setWasOffline(false);
+    }
+  }, [isOffline, wasOffline, toast]);
 
   const form = useForm({
     resolver: zodResolver(loginSchema),
@@ -45,6 +62,16 @@ const LoginPage = () => {
   const { isSubmitting } = form.formState;
 
   const signInWithPassword = async (values) => {
+    // Check for offline state
+    if (isOffline) {
+      toast({
+        variant: "destructive",
+        title: "No Internet Connection",
+        description: "Please check your internet connection and try again.",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: values.email,
@@ -87,6 +114,16 @@ const LoginPage = () => {
   };
 
   const signInWithGoogle = async () => {
+    // Check for offline state
+    if (isOffline) {
+      toast({
+        variant: "destructive",
+        title: "No Internet Connection",
+        description: "Please check your internet connection and try again.",
+      });
+      return;
+    }
+
     setGoogleLoading(true);
     setAuthError(null); // Clear any previous errors
     try {
