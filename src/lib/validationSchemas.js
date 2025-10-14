@@ -1,43 +1,51 @@
-import * as z from 'zod';
+import { z } from 'zod';
 
-export const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(1, { message: "Password is required." }),
-});
-
+// Enhanced signup schema with comprehensive fields
 export const signUpSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters long." }),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  company: z.string().min(2, 'Company name must be at least 2 characters'),
+  jobTitle: z.string().optional(),
+  industry: z.string().optional(),
+  companySize: z.string().optional(),
+  agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions'),
+  subscribeToNewsletter: z.boolean().optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
-export const contactSchema = z.object({
-  name: z.string().min(1, { message: "Full name is required." }),
-  company: z.string().min(1, { message: "Company name is required." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  message: z.string().optional(),
+// Login schema (keep existing)
+export const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
 });
 
-const phoneRegex = new RegExp(
-  /^([+]?[\s0-9]+)?(\d{3}|[(]\d{3}[)])?([-]?[\s]?)(\d{3})([-]?[\s]?)(\d{4})$/
-);
-
-export const profileSchema = z.object({
-  company_name: z.string().min(1, { message: "Company name is required." }),
-  phone: z.string().regex(phoneRegex, 'Invalid phone number format.'),
-  business_email: z.string().email({ message: "Please enter a valid email address." }),
-  country_code: z.string().min(1, { message: "Country is required." }),
-  state_code: z.string().min(1, { message: "State/Province is required." }),
-  city_name: z.string().min(1, { message: "City is required." }),
-  // selected_cities: z.array(z.string()).optional().default([]), // Column doesn't exist in database
+// Profile update schema
+export const profileUpdateSchema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  company: z.string().min(2, 'Company name must be at least 2 characters'),
+  jobTitle: z.string().optional(),
+  industry: z.string().optional(),
+  companySize: z.string().optional(),
 });
 
-export const onboardingSchema = z.object({
-  companyName: z.string().min(1, { message: "Company name is required." }),
-  phone: z.string().regex(phoneRegex, 'Invalid phone number format.'),
-  countryCode: z.string().min(1, { message: "Country is required." }),
-  stateCode: z.string().min(1, { message: "State/Province is required." }),
-  cityName: z.string().min(1, { message: "City is required." }),
+// Password reset schema
+export const passwordResetSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+
+// New password schema
+export const newPasswordSchema = z.object({
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });

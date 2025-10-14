@@ -52,6 +52,7 @@ import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
 import EmailAlertsSettings from '@/components/dashboard/EmailAlertsSettings';
+import ServiceAreaPerformance from '@/components/dashboard/ServiceAreaPerformance';
 
 const LISTINGS_PER_PAGE = 15;
 
@@ -1066,6 +1067,15 @@ const DashboardPage = () => {
       </div>
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* Service Area Performance */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <ServiceAreaPerformance />
       </motion.div>
 
       {/* Email Alerts Settings Modal */}

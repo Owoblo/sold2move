@@ -17,6 +17,7 @@ export const listingKeys = {
 export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => {
   const supabase = useSupabaseClient();
   const { toast } = useToast();
+  const { profile } = useProfile();
 
   return useQuery({
     queryKey: listingKeys.justListed(filters, page),
@@ -30,11 +31,18 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         const cityFilter = filters.city_name;
           
         console.log(`useJustListedEnhanced: City filter:`, cityFilter);
+        console.log(`useJustListedEnhanced: Profile:`, profile);
         
-        // If no city filter is provided, fetch all data (this might be needed for some users)
+        // If no city filter is provided, try to use profile city information
+        let finalCityFilter = cityFilter;
+        if (!finalCityFilter && profile?.city_name) {
+          finalCityFilter = [profile.city_name];
+          console.log(`useJustListedEnhanced: Using profile city:`, finalCityFilter);
+        }
+        
         const { data, count } = await fetchJustListed(
           null, // No run ID needed for just_listed table
-          cityFilter || null, // Allow null city filter
+          finalCityFilter || null, // Allow null city filter
           page, 
           pageSize, 
           filters
@@ -62,7 +70,7 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         throw error;
       }
     },
-    enabled: true, // Always enabled - let the query handle empty filters
+    enabled: !!profile, // Only enabled when profile is loaded
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {
@@ -91,6 +99,7 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
 export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) => {
   const supabase = useSupabaseClient();
   const { toast } = useToast();
+  const { profile } = useProfile();
 
   return useQuery({
     queryKey: listingKeys.soldListings(filters, page),
@@ -136,7 +145,7 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
         hasPrevPage: page > 1,
       };
     },
-    enabled: true, // Always enabled - let the query handle empty filters
+    enabled: !!profile, // Only enabled when profile is loaded
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     onError: (error) => {
