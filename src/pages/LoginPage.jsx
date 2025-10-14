@@ -17,14 +17,11 @@ import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/u
 import { useOffline } from '@/hooks/useOffline';
 import { debugAuthFlow, debugSupabaseError, debugNavigationFlow } from '@/utils/authDebugger';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { Github, Linkedin } from 'lucide-react';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
-  const { signInWithGoogle, signInWithGitHub, signInWithLinkedIn } = useAuth();
+  const { signInWithGoogle } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
-  const [linkedinLoading, setLinkedinLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const navigate = useNavigate();
@@ -34,7 +31,7 @@ const LoginPage = () => {
 
   // Get intended destination from localStorage or location state (don't clear it yet)
   const intendedDestination = localStorage.getItem('intendedDestination');
-  const from = intendedDestination || location.state?.from?.pathname || "/post-auth";
+  const from = intendedDestination || location.state?.from?.pathname || "/dashboard";
 
   // Handle URL error parameters
   useEffect(() => {
@@ -229,35 +226,6 @@ const LoginPage = () => {
                 <span>Continue with Google</span>
               </LoadingButton>
               
-              <LoadingButton 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2" 
-                onClick={async () => {
-                  setGithubLoading(true);
-                  await signInWithGitHub();
-                  setGithubLoading(false);
-                }} 
-                isLoading={githubLoading} 
-                disabled={isSubmitting}
-              >
-                <Github className="h-5 w-5" />
-                <span>Continue with GitHub</span>
-              </LoadingButton>
-              
-              <LoadingButton 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2" 
-                onClick={async () => {
-                  setLinkedinLoading(true);
-                  await signInWithLinkedIn();
-                  setLinkedinLoading(false);
-                }} 
-                isLoading={linkedinLoading} 
-                disabled={isSubmitting}
-              >
-                <Linkedin className="h-5 w-5" />
-                <span>Continue with LinkedIn</span>
-              </LoadingButton>
             </div>
             <div className="mt-6 text-center text-sm space-y-2">
               <p className="text-slate">
