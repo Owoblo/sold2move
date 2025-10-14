@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { Loader2 } from 'lucide-react';
 import { storeIntendedDestination, isProtectedRoute, isPublicRoute, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 

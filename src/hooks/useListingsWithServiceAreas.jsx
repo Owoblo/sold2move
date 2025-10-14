@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 
 // Query keys for consistent caching
 export const serviceAreaListingKeys = {

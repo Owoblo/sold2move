@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,

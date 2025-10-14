@@ -37,7 +37,7 @@ import {
   Bell
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Pagination } from '@/components/ui/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

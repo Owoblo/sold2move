@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 export const useOnboarding = () => {

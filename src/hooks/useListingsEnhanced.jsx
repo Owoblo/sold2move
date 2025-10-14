@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useProfile } from '@/hooks/useProfile';
 import { fetchJustListed, fetchSoldSincePrev, fetchRevealedListings, getMostRecentRunWithData } from '@/lib/queries';
 import { handleQueryError, handleMutationError, getUserFriendlyMessage } from '@/lib/errorHandler';
 

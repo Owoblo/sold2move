@@ -71,7 +71,8 @@ export const onboardingSchema = z.object({
 export const profileSchema = z.object({
   company_name: z.string().min(2, 'Company name must be at least 2 characters'),
   city_name: z.string().min(2, 'City name must be at least 2 characters'),
-  state: z.string().min(2, 'State must be at least 2 characters'),
+  state_code: z.string().min(2, 'State must be at least 2 characters'),
+  country_code: z.string().min(2, 'Country must be selected'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
   service_cities: z.array(z.string()).optional(), // Make service cities optional
 });

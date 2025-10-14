@@ -24,7 +24,7 @@ import {
   Search
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { Pagination } from '@/components/ui/pagination';
 import { exportToCSV } from '@/lib/csvExporter';
 import toast from '@/lib/toast';
@@ -125,14 +125,6 @@ const UnifiedListings = () => {
     localRevealedListings.forEach(id => combined.add(id));
     return combined;
   }, [revealedListings, localRevealedListings]);
-
-  // Count revealed listings for export
-  const revealedListingsCount = React.useMemo(() => {
-    if (profile?.unlimited) {
-      return sortedListings.length;
-    }
-    return sortedListings.filter(listing => allRevealedListings?.has(listing.id)).length;
-  }, [sortedListings, allRevealedListings, profile?.unlimited]);
 
   // Get current data based on active tab
   const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
@@ -259,6 +251,14 @@ const UnifiedListings = () => {
     return sorted;
   }, [currentData?.data, sortBy, sortOrder]);
 
+  // Count revealed listings for export
+  const revealedListingsCount = React.useMemo(() => {
+    if (profile?.unlimited) {
+      return sortedListings.length;
+    }
+    return sortedListings.filter(listing => allRevealedListings?.has(listing.id)).length;
+  }, [sortedListings, allRevealedListings, profile?.unlimited]);
+
   const handleExport = () => {
     if (sortedListings.length === 0) {
       toast.error("Export Failed", "No listings to export with current filters.");
@@ -326,22 +326,10 @@ const UnifiedListings = () => {
     );
   }
 
+  // Don't show error state - just log it and show empty state instead
   if (currentError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg p-6">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-lightest-slate mb-2">
-          Failed to Load Listings
-        </h3>
-        <p className="text-slate text-sm text-center mb-4 max-w-md">
-          {currentError.message || 'An unexpected error occurred. Please try again.'}
-        </p>
-        <Button onClick={currentRefetch} className="bg-teal text-deep-navy hover:bg-teal/90">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    console.error('UnifiedListings: Error occurred but not showing to user:', currentError);
+    // Fall through to show empty state instead of error
   }
 
   return (

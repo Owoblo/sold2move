@@ -310,7 +310,7 @@ export async function fetchListingById(listingId) {
     id: data.id, // Keep as number to match database BIGINT
     zpid: data.zpid,
     imgSrc: data.imgsrc,
-    detailUrl: ensureZillowUrl(data.detailurl),
+    detailUrl: data.detailurl,
     addressStreet: data.addressstreet, // Map lowercase DB column to camelCase frontend property
     lastcity: data.lastcity,
     addresscity: data.addresscity,

@@ -19,7 +19,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 
 const MobileLayout = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

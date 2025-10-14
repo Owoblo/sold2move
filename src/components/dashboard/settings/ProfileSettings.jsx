@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { profileSchema } from '@/lib/validationSchemas';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,18 +58,24 @@ const ProfileSettings = () => {
   }, [profile, session, form]);
 
   const handleSubmit = async (values) => {
+    console.log('ProfileSettings: Submitting values:', values);
+    
     const payload = {
       id: session.user.id,
       ...values
     };
+
+    console.log('ProfileSettings: Payload to save:', payload);
 
     const { error } = await supabase
       .from('profiles')
       .upsert(payload, { onConflict: 'id' });
     
     if (error) {
+      console.error('ProfileSettings: Save error:', error);
       toast({ variant: 'destructive', title: 'Error saving profile', description: error.message });
     } else {
+      console.log('ProfileSettings: Save successful');
       await refreshProfile();
       toast({ title: '✅ Profile Updated!', description: 'Your changes have been saved.' });
     }
@@ -101,7 +107,9 @@ const ProfileSettings = () => {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+            console.log('ProfileSettings: Form validation errors:', errors);
+          })} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <FormField
                 control={form.control}

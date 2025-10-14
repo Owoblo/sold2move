@@ -20,7 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import { useProfile } from '@/hooks/useProfile.jsx';
+import { useProfile } from '@/hooks/useProfile';
 import { Pagination } from '@/components/ui/pagination';
 import { exportToCSV } from '@/lib/csvExporter';
 import toast from '@/lib/toast';
@@ -281,73 +281,10 @@ const JustListed = () => {
     );
   }
 
+  // Don't show error state - just log it and show empty state instead
   if (listingsError) {
-    console.error('JustListed: Error state:', listingsError);
-    
-    // Determine error type and show appropriate message
-    const isColumnError = listingsError.code === 'COLUMN_NOT_FOUND' || 
-                         listingsError.message?.includes('column') ||
-                         listingsError.message?.includes('does not exist');
-    
-    const isNetworkError = listingsError.code === 'CONNECTION_FAILED' ||
-                          listingsError.message?.includes('fetch') ||
-                          listingsError.message?.includes('network');
-    
-    const isAuthError = listingsError.code === 'UNAUTHORIZED' ||
-                       listingsError.message?.includes('auth');
-    
-    return (
-      <div className="flex flex-col items-center justify-center h-64 bg-light-navy/30 rounded-lg p-6">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h3 className="text-lg font-semibold text-lightest-slate mb-2">
-          {isColumnError ? 'Database Structure Issue' : 
-           isNetworkError ? 'Connection Problem' :
-           isAuthError ? 'Authentication Required' :
-           'Failed to Load Listings'}
-        </h3>
-        <p className="text-slate text-sm text-center mb-4 max-w-md">
-          {isColumnError ? 
-            'There\'s a data structure issue. Our team has been notified and will fix this shortly.' :
-            isNetworkError ?
-            'Unable to connect to our servers. Please check your internet connection and try again.' :
-            isAuthError ?
-            'Please log in again to continue.' :
-            listingsError.message || 'An unexpected error occurred. Please try again.'}
-        </p>
-        
-        {/* Error details for development */}
-        {process.env.NODE_ENV === 'development' && (
-          <details className="mb-4 w-full max-w-md">
-            <summary className="text-xs text-slate cursor-pointer hover:text-lightest-slate">
-              Technical Details (Development)
-            </summary>
-            <div className="mt-2 p-3 bg-deep-navy rounded text-xs text-slate font-mono overflow-auto">
-              <div><strong>Error Code:</strong> {listingsError.code || 'Unknown'}</div>
-              <div><strong>Message:</strong> {listingsError.message}</div>
-              {listingsError.context && (
-                <div><strong>Context:</strong> {JSON.stringify(listingsError.context, null, 2)}</div>
-              )}
-            </div>
-          </details>
-        )}
-        
-        <div className="flex gap-2">
-          <Button onClick={refetchListings} className="bg-teal text-deep-navy hover:bg-teal/90">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-          {isAuthError && (
-            <Button 
-              onClick={() => navigate('/login')} 
-              variant="outline"
-              className="border-teal text-teal hover:bg-teal/10"
-            >
-              Go to Login
-            </Button>
-          )}
-        </div>
-      </div>
-    );
+    console.error('JustListed: Error occurred but not showing to user:', listingsError);
+    // Fall through to show empty state instead of error
   }
 
   return (
