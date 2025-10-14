@@ -70,7 +70,7 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         throw error;
       }
     },
-    enabled: !!profile, // Only enabled when profile is loaded
+    enabled: true, // Always enabled - let the query handle empty filters gracefully
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {
@@ -86,11 +86,12 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
       
       console.error('useJustListedEnhanced: Error details:', errorDetails);
       
-      toast({
-        variant: "destructive",
-        title: "Error fetching just listed properties",
-        description: userMessage,
-      });
+      // Don't show toast to avoid user annoyance - just log the error
+      // toast({
+      //   variant: "destructive",
+      //   title: "Error fetching just listed properties",
+      //   description: userMessage,
+      // });
     },
   });
 };
@@ -145,15 +146,18 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
         hasPrevPage: page > 1,
       };
     },
-    enabled: !!profile, // Only enabled when profile is loaded
+    enabled: true, // Always enabled - let the query handle empty filters gracefully
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Error fetching sold listings",
-        description: error.message,
-      });
+      console.error('useSoldListingsEnhanced: Error details:', error);
+      
+      // Don't show toast to avoid user annoyance - just log the error
+      // toast({
+      //   variant: "destructive",
+      //   title: "Error fetching sold listings",
+      //   description: error.message,
+      // });
     },
   });
 };

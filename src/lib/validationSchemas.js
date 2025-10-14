@@ -73,5 +73,5 @@ export const profileSchema = z.object({
   city_name: z.string().min(2, 'City name must be at least 2 characters'),
   state: z.string().min(2, 'State must be at least 2 characters'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
-  service_cities: z.array(z.string()).min(1, 'Please select at least one service city'),
+  service_cities: z.array(z.string()).optional(), // Make service cities optional
 });
