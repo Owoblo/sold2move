@@ -120,6 +120,14 @@ const UnifiedListings = () => {
     return combined;
   }, [revealedListings, localRevealedListings]);
 
+  // Count revealed listings for export
+  const revealedListingsCount = React.useMemo(() => {
+    if (profile?.unlimited) {
+      return sortedListings.length;
+    }
+    return sortedListings.filter(listing => allRevealedListings?.has(listing.id)).length;
+  }, [sortedListings, allRevealedListings, profile?.unlimited]);
+
   // Get current data based on active tab
   const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
   const currentLoading = activeTab === 'just-listed' ? justListedLoading : soldListingsLoading;
@@ -251,14 +259,26 @@ const UnifiedListings = () => {
       return;
     }
     
+    // Filter to only include revealed listings or unlimited access
+    const revealedListings = sortedListings.filter(listing => 
+      profile?.unlimited || allRevealedListings?.has(listing.id)
+    );
+    
+    if (revealedListings.length === 0) {
+      toast.error("Export Failed", "No revealed listings to export. Please reveal some listings first or upgrade to unlimited access.");
+      return;
+    }
+    
     trackAction('export', {
       type: activeTab,
-      count: sortedListings.length,
+      count: revealedListings.length,
+      totalListings: sortedListings.length,
       page: currentPage,
-      filters: filters
+      filters: filters,
+      hasUnlimited: profile?.unlimited
     });
     
-    const dataToExport = sortedListings.map(({ addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
+    const dataToExport = revealedListings.map(({ addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
       Address: addressStreet,
       City: addresscity,
       Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
@@ -267,8 +287,8 @@ const UnifiedListings = () => {
       'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
       'Property Type': statustext || 'N/A',
     }));
-    exportToCSV(dataToExport, `${activeTab}-listings-page-${currentPage}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
-    toast.success("Export Successful", "Your CSV file has been downloaded.");
+    exportToCSV(dataToExport, `${activeTab}-listings-revealed-${revealedListings.length}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
+    toast.success("Export Successful", `Your CSV file has been downloaded with ${revealedListings.length} revealed listings.`);
   };
 
   const handleTabChange = (tab) => {
@@ -385,12 +405,12 @@ const UnifiedListings = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleExport}
-              disabled={sortedListings.length === 0}
+              disabled={revealedListingsCount === 0}
               variant="outline"
               className="border-teal text-teal hover:bg-teal/10"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export ({sortedListings.length})
+              Export ({revealedListingsCount})
             </Button>
           </div>
         </div>
