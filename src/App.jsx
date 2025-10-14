@@ -27,7 +27,6 @@ const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
 const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
-const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'));
 const ComponentTestPage = lazy(() => import('@/pages/ComponentTestPage'));
 const BillingTestPage = lazy(() => import('@/pages/BillingTestPage'));
