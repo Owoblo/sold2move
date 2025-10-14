@@ -222,22 +222,41 @@ const BillingEnhanced = () => {
 
   const handleManageSubscription = async () => {
     try {
+      setLoading(true);
+      trackAction('billing_manage_subscription_clicked');
+      
       const { data, error } = await supabase.functions.invoke('create-portal-session', {
         body: {
           returnUrl: window.location.href
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to create portal session');
+      }
       
-      window.location.href = data.url;
+      if (!data?.url) {
+        throw new Error('No portal URL returned from server');
+      }
+      
+      // Open in new tab for better UX
+      window.open(data.url, '_blank');
+      
+      toast({
+        title: 'Success',
+        description: 'Opening subscription management portal...'
+      });
+      
     } catch (error) {
       console.error('Error creating portal session:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to open billing portal"
+        description: error.message || 'Failed to open subscription management. Please try again or contact support.'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -297,9 +316,14 @@ const BillingEnhanced = () => {
             onClick={handleManageSubscription}
             variant="outline"
             className="border-teal text-teal hover:bg-teal/10"
+            disabled={loading}
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Manage Subscription
+            {loading ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <ExternalLink className="h-4 w-4 mr-2" />
+            )}
+            {loading ? 'Opening...' : 'Manage Subscription'}
           </Button>
         )}
       </motion.div>

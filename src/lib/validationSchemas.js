@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Enhanced signup schema with comprehensive fields
+// Simplified signup schema with essential fields only
 export const signUpSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
@@ -8,12 +8,7 @@ export const signUpSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   phone: z.string().min(10, 'Please enter a valid phone number'),
-  company: z.string().min(2, 'Company name must be at least 2 characters'),
-  jobTitle: z.string().optional(),
-  industry: z.string().optional(),
-  companySize: z.string().optional(),
   agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions'),
-  subscribeToNewsletter: z.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],

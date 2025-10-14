@@ -66,7 +66,7 @@ const PropertyDetailPage = () => {
         setLoading(true);
         const data = await fetchListingById(listingId);
         setListing(data);
-
+        
         const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
@@ -226,7 +226,7 @@ const PropertyDetailPage = () => {
             {/* Image Gallery */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="relative aspect-w-16 aspect-h-9 bg-lightest-navy/10">
+                <div className="relative aspect-w-16 aspect-h-10 bg-lightest-navy/10">
                   {selectedImage ? (
                     <img 
                       src={selectedImage} 
@@ -273,7 +273,7 @@ const PropertyDetailPage = () => {
                 
                 {/* Thumbnail Strip */}
                 {photos.length > 1 && (
-                  <div className="p-4 flex space-x-2 overflow-x-auto bg-light-navy">
+                  <div className="p-3 flex space-x-2 overflow-x-auto bg-light-navy">
                     {photos.map((photo, index) => (
                       <div 
                         key={index} 
@@ -283,7 +283,7 @@ const PropertyDetailPage = () => {
                         <img 
                           src={photo.url} 
                           alt={`Thumbnail ${index + 1}`} 
-                          className={`w-20 h-16 object-cover rounded-md border-2 transition-all ${
+                          className={`w-16 h-12 object-cover rounded-md border-2 transition-all ${
                             currentImageIndex === index 
                               ? 'border-teal scale-105' 
                               : 'border-transparent hover:border-slate'
@@ -345,10 +345,10 @@ const PropertyDetailPage = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate">Property Type:</span>
-                      <Badge variant="outline" className="text-lightest-slate">
-                        {listing.statustext || 'N/A'}
+                  <div className="flex justify-between">
+                    <span className="text-slate">Property Type:</span>
+                      <Badge variant="outline" className="text-lightest-slate bg-teal/10 border-teal/30">
+                        Just Listed
                       </Badge>
                     </div>
                     <div className="flex justify-between">
@@ -362,8 +362,8 @@ const PropertyDetailPage = () => {
                       <span className="text-lightest-slate font-medium">
                         {homeInfo.lotSize || 'N/A'}
                       </span>
-                    </div>
-                    <div className="flex justify-between">
+                  </div>
+                  <div className="flex justify-between">
                       <span className="text-slate">Parking:</span>
                       <span className="text-lightest-slate font-medium">
                         {homeInfo.parkingFeatures || 'N/A'}
@@ -382,18 +382,18 @@ const PropertyDetailPage = () => {
                       <span className="text-lightest-slate font-medium">
                         {homeInfo.cooling || 'N/A'}
                       </span>
-                    </div>
-                    <div className="flex justify-between">
+                  </div>
+                  <div className="flex justify-between">
                       <span className="text-slate">Flooring:</span>
                       <span className="text-lightest-slate font-medium">
                         {homeInfo.flooring || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
                       <span className="text-slate">Roof:</span>
                       <span className="text-lightest-slate font-medium">
                         {homeInfo.roof || 'N/A'}
-                      </span>
+                    </span>
                     </div>
                   </div>
                 </div>
@@ -516,8 +516,8 @@ const PropertyDetailPage = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate">Property Type:</span>
-                    <Badge variant="outline" className="text-lightest-slate">
-                      {listing.statustext || 'N/A'}
+                    <Badge variant="outline" className="text-lightest-slate bg-teal/10 border-teal/30">
+                      Just Listed
                     </Badge>
                   </div>
                 </div>
