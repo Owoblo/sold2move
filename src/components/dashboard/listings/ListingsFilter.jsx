@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SlidersHorizontal, RotateCw } from 'lucide-react';
 
 const propertyTypeOptions = [
@@ -55,12 +55,18 @@ const ListingsFilter = ({ filters, onFilterChange, onApply, onReset }) => {
 
         <div className="space-y-2">
           <Label htmlFor="propertyType" className="text-sm font-medium text-slate">Property Type</Label>
-          <Combobox
-            options={propertyTypeOptions}
-            value={filters.propertyType}
-            onChange={handleComboboxChange}
-            placeholder="Select type..."
-          />
+          <Select value={filters.propertyType} onValueChange={handleComboboxChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select type..." />
+            </SelectTrigger>
+            <SelectContent>
+              {propertyTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex gap-2">

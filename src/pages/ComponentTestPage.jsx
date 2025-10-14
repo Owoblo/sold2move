@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -129,38 +129,54 @@ const ComponentTestPage = () => {
                 <label className="block text-sm font-medium text-lightest-slate mb-2">
                   Country Selection
                 </label>
-                <Combobox
-                  options={countries}
-                  value={selectedCountry}
-                  onChange={setSelectedCountry}
-                  placeholder="Select Country..."
-                />
+                <Select value={selectedCountry} onValueChange={setSelectedCountry}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Country..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.value} value={country.value}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-lightest-slate mb-2">
                   State Selection
                 </label>
-                <Combobox
-                  options={states}
-                  value={selectedState}
-                  onChange={setSelectedState}
-                  placeholder="Select State..."
-                  disabled={!selectedCountry}
-                />
+                <Select value={selectedState} onValueChange={setSelectedState} disabled={!selectedCountry}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select State..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((state) => (
+                      <SelectItem key={state.value} value={state.value}>
+                        {state.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-lightest-slate mb-2">
                   City Selection
                 </label>
-                <Combobox
-                  options={cities}
-                  value={selectedCity}
-                  onChange={setSelectedCity}
-                  placeholder="Select City..."
-                  disabled={!selectedState}
-                />
+                <Select value={selectedCity} onValueChange={setSelectedCity} disabled={!selectedState}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select City..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cities.map((city) => (
+                      <SelectItem key={city.value} value={city.value}>
+                        {city.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>

@@ -10,7 +10,7 @@ import { Country, State, City } from 'country-state-city';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
 import { Building, Mail, Phone, MapPin, Globe, CheckCircle, Plus } from 'lucide-react';
@@ -175,7 +175,18 @@ const OnboardingPage = () => {
                         <FormItem>
                           <FormLabel><Globe className="inline-block mr-2 h-4 w-4 text-teal" />Country</FormLabel>
                           <FormControl>
-                            <Combobox options={countries} value={field.value} onChange={(val) => { field.onChange(val); setValue('stateCode', ''); setValue('cityName', ''); }} placeholder="Select Country..." />
+                            <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('stateCode', ''); setValue('cityName', ''); }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Country..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {countries.map((country) => (
+                                  <SelectItem key={country.value} value={country.value}>
+                                    {country.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -188,7 +199,18 @@ const OnboardingPage = () => {
                         <FormItem>
                           <FormLabel>State / Province</FormLabel>
                           <FormControl>
-                            <Combobox options={states} value={field.value} onChange={(val) => { field.onChange(val); setValue('cityName', ''); }} placeholder="Select State..." disabled={!countryCode} />
+                            <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('cityName', ''); }} disabled={!countryCode}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select State..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {states.map((state) => (
+                                  <SelectItem key={state.value} value={state.value}>
+                                    {state.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -202,7 +224,18 @@ const OnboardingPage = () => {
                       <FormItem>
                         <FormLabel>City</FormLabel>
                         <FormControl>
-                          <Combobox options={cities} value={field.value} onChange={field.onChange} placeholder="Select City..." disabled={!stateCode} />
+                          <Select value={field.value} onValueChange={field.onChange} disabled={!stateCode}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select City..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cities.map((city) => (
+                                <SelectItem key={city.value} value={city.value}>
+                                  {city.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

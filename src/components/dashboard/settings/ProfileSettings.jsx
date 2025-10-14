@@ -8,7 +8,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Combobox } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
 import { Country, State, City } from 'country-state-city';
@@ -150,7 +150,18 @@ const ProfileSettings = () => {
                 <FormItem>
                   <FormLabel>Country</FormLabel>
                   <FormControl>
-                    <Combobox options={countries} value={field.value} onChange={(val) => { field.onChange(val); setValue('state_code', ''); setValue('city_name', ''); }} placeholder="Select Country..." />
+                    <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('state_code', ''); setValue('city_name', ''); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Country..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((country) => (
+                          <SelectItem key={country.value} value={country.value}>
+                            {country.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -163,7 +174,18 @@ const ProfileSettings = () => {
                 <FormItem>
                   <FormLabel>Province / State</FormLabel>
                   <FormControl>
-                    <Combobox options={states} value={field.value} onChange={(val) => { field.onChange(val); setValue('city_name', ''); }} placeholder="Select province/state" disabled={!countryCode} />
+                    <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('city_name', ''); }} disabled={!countryCode}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select province/state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {states.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -177,7 +199,18 @@ const ProfileSettings = () => {
                   <FormItem>
                     <FormLabel>City</FormLabel>
                     <FormControl>
-                      <Combobox options={cities} value={field.value} onChange={field.onChange} placeholder="Select city" disabled={!stateCode} />
+                      <Select value={field.value} onValueChange={field.onChange} disabled={!stateCode}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select city" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cities.map((city) => (
+                            <SelectItem key={city.value} value={city.value}>
+                              {city.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
