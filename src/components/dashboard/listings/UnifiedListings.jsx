@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
@@ -44,9 +44,19 @@ const PAGE_SIZE = 20;
 
 const UnifiedListings = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeTab, setActiveTab] = useState('just-listed'); // 'just-listed' or 'sold'
+  
+  // Determine active tab based on URL
+  const getActiveTabFromUrl = () => {
+    if (location.pathname.includes('/sold')) {
+      return 'sold';
+    }
+    return 'just-listed';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromUrl());
   const [filters, setFilters] = useState({
     city_name: [],
     searchTerm: '',
@@ -71,6 +81,14 @@ const UnifiedListings = () => {
       setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
     }
   }, [profile?.service_cities, profile?.city_name]);
+
+  // Update active tab when URL changes
+  useEffect(() => {
+    const newActiveTab = getActiveTabFromUrl();
+    if (newActiveTab !== activeTab) {
+      setActiveTab(newActiveTab);
+    }
+  }, [location.pathname]);
 
   // Use enhanced hooks based on active tab
   const {
@@ -257,6 +275,13 @@ const UnifiedListings = () => {
     setActiveTab(tab);
     setCurrentPage(1);
     trackAction('tab_change', { from: activeTab, to: tab });
+    
+    // Navigate to the appropriate URL
+    if (tab === 'sold') {
+      navigate('/dashboard/listings/sold');
+    } else {
+      navigate('/dashboard/listings/just-listed');
+    }
   };
 
   if (currentLoading || profileLoading) {

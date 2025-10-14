@@ -28,7 +28,7 @@ const PropertyDetailPage = () => {
           setDaysOnZillow(data.hdpData.homeInfo.daysOnZillow);
         }
 
-        const photos = data?.carouselPhotos || (data?.imgsrc ? [{ url: data.imgsrc }] : []);
+        const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
         }
@@ -43,7 +43,7 @@ const PropertyDetailPage = () => {
     getListing();
   }, [listingId]);
 
-  const photos = listing?.carouselPhotos || (listing?.imgsrc ? [{ url: listing.imgsrc }] : []);
+  const photos = listing?.carouselPhotos || (listing?.imgSrc ? [{ url: listing.imgSrc }] : []);
 
   if (loading) {
     return (
@@ -81,8 +81,8 @@ const PropertyDetailPage = () => {
   return (
     <PageWrapper>
       <Helmet>
-        <title>{listing.addressstreet || 'Property'} | Property Details</title>
-        <meta name="description" content={`Details for property at ${listing.addressstreet || 'this location'}`} />
+        <title>{listing.addressStreet || 'Property'} | Property Details</title>
+        <meta name="description" content={`Details for property at ${listing.addressStreet || 'this location'}`} />
       </Helmet>
       
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -125,7 +125,7 @@ const PropertyDetailPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-3xl text-teal">{listing.price}</CardTitle>
-                <p className="text-lg text-lightest-slate">{listing.addressstreet}</p>
+                <p className="text-lg text-lightest-slate">{listing.addressStreet}</p>
                 <p className="text-md text-slate flex items-center">
                   <MapPin className="mr-2 h-4 w-4" />
                   {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
