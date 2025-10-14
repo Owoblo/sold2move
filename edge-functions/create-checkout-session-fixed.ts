@@ -181,8 +181,8 @@ Deno.serve(async (req) => {
         }
       ],
       mode: 'subscription',
-      success_url: `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/pricing`,
+      success_url: `${siteUrl}/dashboard/billing?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/dashboard/billing?payment=cancelled`,
       metadata: {
         supabase_user_id: user.id
       },

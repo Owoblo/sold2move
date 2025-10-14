@@ -328,3 +328,4 @@ const CanadaSoldListings = () => {
 };
 
 export default CanadaSoldListings;
+

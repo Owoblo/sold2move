@@ -25,6 +25,8 @@ const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
 const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'));
 const ComponentTestPage = lazy(() => import('@/pages/ComponentTestPage'));
 const BillingTestPage = lazy(() => import('@/pages/BillingTestPage'));
@@ -139,6 +141,8 @@ function App() {
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />
                 <Route path="/signup-success" element={<PublicRoute><SignUpSuccessPage /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+                <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
                 
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/post-auth" element={<PostAuthPage />} />

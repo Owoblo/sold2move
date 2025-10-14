@@ -9,7 +9,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { getStripe } from '@/lib/getStripe';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PageWrapper from '@/components/layout/PageWrapper';
 
 // Live pricing plans with real Stripe price IDs
@@ -58,8 +58,35 @@ const BillingLive = () => {
   const supabase = useSupabaseClient();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingPackageId, setLoadingPackageId] = useState(null);
+
+  // Handle payment success/cancellation from URL parameters
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const sessionId = searchParams.get('session_id');
+
+    if (paymentStatus === 'success' && sessionId) {
+      toast({
+        title: "Payment Successful!",
+        description: "Your subscription has been activated. Welcome aboard!",
+        duration: 5000,
+      });
+      // Refresh profile to get updated subscription status
+      refreshProfile();
+      // Clean up URL parameters
+      navigate('/dashboard/billing', { replace: true });
+    } else if (paymentStatus === 'cancelled') {
+      toast({
+        title: "Payment Cancelled",
+        description: "Your payment was cancelled. You can try again anytime.",
+        duration: 3000,
+      });
+      // Clean up URL parameters
+      navigate('/dashboard/billing', { replace: true });
+    }
+  }, [searchParams, toast, refreshProfile, navigate]);
 
   const handleCheckout = async (priceId, mode = 'subscription') => {
     setLoadingPackageId(priceId);

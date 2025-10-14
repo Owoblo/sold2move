@@ -228,6 +228,293 @@ export const AuthProvider = ({ children }) => {
     }
   }, [supabase.auth, toast]);
 
+  // Password Reset
+  const resetPassword = useCallback(async (email) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${getSiteUrl()}/auth/reset-password`,
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "Password Reset Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+        duration: 8000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Password Reset Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Update Password
+  const updatePassword = useCallback(async (newPassword) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "Password Update Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Password updated successfully",
+        description: "Your password has been changed.",
+        duration: 3000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Password Update Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Update Email
+  const updateEmail = useCallback(async (newEmail) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "Email Update Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Email update initiated",
+        description: "Check your new email for a confirmation link.",
+        duration: 8000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Email Update Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Resend Email Verification
+  const resendVerification = useCallback(async (email) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${getSiteUrl()}/auth/callback`
+        }
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "Verification Email Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Verification email sent",
+        description: "Check your email for the verification link.",
+        duration: 8000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Verification Email Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Sign in with GitHub
+  const signInWithGitHub = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: `${getSiteUrl()}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "GitHub Sign in Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "GitHub Sign in Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Sign in with LinkedIn
+  const signInWithLinkedIn = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'linkedin',
+        options: {
+          redirectTo: `${getSiteUrl()}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        const friendlyMessage = getAuthErrorMessage(error);
+        toast({
+          variant: "destructive",
+          title: "LinkedIn Sign in Failed",
+          description: friendlyMessage,
+        });
+        return { error };
+      }
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "LinkedIn Sign in Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Get User Sessions (for session management)
+  const getUserSessions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      return { data, error };
+    } catch (err) {
+      return { data: null, error: err };
+    }
+  }, [supabase.auth]);
+
+  // Sign out from all devices
+  const signOutAllDevices = useCallback(async () => {
+    try {
+      // This would require a custom function in Supabase
+      // For now, we'll just sign out the current session
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Sign out Failed",
+          description: error.message || "Something went wrong",
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Signed out from all devices",
+        description: "You have been signed out from all devices.",
+        duration: 3000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Sign out Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase.auth, toast]);
+
+  // Delete Account
+  const deleteAccount = useCallback(async () => {
+    try {
+      // First, we need to delete user data from our custom tables
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user?.id);
+
+      if (profileError) {
+        console.error('Error deleting profile:', profileError);
+      }
+
+      // Then delete the auth user
+      const { error } = await supabase.auth.admin.deleteUser(user?.id);
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Account Deletion Failed",
+          description: error.message || "Something went wrong",
+        });
+        return { error };
+      }
+
+      toast({
+        title: "Account deleted successfully",
+        description: "Your account and all data have been permanently deleted.",
+        duration: 5000,
+      });
+
+      return { error: null };
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Account Deletion Failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+      return { error: err };
+    }
+  }, [supabase, user?.id, toast]);
+
   const value = useMemo(() => ({
     user,
     session,
@@ -236,8 +523,35 @@ export const AuthProvider = ({ children }) => {
     signUp,
     signIn,
     signInWithGoogle,
+    signInWithGitHub,
+    signInWithLinkedIn,
     signOut,
-  }), [user, session, loading, isInitialized, signUp, signIn, signInWithGoogle, signOut]);
+    resetPassword,
+    updatePassword,
+    updateEmail,
+    resendVerification,
+    getUserSessions,
+    signOutAllDevices,
+    deleteAccount,
+  }), [
+    user, 
+    session, 
+    loading, 
+    isInitialized, 
+    signUp, 
+    signIn, 
+    signInWithGoogle,
+    signInWithGitHub,
+    signInWithLinkedIn,
+    signOut, 
+    resetPassword,
+    updatePassword,
+    updateEmail,
+    resendVerification,
+    getUserSessions,
+    signOutAllDevices,
+    deleteAccount
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

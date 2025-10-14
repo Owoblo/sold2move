@@ -287,3 +287,4 @@ const OntarioSoldListings = () => {
 };
 
 export default OntarioSoldListings;
+
