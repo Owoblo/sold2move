@@ -59,7 +59,7 @@ const ListingsFilter = ({ filters, onFilterChange, onApply, onReset }) => {
             <SelectTrigger>
               <SelectValue placeholder="Select type..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-60 overflow-y-auto">
               {propertyTypeOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}

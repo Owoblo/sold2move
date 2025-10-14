@@ -154,7 +154,7 @@ const ProfileSettings = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select Country..." />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         {countries.map((country) => (
                           <SelectItem key={country.value} value={country.value}>
                             {country.label}
@@ -178,7 +178,7 @@ const ProfileSettings = () => {
                       <SelectTrigger>
                         <SelectValue placeholder="Select province/state" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         {states.map((state) => (
                           <SelectItem key={state.value} value={state.value}>
                             {state.label}
@@ -203,7 +203,7 @@ const ProfileSettings = () => {
                         <SelectTrigger>
                           <SelectValue placeholder="Select city" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-60 overflow-y-auto">
                           {cities.map((city) => (
                             <SelectItem key={city.value} value={city.value}>
                               {city.label}
