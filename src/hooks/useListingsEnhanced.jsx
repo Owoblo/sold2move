@@ -23,20 +23,18 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
     queryFn: async () => {
       try {
         console.log(`useJustListedEnhanced: Starting query with filters:`, filters);
+        console.log(`useJustListedEnhanced: City filter type:`, typeof filters.city_name, filters.city_name);
         
-        // Get the most recent run ID that has data
-        const currentRunId = await getMostRecentRunWithData();
-        console.log(`useJustListedEnhanced: Using run ID: ${currentRunId}`);
-        
-        // Use the existing query function with enhanced filters
+        // Since just_listed table doesn't use run_id, we can pass null
         // Support both single city and multiple cities
         const cityFilter = filters.city_name;
           
         console.log(`useJustListedEnhanced: City filter:`, cityFilter);
         
+        // If no city filter is provided, fetch all data (this might be needed for some users)
         const { data, count } = await fetchJustListed(
-          currentRunId, 
-          cityFilter, 
+          null, // No run ID needed for just_listed table
+          cityFilter || null, // Allow null city filter
           page, 
           pageSize, 
           filters
@@ -64,7 +62,7 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         throw error;
       }
     },
-    enabled: !!filters.city_name,
+    enabled: true, // Always enabled - let the query handle empty filters
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {
@@ -138,7 +136,7 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
         hasPrevPage: page > 1,
       };
     },
-    enabled: !!filters.city_name,
+    enabled: true, // Always enabled - let the query handle empty filters
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     onError: (error) => {

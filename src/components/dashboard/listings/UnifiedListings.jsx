@@ -75,10 +75,16 @@ const UnifiedListings = () => {
 
   // Update filters when profile changes
   useEffect(() => {
+    console.log('UnifiedListings: Profile changed:', profile);
     if (profile?.service_cities && profile.service_cities.length > 0) {
+      console.log('UnifiedListings: Setting filters with service_cities:', profile.service_cities);
       setFilters(prev => ({ ...prev, city_name: profile.service_cities }));
     } else if (profile?.city_name) {
+      console.log('UnifiedListings: Setting filters with city_name:', profile.city_name);
       setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
+    } else {
+      console.log('UnifiedListings: No city information in profile, using empty filters');
+      setFilters(prev => ({ ...prev, city_name: [] }));
     }
   }, [profile?.service_cities, profile?.city_name]);
 
