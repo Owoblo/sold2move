@@ -432,9 +432,9 @@ const ListingsEnhanced = ({ filters }) => {
                             <div className="text-teal font-semibold text-lg">
                               {listing.price ? `$${listing.price.toLocaleString()}` : 'N/A'}
                             </div>
-                            {listing.unformattedPrice && listing.unformattedPrice !== listing.price && (
+                            {listing.unformattedprice && listing.unformattedprice !== listing.price && (
                               <div className="text-xs text-slate">
-                                Est: ${listing.unformattedPrice.toLocaleString()}
+                                Est: ${listing.unformattedprice.toLocaleString()}
                               </div>
                             )}
                           </TableCell>

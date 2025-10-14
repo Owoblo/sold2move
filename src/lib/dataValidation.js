@@ -10,7 +10,7 @@ export const validateListingData = (listing) => {
   if (!listing.addressState) errors.push('Missing state');
   
   // Optional but important fields
-  if (listing.unformattedPrice && (isNaN(listing.unformattedPrice) || listing.unformattedPrice < 0)) {
+  if (listing.unformattedprice && (isNaN(listing.unformattedprice) || listing.unformattedprice < 0)) {
     errors.push('Invalid price value');
   }
   
@@ -39,7 +39,7 @@ export const sanitizeListingData = (listing) => {
     addressCity: listing.addresscity?.trim() || '',
     addressState: listing.addressstate?.trim() || '',
     addressZipcode: listing.addresszipcode?.trim() || '',
-    unformattedPrice: listing.unformattedPrice ? Number(listing.unformattedPrice) : null,
+    unformattedprice: listing.unformattedprice ? Number(listing.unformattedprice) : null,
     beds: listing.beds ? Number(listing.beds) : null,
     baths: listing.baths ? Number(listing.baths) : null,
     area: listing.area ? Number(listing.area) : null,
@@ -52,8 +52,8 @@ export const formatListingForDisplay = (listing) => {
   
   return {
     ...sanitized,
-    formattedPrice: sanitized.unformattedPrice 
-      ? `$${sanitized.unformattedPrice.toLocaleString()}` 
+    formattedPrice: sanitized.unformattedprice 
+      ? `$${sanitized.unformattedprice.toLocaleString()}` 
       : 'N/A',
     formattedArea: sanitized.area 
       ? `${sanitized.area.toLocaleString()} sq ft` 

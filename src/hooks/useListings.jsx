@@ -161,8 +161,8 @@ export const useJustListed = (filters = {}, page = 1, pageSize = 20) => {
 
       let query = supabase
         .from('just_listed')
-        .select('id,zpid,imgsrc,detailurl,addressstreet,lastcity,addressstate,addresszipcode,price,unformattedPrice,beds,baths,area,statustext', { count: 'exact' })
-        .order('unformattedPrice', { ascending: false })
+        .select('id,zpid,imgsrc,detailurl,addressstreet,lastcity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext', { count: 'exact' })
+        .order('unformattedprice', { ascending: false })
         .range(from, to);
 
       // Apply filters
@@ -170,10 +170,10 @@ export const useJustListed = (filters = {}, page = 1, pageSize = 20) => {
         query = query.eq('lastcity', filters.city_name);
       }
       if (filters.minPrice) {
-        query = query.gte('unformattedPrice', filters.minPrice);
+        query = query.gte('unformattedprice', filters.minPrice);
       }
       if (filters.maxPrice) {
-        query = query.lte('unformattedPrice', filters.maxPrice);
+        query = query.lte('unformattedprice', filters.maxPrice);
       }
       if (filters.beds) {
         query = query.gte('beds', filters.beds);

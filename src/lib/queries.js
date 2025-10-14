@@ -61,8 +61,8 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
         query = query.in('lastcity', cityName);
         console.log(`Filtering by multiple cities:`, cityName);
       } else {
-        // Single city
-        query = query.eq('lastcity', cityName);
+        // Single city - try both lastcity and addresscity columns
+        query = query.or(`lastcity.eq.${cityName},addresscity.eq.${cityName}`);
         console.log(`Filtering by single city:`, cityName);
       }
     }
@@ -153,6 +153,16 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
     return { data: mappedData, count: count || 0 };
   } catch (error) {
     console.error('Error in fetchJustListed:', error);
+    
+    // Provide more specific error information
+    if (error.code === 'PGRST116') {
+      throw new Error('No data found for the specified criteria. Please check your filters or try again later.');
+    } else if (error.code === 'PGRST301') {
+      throw new Error('Database connection issue. Please try again in a moment.');
+    } else if (error.message?.includes('column') || error.message?.includes('does not exist')) {
+      throw new Error('Database structure issue. Please contact support.');
+    }
+    
     throw error;
   }
 }
