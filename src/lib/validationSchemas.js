@@ -49,3 +49,29 @@ export const newPasswordSchema = z.object({
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
+
+// Contact form schema
+export const contactSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  subject: z.string().min(5, 'Subject must be at least 5 characters'),
+  message: z.string().min(10, 'Message must be at least 10 characters'),
+});
+
+// Onboarding schema
+export const onboardingSchema = z.object({
+  company_name: z.string().min(2, 'Company name must be at least 2 characters'),
+  city_name: z.string().min(2, 'City name must be at least 2 characters'),
+  state: z.string().min(2, 'State must be at least 2 characters'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  service_cities: z.array(z.string()).min(1, 'Please select at least one service city'),
+});
+
+// Profile schema
+export const profileSchema = z.object({
+  company_name: z.string().min(2, 'Company name must be at least 2 characters'),
+  city_name: z.string().min(2, 'City name must be at least 2 characters'),
+  state: z.string().min(2, 'State must be at least 2 characters'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+  service_cities: z.array(z.string()).min(1, 'Please select at least one service city'),
+});

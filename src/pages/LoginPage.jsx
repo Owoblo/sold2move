@@ -131,69 +131,6 @@ const LoginPage = () => {
     }
   };
 
-  const signInWithGoogle = async () => {
-    // Check for offline state
-    if (isOffline) {
-      toast({
-        variant: "destructive",
-        title: "No Internet Connection",
-        description: "Please check your internet connection and try again.",
-      });
-      return;
-    }
-
-    setGoogleLoading(true);
-    setAuthError(null); // Clear any previous errors
-    try {
-      const siteUrl = getSiteUrl();
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      console.log('🔄 LoginPage: Initiating Google OAuth sign-in', {
-        siteUrl,
-        isMobile,
-        userAgent: navigator.userAgent,
-        currentOrigin: window.location.origin
-      });
-
-      const oauthOptions = {
-        redirectTo: `${siteUrl}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      };
-
-      // Add mobile-specific options
-      if (isMobile) {
-        oauthOptions.queryParams.prompt = 'select_account';
-        console.log('📱 Mobile device detected, using select_account prompt');
-      }
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: oauthOptions,
-      });
-
-      if (error) {
-        console.error('Google OAuth error:', error);
-        setGoogleLoading(false);
-        toast({
-          variant: "destructive",
-          title: "Google Sign in Failed",
-          description: error.message || "Something went wrong. Please try again.",
-        });
-      }
-      // Don't set loading to false here - let the redirect handle it
-    } catch (err) {
-      console.error('Google OAuth exception:', err);
-      setGoogleLoading(false);
-      toast({
-        variant: "destructive",
-        title: "Google Sign in Failed",
-        description: "An unexpected error occurred. Please try again.",
-      });
-    }
-  };
 
   const handleRetry = () => {
     setIsRetrying(true);
