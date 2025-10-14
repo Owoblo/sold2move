@@ -1,25 +1,7 @@
 // Frontend Data Mapping Utilities for Sold2Move
 // These functions ensure consistent data mapping between database and frontend
 
-/**
- * Ensures that detail URLs point to Zillow.com instead of sold2move.com
- * This fixes URLs that might have been incorrectly stored in the database
- */
-function ensureZillowUrl(detailUrl) {
-  if (!detailUrl) return detailUrl;
-  
-  // If the URL contains sold2move.com, replace it with zillow.com
-  if (detailUrl.includes('sold2move.com')) {
-    return detailUrl.replace('sold2move.com', 'zillow.com');
-  }
-  
-  // If the URL doesn't start with http/https, assume it's a relative path and prepend zillow.com
-  if (!detailUrl.startsWith('http')) {
-    return `https://www.zillow.com${detailUrl.startsWith('/') ? '' : '/'}${detailUrl}`;
-  }
-  
-  return detailUrl;
-}
+// Note: Zillow URL functions removed - external links now admin-only
 
 /**
  * Maps database listing data to frontend component format
@@ -35,7 +17,7 @@ export function mapDatabaseListingToFrontend(dbListing) {
     
     // Images and URLs
     imgSrc: dbListing.imgsrc,
-    detailUrl: ensureZillowUrl(dbListing.detailurl),
+    detailUrl: dbListing.detailurl,
     
     // Address information (ensure consistent mapping)
     address: dbListing.address || dbListing.addressstreet,

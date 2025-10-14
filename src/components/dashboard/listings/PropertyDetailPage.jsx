@@ -3,19 +3,62 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { fetchListingById } from '@/lib/queries';
-import { Loader2, AlertCircle, Bed, Bath, Ruler, MapPin, ArrowLeft, ExternalLink, CalendarDays, Building } from 'lucide-react';
+import { 
+  Loader2, 
+  AlertCircle, 
+  Bed, 
+  Bath, 
+  Ruler, 
+  MapPin, 
+  ArrowLeft, 
+  CalendarDays, 
+  Building,
+  Home,
+  Car,
+  TreePine,
+  Wifi,
+  Shield,
+  Star,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  Users,
+  Phone,
+  Mail,
+  Share2,
+  Heart,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  Info,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import PageWrapper from '@/components/layout/PageWrapper';
 
 const PropertyDetailPage = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [daysOnZillow, setDaysOnZillow] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // Check if user is admin
+  const isAdmin = user?.email === 'johnowolabi80@gmail.com';
 
   useEffect(() => {
     const getListing = async () => {
@@ -23,10 +66,6 @@ const PropertyDetailPage = () => {
         setLoading(true);
         const data = await fetchListingById(listingId);
         setListing(data);
-        
-        if (data?.hdpData?.homeInfo?.daysOnZillow) {
-          setDaysOnZillow(data.hdpData.homeInfo.daysOnZillow);
-        }
 
         const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
         if (photos.length > 0) {
@@ -44,6 +83,77 @@ const PropertyDetailPage = () => {
   }, [listingId]);
 
   const photos = listing?.carouselPhotos || (listing?.imgSrc ? [{ url: listing.imgSrc }] : []);
+  
+  // Extract rich data from hdpData
+  const homeInfo = listing?.hdpData?.homeInfo || {};
+  const propertyDetails = listing?.hdpData?.propertyDetails || {};
+  const priceHistory = listing?.hdpData?.priceHistory || [];
+  const taxHistory = listing?.hdpData?.taxHistory || [];
+  const schoolInfo = listing?.hdpData?.schoolInfo || {};
+  
+  // Calculate property metrics
+  const pricePerSqft = listing?.area && listing?.unformattedprice 
+    ? Math.round(listing.unformattedprice / listing.area) 
+    : null;
+  
+  const daysOnMarket = homeInfo.daysOnZillow || null;
+  
+  // Format price
+  const formatPrice = (price) => {
+    if (!price) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Navigation functions
+  const nextImage = () => {
+    if (photos.length > 0) {
+      const nextIndex = (currentImageIndex + 1) % photos.length;
+      setCurrentImageIndex(nextIndex);
+      setSelectedImage(photos[nextIndex].url);
+    }
+  };
+
+  const prevImage = () => {
+    if (photos.length > 0) {
+      const prevIndex = currentImageIndex === 0 ? photos.length - 1 : currentImageIndex - 1;
+      setCurrentImageIndex(prevIndex);
+      setSelectedImage(photos[prevIndex].url);
+    }
+  };
+
+  const selectImage = (index) => {
+    setCurrentImageIndex(index);
+    setSelectedImage(photos[index].url);
+  };
+
+  // Share functionality
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${listing.addressStreet}`,
+          text: `Check out this property: ${listing.addressStreet}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    // Here you would typically save to database
+  };
 
   if (loading) {
     return (
@@ -86,32 +196,98 @@ const PropertyDetailPage = () => {
       </Helmet>
       
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-        <div className="mb-6">
+        {/* Header with Navigation */}
+        <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)} className="text-slate hover:text-lightest-slate">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Listings
           </Button>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={toggleFavorite}>
+              <Heart className={`h-4 w-4 mr-2 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+              {isFavorite ? 'Saved' : 'Save'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleShare}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Share
+            </Button>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
         </div>
 
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
+          {/* Left Column - Images and Details */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Image Gallery */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="aspect-w-16 aspect-h-9 bg-lightest-navy/10">
+                <div className="relative aspect-w-16 aspect-h-9 bg-lightest-navy/10">
                   {selectedImage ? (
-                    <img src={selectedImage} alt="Property" className="w-full h-full object-cover" />
+                    <img 
+                      src={selectedImage} 
+                      alt="Property" 
+                      className="w-full h-full object-cover cursor-pointer" 
+                      onClick={() => setIsFullscreen(true)}
+                    />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-slate">No Image Available</div>
+                    <div className="flex items-center justify-center h-full text-slate">
+                      <div className="text-center">
+                        <Home className="h-16 w-16 mx-auto mb-4 text-slate/50" />
+                        <p>No Image Available</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Image Navigation */}
+                  {photos.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70"
+                        onClick={prevImage}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70"
+                        onClick={nextImage}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      
+                      {/* Image Counter */}
+                      <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                        {currentImageIndex + 1} / {photos.length}
+                      </div>
+                    </>
                   )}
                 </div>
+                
+                {/* Thumbnail Strip */}
                 {photos.length > 1 && (
                   <div className="p-4 flex space-x-2 overflow-x-auto bg-light-navy">
                     {photos.map((photo, index) => (
-                      <div key={index} className="flex-shrink-0" onClick={() => setSelectedImage(photo.url)}>
+                      <div 
+                        key={index} 
+                        className="flex-shrink-0 cursor-pointer" 
+                        onClick={() => selectImage(index)}
+                      >
                         <img 
                           src={photo.url} 
                           alt={`Thumbnail ${index + 1}`} 
-                          className={`w-24 h-16 object-cover rounded-md cursor-pointer border-2 ${selectedImage === photo.url ? 'border-teal' : 'border-transparent'}`}
+                          className={`w-20 h-16 object-cover rounded-md border-2 transition-all ${
+                            currentImageIndex === index 
+                              ? 'border-teal scale-105' 
+                              : 'border-transparent hover:border-slate'
+                          }`}
                         />
                       </div>
                     ))}
@@ -119,67 +295,299 @@ const PropertyDetailPage = () => {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          <div className="lg:col-span-1">
+            {/* Property Overview */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-3xl text-teal">{listing.price}</CardTitle>
-                <p className="text-lg text-lightest-slate">{listing.addressStreet}</p>
-                <p className="text-md text-slate flex items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Home className="h-5 w-5" />
+                  Property Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <Bed className="mx-auto h-8 w-8 text-teal mb-2" />
+                    <p className="text-2xl font-bold text-lightest-slate">{listing.beds || 'N/A'}</p>
+                    <p className="text-sm text-slate">Bedrooms</p>
+                  </div>
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <Bath className="mx-auto h-8 w-8 text-teal mb-2" />
+                    <p className="text-2xl font-bold text-lightest-slate">{listing.baths || 'N/A'}</p>
+                    <p className="text-sm text-slate">Bathrooms</p>
+                  </div>
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <Ruler className="mx-auto h-8 w-8 text-teal mb-2" />
+                    <p className="text-2xl font-bold text-lightest-slate">
+                      {listing.area ? `${(listing.area / 1000).toFixed(1)}k` : 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate">Sq Ft</p>
+                  </div>
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <DollarSign className="mx-auto h-8 w-8 text-teal mb-2" />
+                    <p className="text-2xl font-bold text-lightest-slate">
+                      {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate">Per Sq Ft</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Property Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Info className="h-5 w-5" />
+                  Property Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate">Property Type:</span>
+                      <Badge variant="outline" className="text-lightest-slate">
+                        {listing.statustext || 'N/A'}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Year Built:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.yearBuilt || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Lot Size:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.lotSize || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Parking:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.parkingFeatures || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-slate">Heating:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.heating || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Cooling:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.cooling || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Flooring:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.flooring || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate">Roof:</span>
+                      <span className="text-lightest-slate font-medium">
+                        {homeInfo.roof || 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Market Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Market Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <Clock className="mx-auto h-8 w-8 text-blue-500 mb-2" />
+                    <p className="text-xl font-bold text-lightest-slate">
+                      {daysOnMarket || 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate">Days on Market</p>
+                  </div>
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <CalendarDays className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                    <p className="text-xl font-bold text-lightest-slate">
+                      {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate">Last Updated</p>
+                  </div>
+                  <div className="text-center p-4 bg-lightest-navy/10 rounded-lg">
+                    <Building className="mx-auto h-8 w-8 text-purple-500 mb-2" />
+                    <p className="text-xl font-bold text-lightest-slate">
+                      {homeInfo.homeStatus || 'N/A'}
+                    </p>
+                    <p className="text-sm text-slate">Status</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Admin-only Zillow Link */}
+            {isAdmin && listing.detailurl && (
+              <Card className="border-yellow-500/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-yellow-500">
+                    <AlertTriangle className="h-5 w-5" />
+                    Admin Access
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-slate mb-4">This link is only visible to admin users.</p>
+                  <Button asChild className="w-full bg-yellow-500 text-black hover:bg-yellow-500/90">
+                    <a href={listing.detailurl} target="_blank" rel="noopener noreferrer">
+                      View on Zillow <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column - Key Information */}
+          <div className="space-y-6">
+            {/* Price and Address */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-3xl text-teal">{formatPrice(listing.unformattedprice)}</CardTitle>
+                <p className="text-lg text-lightest-slate font-medium">{listing.addressStreet}</p>
+                <p className="text-slate flex items-center">
                   <MapPin className="mr-2 h-4 w-4" />
                   {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
                 </p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4 text-center my-4">
-                  <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Bed className="mx-auto h-6 w-6 text-teal mb-1" />
-                    <p className="font-bold text-lightest-slate">{listing.beds || 'N/A'}</p>
-                    <p className="text-xs text-slate">Beds</p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate">Price per Sq Ft:</span>
+                    <span className="text-lightest-slate font-medium">
+                      {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
+                    </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Bath className="mx-auto h-6 w-6 text-teal mb-1" />
-                    <p className="font-bold text-lightest-slate">{listing.baths || 'N/A'}</p>
-                    <p className="text-xs text-slate">Baths</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate">Property ID:</span>
+                    <span className="text-lightest-slate font-mono text-sm">{listing.id}</span>
                   </div>
-                  <div className="p-2 rounded-lg bg-lightest-navy/10">
-                    <Ruler className="mx-auto h-6 w-6 text-teal mb-1" />
-                    <p className="font-bold text-lightest-slate">{listing.area ? `${listing.area.toLocaleString()} sqft` : 'N/A'}</p>
-                    <p className="text-xs text-slate">Area</p>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate">Zillow ID:</span>
+                      <span className="text-lightest-slate font-mono text-sm">{listing.zpid || 'N/A'}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2 text-sm mt-6">
-                  <div className="flex justify-between">
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Quick Stats
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate">Total Area:</span>
+                    <span className="text-lightest-slate font-medium">
+                      {listing.area ? `${listing.area.toLocaleString()} sq ft` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate">Bedrooms:</span>
+                    <span className="text-lightest-slate font-medium">{listing.beds || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate">Bathrooms:</span>
+                    <span className="text-lightest-slate font-medium">{listing.baths || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-slate">Property Type:</span>
-                    <span className="font-medium text-lightest-slate">{listing.statustext || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate">Zillow ID (zpid):</span>
-                    <span className="font-medium text-lightest-slate">{listing.zpid || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate">Days on Zillow:</span>
-                    <span className="font-medium text-lightest-slate flex items-center">
-                      <CalendarDays className="mr-2 h-4 w-4 text-teal" />
-                      {daysOnZillow ?? 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate">Listed By:</span>
-                    <span className="font-medium text-lightest-slate flex items-center">
-                      <Building className="mr-2 h-4 w-4 text-teal" />
-                      {listing.brokerName || 'N/A'}
-                    </span>
+                    <Badge variant="outline" className="text-lightest-slate">
+                      {listing.statustext || 'N/A'}
+                    </Badge>
                   </div>
                 </div>
-                {listing.detailurl && (
-                  <Button asChild className="w-full mt-6 bg-teal text-deep-navy hover:bg-teal/90">
-                    <a href={listing.detailurl} target="_blank" rel="noopener noreferrer">
-                      View on Zillow <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                )}
+              </CardContent>
+            </Card>
+
+            {/* Location Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-teal mt-0.5" />
+                    <div>
+                      <p className="text-lightest-slate font-medium">{listing.addressStreet}</p>
+                      <p className="text-slate text-sm">
+                        {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {schoolInfo.schoolDistrict && (
+                    <div className="flex items-start gap-3">
+                      <Users className="h-5 w-5 text-blue-500 mt-0.5" />
+                      <div>
+                        <p className="text-lightest-slate font-medium">School District</p>
+                        <p className="text-slate text-sm">{schoolInfo.schoolDistrict}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {homeInfo.neighborhood && (
+                    <div className="flex items-start gap-3">
+                      <TreePine className="h-5 w-5 text-green-500 mt-0.5" />
+                      <div>
+                        <p className="text-lightest-slate font-medium">Neighborhood</p>
+                        <p className="text-slate text-sm">{homeInfo.neighborhood}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Phone className="h-5 w-5" />
+                  Take Action
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full bg-teal text-deep-navy hover:bg-teal/90">
+                  <Phone className="h-4 w-4 mr-2" />
+                  Contact Agent
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Message
+                </Button>
+                <Button variant="outline" className="w-full">
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  Schedule Tour
+                </Button>
               </CardContent>
             </Card>
           </div>

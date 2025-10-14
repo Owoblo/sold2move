@@ -134,7 +134,7 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
       id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
-      detailUrl: ensureZillowUrl(r.detailurl),
+      detailUrl: r.detailurl,
       addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
@@ -237,7 +237,7 @@ export async function fetchSoldSincePrev(currentRunId, prevRunId, cityName, filt
       id: r.id, // Keep as number to match database BIGINT
       zpid: r.zpid,
       imgSrc: r.imgsrc,
-      detailUrl: ensureZillowUrl(r.detailurl),
+      detailUrl: r.detailurl,
       addressStreet: r.addressstreet, // Map lowercase DB column to camelCase frontend property
       lastcity: r.lastcity,
       addresscity: r.addresscity,
@@ -330,31 +330,13 @@ export async function fetchListingById(listingId) {
     
     // Additional fields that might be needed
     brokerName: data.brokername || data.broker_name,
-    detailurl: ensureZillowUrl(data.detailurl), // Ensure URL points to Zillow.com
+    detailurl: data.detailurl,
   };
 
   return mappedData;
 }
 
-/**
- * Ensures that detail URLs point to Zillow.com instead of sold2move.com
- * This fixes URLs that might have been incorrectly stored in the database
- */
-function ensureZillowUrl(detailUrl) {
-  if (!detailUrl) return detailUrl;
-  
-  // If the URL contains sold2move.com, replace it with zillow.com
-  if (detailUrl.includes('sold2move.com')) {
-    return detailUrl.replace('sold2move.com', 'zillow.com');
-  }
-  
-  // If the URL doesn't start with http/https, assume it's a relative path and prepend zillow.com
-  if (!detailUrl.startsWith('http')) {
-    return `https://www.zillow.com${detailUrl.startsWith('/') ? '' : '/'}${detailUrl}`;
-  }
-  
-  return detailUrl;
-}
+// Note: Zillow URL functions removed - external links now admin-only
 
 export async function fetchRevealedListings(userId, listingIds) {
   if (!userId || !listingIds || listingIds.length === 0) {
