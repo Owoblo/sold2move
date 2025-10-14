@@ -46,17 +46,23 @@ import {
   FileText,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  MessageSquare
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
+import SupportTicketAdmin from '@/components/dashboard/admin/SupportTicketAdmin';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Link } from 'react-router-dom';
 
 const AccountHub = () => {
   const { profile, loading: profileLoading } = useProfile();
+  const { user } = useAuth();
+  
+  // Check if user is admin
+  const isAdmin = user?.email === 'johnowolabi80@gmail.com';
   const { session } = useAuth();
   const supabase = useSupabaseClient();
   const { toast } = useToast();
@@ -216,7 +222,7 @@ const AccountHub = () => {
         <Card className="bg-light-navy border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
+    <div>
                 <p className="text-sm text-slate">Service Areas</p>
                 <p className="text-2xl font-bold text-lightest-slate">
                   {profile?.service_cities?.length || 1}
@@ -237,7 +243,7 @@ const AccountHub = () => {
         transition={{ delay: 0.2 }}
       >
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-2 lg:grid-cols-5' : 'grid-cols-2 lg:grid-cols-4'}`}>
             <TabsTrigger value="overview">
               <BarChart3 className="mr-2 h-4 w-4" />
               Overview
@@ -254,6 +260,12 @@ const AccountHub = () => {
               <Shield className="mr-2 h-4 w-4" />
               Security
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="admin-support">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Support
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
@@ -373,14 +385,14 @@ const AccountHub = () => {
 
           {/* Activity Tab */}
           <TabsContent value="activity" className="space-y-6">
-            <Card>
-              <CardHeader>
+      <Card>
+        <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
                   Recent Activity
                 </CardTitle>
-              </CardHeader>
-              <CardContent>
+        </CardHeader>
+        <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-3 bg-light-navy/30 rounded-lg">
                     <div className="p-2 bg-blue-500/10 rounded-full">
@@ -559,9 +571,16 @@ const AccountHub = () => {
                   <FileText className="h-4 w-4 mr-2" />
                   Download Data
                 </Button>
-              </CardContent>
-            </Card>
+        </CardContent>
+      </Card>
           </TabsContent>
+
+          {/* Admin Support Tab */}
+          {isAdmin && (
+            <TabsContent value="admin-support" className="space-y-6">
+              <SupportTicketAdmin />
+            </TabsContent>
+          )}
         </Tabs>
       </motion.div>
     </div>

@@ -1,7 +1,7 @@
 
 import React, { Suspense, lazy, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, CreditCard, Bell, Globe, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { User, CreditCard, Bell, Globe, Shield, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const ProfileSettings = lazy(() => import('@/components/dashboard/settings/ProfileSettings'));
@@ -10,6 +10,7 @@ const NotificationsSettings = lazy(() => import('@/components/dashboard/settings
 const MultiCitySettings = lazy(() => import('@/components/dashboard/settings/MultiCitySettings'));
 const AccountManagement = lazy(() => import('@/components/dashboard/settings/AccountManagement'));
 const SessionManagement = lazy(() => import('@/components/dashboard/settings/SessionManagement'));
+const SupportTickets = lazy(() => import('@/components/dashboard/settings/SupportTickets'));
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -21,7 +22,7 @@ const SettingsPage = () => {
         <p className="text-slate">Manage your account, billing, and notification preferences.</p>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 max-w-4xl">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 max-w-5xl">
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
             Profile
@@ -46,6 +47,10 @@ const SettingsPage = () => {
             <Shield className="mr-2 h-4 w-4" />
             Security
           </TabsTrigger>
+          <TabsTrigger value="support">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            Support
+          </TabsTrigger>
         </TabsList>
         <Suspense fallback={<div className="flex justify-center items-center h-96"><LoadingSpinner size="lg" /></div>}>
           <TabsContent value="profile">
@@ -65,6 +70,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="security">
             <SessionManagement />
+          </TabsContent>
+          <TabsContent value="support">
+            <SupportTickets />
           </TabsContent>
         </Suspense>
       </Tabs>
