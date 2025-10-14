@@ -53,6 +53,7 @@ import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
 import EmailAlertsSettings from '@/components/dashboard/EmailAlertsSettings';
 import ServiceAreaPerformance from '@/components/dashboard/ServiceAreaPerformance';
+import DataErrorBoundary from '@/components/dashboard/DataErrorBoundary';
 
 const LISTINGS_PER_PAGE = 15;
 
@@ -1075,7 +1076,9 @@ const DashboardPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <ServiceAreaPerformance />
+        <DataErrorBoundary>
+          <ServiceAreaPerformance />
+        </DataErrorBoundary>
       </motion.div>
 
       {/* Email Alerts Settings Modal */}

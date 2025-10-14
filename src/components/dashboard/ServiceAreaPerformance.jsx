@@ -39,6 +39,11 @@ const ServiceAreaPerformance = () => {
   }, [profile, timeRange, selectedMetric]);
 
   const fetchPerformanceData = async () => {
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
+
     if (!profile?.service_cities || profile.service_cities.length === 0) {
       setLoading(false);
       return;
@@ -67,20 +72,28 @@ const ServiceAreaPerformance = () => {
       const performancePromises = profile.service_cities.map(async (city) => {
         try {
           // Fetch just listed data for this city
-          const { data: justListedData, count: justListedCount } = await supabase
+          const { data: justListedData, count: justListedCount, error: justListedError } = await supabase
             .from('just_listed')
             .select('*', { count: 'exact' })
             .or(`lastcity.eq.${city},addresscity.eq.${city}`)
             .gte('created_at', startDate.toISOString())
             .lte('created_at', endDate.toISOString());
 
+          if (justListedError) {
+            console.error(`Error fetching just listed data for ${city}:`, justListedError);
+          }
+
           // Fetch sold listings data for this city
-          const { data: soldData, count: soldCount } = await supabase
+          const { data: soldData, count: soldCount, error: soldError } = await supabase
             .from('sold_listings')
             .select('*', { count: 'exact' })
             .or(`lastcity.eq.${city},addresscity.eq.${city}`)
             .gte('created_at', startDate.toISOString())
             .lte('created_at', endDate.toISOString());
+
+          if (soldError) {
+            console.error(`Error fetching sold data for ${city}:`, soldError);
+          }
 
           // Calculate average price for just listed
           const avgJustListedPrice = justListedData?.length > 0 
@@ -141,11 +154,13 @@ const ServiceAreaPerformance = () => {
       setPerformanceData(sortedResults);
     } catch (error) {
       console.error('Error fetching performance data:', error);
-      toast({
-        variant: "destructive",
-        title: "Error Loading Data",
-        description: "Failed to load service area performance data.",
-      });
+      // Don't show toast for now to avoid spam, just log the error
+      // toast({
+      //   variant: "destructive",
+      //   title: "Error Loading Data",
+      //   description: "Failed to load service area performance data.",
+      // });
+      setPerformanceData([]);
     } finally {
       setLoading(false);
     }
