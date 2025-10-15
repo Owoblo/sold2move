@@ -17,6 +17,15 @@ button, .btn, [role="button"] {
   user-select: none;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
+}
+
 /* Better mobile scrolling */
 html, body {
   touch-action: manipulation; /* Prevents double-tap zoom */

@@ -173,6 +173,30 @@ const PropertyDetailPage = () => {
     // Here you would typically save to database
   };
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (isFullscreen) {
+        switch (e.key) {
+          case 'Escape':
+            setIsFullscreen(false);
+            break;
+          case 'ArrowLeft':
+            prevImage();
+            break;
+          case 'ArrowRight':
+            nextImage();
+            break;
+          default:
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isFullscreen, photos.length, currentImageIndex]);
+
   if (loading) {
     return (
       <PageWrapper>
@@ -244,12 +268,12 @@ const PropertyDetailPage = () => {
             {/* Image Gallery */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="relative aspect-w-16 aspect-h-10 bg-lightest-navy/10">
+                <div className="relative aspect-[16/10] bg-lightest-navy/10 rounded-lg overflow-hidden">
                   {selectedImage ? (
                     <img 
                       src={selectedImage} 
                       alt="Property" 
-                      className="w-full h-full object-cover cursor-pointer" 
+                      className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-105" 
                       onClick={() => setIsFullscreen(true)}
                     />
                   ) : (
@@ -267,7 +291,7 @@ const PropertyDetailPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70"
+                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
                         onClick={prevImage}
                       >
                         <ChevronLeft className="h-4 w-4" />
@@ -275,40 +299,57 @@ const PropertyDetailPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
                         onClick={nextImage}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                       
                       {/* Image Counter */}
-                      <div className="absolute bottom-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                      <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
                         {currentImageIndex + 1} / {photos.length}
                       </div>
+                      
+                      {/* Fullscreen Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                        onClick={() => setIsFullscreen(true)}
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                      </Button>
                     </>
                   )}
                 </div>
                 
                 {/* Thumbnail Strip */}
                 {photos.length > 1 && (
-                  <div className="p-3 flex space-x-2 overflow-x-auto bg-light-navy">
-                    {photos.map((photo, index) => (
-                      <div 
-                        key={index} 
-                        className="flex-shrink-0 cursor-pointer" 
-                        onClick={() => selectImage(index)}
-                      >
-                        <img 
-                          src={photo.url} 
-                          alt={`Thumbnail ${index + 1}`} 
-                          className={`w-16 h-12 object-cover rounded-md border-2 transition-all ${
-                            currentImageIndex === index 
-                              ? 'border-teal scale-105' 
-                              : 'border-transparent hover:border-slate'
-                          }`}
-                        />
-                      </div>
-                    ))}
+                  <div className="p-4 bg-light-navy">
+                    <div className="flex space-x-3 overflow-x-auto scrollbar-hide">
+                      {photos.map((photo, index) => (
+                        <div 
+                          key={index} 
+                          className="flex-shrink-0 cursor-pointer group" 
+                          onClick={() => selectImage(index)}
+                        >
+                          <div className="relative">
+                            <img 
+                              src={photo.url} 
+                              alt={`Thumbnail ${index + 1}`} 
+                              className={`w-20 h-16 object-cover rounded-lg border-2 transition-all duration-200 ${
+                                currentImageIndex === index 
+                                  ? 'border-teal scale-105 shadow-lg' 
+                                  : 'border-transparent hover:border-slate/50 hover:scale-105'
+                              }`}
+                            />
+                            {currentImageIndex === index && (
+                              <div className="absolute inset-0 bg-teal/20 rounded-lg"></div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -611,6 +652,84 @@ const PropertyDetailPage = () => {
           </div>
         </div>
       </motion.div>
+      
+      {/* Fullscreen Image Modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            {/* Close Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white border-white/20"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            
+            {/* Main Image */}
+            <div className="relative max-w-7xl max-h-full">
+              <img 
+                src={selectedImage} 
+                alt="Property Fullscreen" 
+                className="max-w-full max-h-full object-contain"
+              />
+              
+              {/* Navigation in Fullscreen */}
+              {photos.length > 1 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  
+                  {/* Image Counter in Fullscreen */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
+                    {currentImageIndex + 1} / {photos.length}
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Thumbnail Strip in Fullscreen */}
+            {photos.length > 1 && (
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+                <div className="flex space-x-2 bg-black/50 rounded-lg p-2">
+                  {photos.map((photo, index) => (
+                    <div 
+                      key={index} 
+                      className="cursor-pointer" 
+                      onClick={() => selectImage(index)}
+                    >
+                      <img 
+                        src={photo.url} 
+                        alt={`Thumbnail ${index + 1}`} 
+                        className={`w-12 h-8 object-cover rounded border-2 transition-all ${
+                          currentImageIndex === index 
+                            ? 'border-teal' 
+                            : 'border-transparent hover:border-white/50'
+                        }`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </PageWrapper>
   );
 };
