@@ -68,6 +68,24 @@ const AuthErrorDisplay = ({ error, onRetry, onGoBack, isRetrying = false }) => {
       };
     }
     
+    if (error.includes('mobile_code_expired')) {
+      return {
+        title: 'Sign-in Code Expired',
+        description: 'The authentication code has expired. This can happen on mobile devices with slow connections.',
+        suggestion: 'Please try signing in again or use the email and password form below.',
+        icon: '⏰'
+      };
+    }
+    
+    if (error.includes('mobile_session_failed')) {
+      return {
+        title: 'Session Creation Failed',
+        description: 'Unable to create your session after successful authentication.',
+        suggestion: 'Please try signing in again or use the email and password form below for a more reliable mobile experience.',
+        icon: '📱'
+      };
+    }
+    
     if (error.includes('offline')) {
       return {
         title: 'No Internet Connection',

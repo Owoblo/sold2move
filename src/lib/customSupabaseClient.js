@@ -13,18 +13,35 @@ export const getSiteUrl = () => {
   // For mobile devices and PWAs, ensure we use the correct origin
   if (typeof window !== 'undefined') {
     const origin = window.location.origin;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    console.log('🔍 getSiteUrl: Determining site URL', {
+      origin,
+      isMobile,
+      userAgent: navigator.userAgent,
+      envSiteUrl: import.meta.env.VITE_SITE_URL
+    });
     
     // Handle mobile-specific cases
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      console.log('🔍 Development environment detected');
       return origin; // Development
     }
     
     // Production - ensure we use the correct domain
     if (origin.includes('sold2move.com')) {
+      console.log('🔍 Production environment detected');
       return 'https://sold2move.com';
     }
     
+    // For mobile devices, be more permissive with origins
+    if (isMobile) {
+      console.log('🔍 Mobile device detected, using current origin');
+      return origin;
+    }
+    
     // Fallback to current origin
+    console.log('🔍 Using fallback origin');
     return origin;
   }
   

@@ -139,11 +139,21 @@ const LoginPage = () => {
 
   const handleMobileFallback = () => {
     // For mobile users having OAuth issues, show a message to use email/password
-    toast({
-      title: "Mobile Sign-in Tip",
-      description: "If Google sign-in isn't working on your mobile device, please use the email and password form below.",
-      duration: 5000,
-    });
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      toast({
+        title: "Mobile Sign-in Tip",
+        description: "If Google sign-in isn't working on your mobile device, please use the email and password form below for a more reliable experience.",
+        duration: 8000,
+      });
+    } else {
+      toast({
+        title: "Sign-in Tip",
+        description: "If Google sign-in isn't working, please use the email and password form below.",
+        duration: 5000,
+      });
+    }
   };
 
   const handleGoBack = () => {

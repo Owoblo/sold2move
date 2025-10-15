@@ -20,6 +20,8 @@ const AuthCallbackPage = () => {
     const handleAuthCallback = async () => {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
       
       console.log('🔍 AuthCallbackPage: Starting auth callback handling');
       console.log('🔍 Current URL:', window.location.href);
@@ -27,6 +29,8 @@ const AuthCallbackPage = () => {
       console.log('🔍 Device info:', {
         isMobile,
         isPWA,
+        isIOS,
+        isAndroid,
         userAgent: navigator.userAgent,
         origin: window.location.origin,
         pathname: window.location.pathname,
@@ -86,7 +90,17 @@ const AuthCallbackPage = () => {
               code: exchangeError.code,
               details: exchangeError
             });
-            setError(`session_failed`);
+            
+            // Provide mobile-specific error handling
+            if (isMobile) {
+              if (exchangeError.message.includes('invalid_grant') || exchangeError.message.includes('code_expired')) {
+                setError('mobile_code_expired');
+              } else {
+                setError('mobile_session_failed');
+              }
+            } else {
+              setError('session_failed');
+            }
             setIsProcessing(false);
             return;
           }
@@ -100,13 +114,21 @@ const AuthCallbackPage = () => {
 
           if (data.session) {
             console.log('🎉 Session created successfully, redirecting to post-auth');
-            // Add a small delay to ensure the session is fully established
+            // Add a longer delay for mobile devices to ensure session is fully established
+            const delay = isMobile ? 500 : 100;
             setTimeout(() => {
               navigate('/post-auth', { replace: true });
-            }, 100);
+            }, delay);
             return;
           } else {
             console.warn('⚠️ Code exchange succeeded but no session returned');
+            if (isMobile) {
+              setError('mobile_session_failed');
+            } else {
+              setError('session_failed');
+            }
+            setIsProcessing(false);
+            return;
           }
         }
 

@@ -139,6 +139,8 @@ export const AuthProvider = ({ children }) => {
       const siteUrl = getSiteUrl();
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
       
       console.log('🔄 Initiating Google OAuth sign-in');
       console.log('🔄 OAuth configuration:', {
@@ -147,6 +149,8 @@ export const AuthProvider = ({ children }) => {
         provider: 'google',
         isMobile,
         isPWA,
+        isIOS,
+        isAndroid,
         userAgent: navigator.userAgent,
         currentOrigin: window.location.origin
       });
@@ -161,8 +165,20 @@ export const AuthProvider = ({ children }) => {
 
       // Add mobile-specific options
       if (isMobile) {
+        // For mobile, use different prompts and ensure proper redirect handling
         oauthOptions.queryParams.prompt = 'select_account';
-        console.log('📱 Mobile device detected, using select_account prompt');
+        
+        // For iOS, add additional parameters to help with redirect issues
+        if (isIOS) {
+          oauthOptions.queryParams.include_granted_scopes = 'true';
+        }
+        
+        // For Android, ensure proper redirect handling
+        if (isAndroid) {
+          oauthOptions.queryParams.response_type = 'code';
+        }
+        
+        console.log('📱 Mobile device detected, using mobile-optimized OAuth parameters');
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
