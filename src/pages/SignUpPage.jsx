@@ -13,6 +13,7 @@ import { Helmet } from 'react-helmet-async';
 import PageWrapper from '@/components/layout/PageWrapper';
 import GoogleIcon from '@/components/icons/GoogleIcon';
 import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingButton from '@/components/ui/LoadingButton';
 import { 
   User, 
@@ -29,6 +30,7 @@ import { motion } from 'framer-motion';
 const SignUpPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signInWithGoogle } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -126,21 +128,19 @@ const SignUpPage = () => {
   const signUpWithGoogle = async () => {
     try {
       setGoogleLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${getSiteUrl()}/dashboard`,
-        },
-      });
-
+      console.log('🔄 Initiating Google OAuth sign-up via AuthContext');
+      
+      // Use the same OAuth function as the login page for consistency
+      const { error } = await signInWithGoogle();
+      
       if (error) {
-        toast({
-          variant: "destructive",
-          title: "Google Sign Up Failed",
-          description: error.message,
-        });
+        console.error('❌ Google OAuth sign-up error:', error);
+        // Error handling is already done in the AuthContext
+      } else {
+        console.log('✅ Google OAuth sign-up initiated successfully');
       }
     } catch (error) {
+      console.error('Google OAuth sign-up exception:', error);
       toast({
         variant: "destructive",
         title: "Error",
