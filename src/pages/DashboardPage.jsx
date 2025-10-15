@@ -139,9 +139,16 @@ const DashboardPage = () => {
     const stats = {};
     
     // Use the main service area (city_name, state_code) if no service_cities array
-    const serviceAreas = profile.service_cities && profile.service_cities.length > 0 
-      ? profile.service_cities 
-      : [profile.city_name];
+    let serviceAreas;
+    if (profile.service_cities && profile.service_cities.length > 0) {
+      // Extract city names from service cities (format: "City, State")
+      serviceAreas = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        return cityName;
+      });
+    } else {
+      serviceAreas = [profile.city_name];
+    }
     
     serviceAreas.forEach(city => {
       if (!city) return;

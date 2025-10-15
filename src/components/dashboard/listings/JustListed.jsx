@@ -78,7 +78,12 @@ const JustListed = () => {
   // Update filters when profile changes
   useEffect(() => {
     if (profile?.service_cities && profile.service_cities.length > 0) {
-      setFilters(prev => ({ ...prev, city_name: profile.service_cities }));
+      // Extract city names from service cities (format: "City, State")
+      const cityNames = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        return cityName;
+      });
+      setFilters(prev => ({ ...prev, city_name: cityNames }));
     } else if (profile?.city_name) {
       setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
     }

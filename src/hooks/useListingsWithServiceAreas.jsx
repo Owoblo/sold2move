@@ -39,13 +39,20 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
+      // Extract city names from service cities (format: "City, State")
+      const cityNames = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        return cityName;
+      });
+      
       console.log('🔍 Querying just_listed table with service cities:', profile.service_cities);
+      console.log('🔍 Extracted city names for query:', cityNames);
 
       // Query just_listed table directly with service area filtering
       let query = supabase
         .from('just_listed')
         .select('*', { count: 'exact' })
-        .in('address_city', profile.service_cities)
+        .in('address_city', cityNames)
         .order('last_seen_at', { ascending: false })
         .range(from, to);
 
@@ -145,13 +152,20 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
+      // Extract city names from service cities (format: "City, State")
+      const cityNames = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        return cityName;
+      });
+      
       console.log('🔍 Querying sold_listings table with service cities:', profile.service_cities);
+      console.log('🔍 Extracted city names for query:', cityNames);
 
       // Query sold_listings table directly with service area filtering
       let query = supabase
         .from('sold_listings')
         .select('*', { count: 'exact' })
-        .in('address_city', profile.service_cities)
+        .in('address_city', cityNames)
         .order('last_seen_at', { ascending: false })
         .range(from, to);
 
