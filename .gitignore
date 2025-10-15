@@ -21,3 +21,14 @@ build/
 coverage/
 .vercel/
 .netlify/
+
+# AI features (temporarily excluded from production deployment)
+src/components/dashboard/AITestPanel.jsx
+src/components/dashboard/AIUploadDemo.jsx
+src/components/dashboard/settings/AISettings.jsx
+src/services/aiImageAnalysis.js
+src/utils/testAI.js
+add_ai_columns.sql
+supabase/migrations/20241222_add_ai_analysis.sql
+edge-functions/analyze-property-images/
+supabase/functions/analyze-property-images/

@@ -121,3 +121,4 @@ export const useOptimizedScroll = (callback, delay = 100) => {
 
   return handleScroll;
 };
+

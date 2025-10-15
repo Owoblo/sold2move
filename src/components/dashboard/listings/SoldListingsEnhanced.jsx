@@ -127,14 +127,38 @@ const SoldListingsEnhanced = () => {
     trackAction('pagination', { page, section: 'sold_listings' });
   };
 
-  const handleRowClick = (listingId) => {
+  const navigateToProperty = (listingId) => {
     navigate(`/dashboard/listings/property/${listingId}`);
+  };
+
+  const handleRowClick = (listingId) => {
+    // Check if user has credits or unlimited access
+    if (profile?.unlimited || allRevealedListings.has(listingId)) {
+      navigateToProperty(listingId);
+      return;
+    }
+
+    // Check if user has sufficient credits
+    const creditCost = 2; // Sold listings cost 2 credits
+    if (profile?.credits_remaining < creditCost) {
+      toast.error("Insufficient Credits", `You need ${creditCost} credits to view this property. Please purchase more credits.`);
+      navigate('/pricing');
+      return;
+    }
+
+    // If user has credits, show confirmation dialog
+    const confirmMessage = `Viewing this property will cost ${creditCost} credits. You have ${profile?.credits_remaining || 0} credits remaining. Continue?`;
+    
+    if (window.confirm(confirmMessage)) {
+      // Use the existing reveal mechanism to deduct credits and then navigate
+      handleReveal(listingId, { stopPropagation: () => {} });
+    }
   };
 
   const handleReveal = async (listingId, e) => {
     e.stopPropagation();
     if (profile?.unlimited || allRevealedListings.has(listingId)) {
-        handleRowClick(listingId);
+        navigateToProperty(listingId);
         return;
     }
 
@@ -160,8 +184,8 @@ const SoldListingsEnhanced = () => {
         totalListings: sortedListings.length,
       });
       
-      // Don't navigate immediately - let the user see the revealed address
-      // The address will be revealed in place and they can click on it
+      // Navigate to property detail page after successful reveal
+      navigateToProperty(listingId);
     } catch (err) {
       if (err.message.includes('Insufficient credits')) {
         // Show upgrade modal or redirect to pricing

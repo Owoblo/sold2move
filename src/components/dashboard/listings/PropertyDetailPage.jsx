@@ -43,12 +43,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import PageWrapper from '@/components/layout/PageWrapper';
 
 const PropertyDetailPage = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile } = useProfile();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +61,22 @@ const PropertyDetailPage = () => {
 
   // Check if user is admin
   const isAdmin = user?.email === 'johnowolabi80@gmail.com';
+
+  // Credit validation effect
+  useEffect(() => {
+    if (profile && !isAdmin) {
+      // Check if user has unlimited access or if this is a revealed listing
+      // For now, we'll allow access if they have any credits (they should have paid to get here)
+      if (!profile.unlimited && profile.credits_remaining <= 0) {
+        navigate('/pricing', { 
+          state: { 
+            message: 'You need credits to view property details. Please purchase credits to continue.' 
+          } 
+        });
+        return;
+      }
+    }
+  }, [profile, isAdmin, navigate]);
 
   useEffect(() => {
     const getListing = async () => {

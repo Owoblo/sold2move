@@ -51,7 +51,7 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
 
     let query = supabase
       .from('just_listed')
-      .select('id,zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,lastseenat,created_at', { count: 'exact' })
+      .select('id,zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,lastseenat,created_at,ai_analysis', { count: 'exact' })
       .order('lastseenat', { ascending: false })
       .range(from, to);
 
@@ -112,6 +112,14 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
       query = query.lte('area', filters.maxSqft);
       console.log(`Max sqft filter: ${filters.maxSqft}`);
     }
+    
+    // AI Furniture Filter - only show properties with furniture if enabled
+    if (filters.aiFurnitureFilter) {
+      // Use the database function we created to check for furniture
+      query = query.filter('ai_analysis', 'not.is', null)
+                   .filter('ai_analysis->has_furniture', 'eq', true);
+      console.log(`AI furniture filter: enabled - showing only furnished properties`);
+    }
 
     const { data, error, count } = await query;
 
@@ -147,7 +155,8 @@ export async function fetchJustListed(runId, cityName, page = 1, pageSize = 20, 
       area: r.area,
       statustext: r.statustext, // Use lowercase to match component
       lastseenat: r.lastseenat,
-      created_at: r.created_at
+      created_at: r.created_at,
+      ai_analysis: r.ai_analysis // Include AI analysis results
     }));
     
     return { data: mappedData, count: count || 0 };

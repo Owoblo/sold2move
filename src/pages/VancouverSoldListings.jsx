@@ -288,3 +288,4 @@ const VancouverSoldListings = () => {
 export default VancouverSoldListings;
 
 
+

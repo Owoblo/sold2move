@@ -288,3 +288,4 @@ const TorontoSoldListings = () => {
 export default TorontoSoldListings;
 
 
+

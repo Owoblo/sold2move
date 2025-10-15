@@ -177,8 +177,33 @@ const SoldListings = ({ filters }) => {
     toast.success("Export Successful", "Your CSV file has been downloaded.");
   };
 
-  const handleRowClick = (listingId) => {
+  const navigateToProperty = (listingId) => {
     navigate(`/dashboard/listings/property/${listingId}`);
+  };
+
+  const handleRowClick = (listingId) => {
+    // Check if user has credits or unlimited access
+    if (profile?.unlimited) {
+      navigateToProperty(listingId);
+      return;
+    }
+
+    // Check if user has sufficient credits
+    const creditCost = 2; // Sold listings cost 2 credits
+    if (profile?.credits_remaining < creditCost) {
+      toast.error("Insufficient Credits", `You need ${creditCost} credits to view this property. Please purchase more credits.`);
+      navigate('/pricing');
+      return;
+    }
+
+    // If user has credits, show confirmation dialog
+    const confirmMessage = `Viewing this property will cost ${creditCost} credits. You have ${profile?.credits_remaining || 0} credits remaining. Continue?`;
+    
+    if (window.confirm(confirmMessage)) {
+      // For sold listings, we'll need to implement a reveal mechanism
+      // For now, just navigate directly since sold listings don't have the same reveal system
+      navigateToProperty(listingId);
+    }
   };
 
   if (loading || profileLoading) {

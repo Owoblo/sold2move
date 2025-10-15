@@ -11,6 +11,10 @@ const MultiCitySettings = lazy(() => import('@/components/dashboard/settings/Mul
 const AccountManagement = lazy(() => import('@/components/dashboard/settings/AccountManagement'));
 const SessionManagement = lazy(() => import('@/components/dashboard/settings/SessionManagement'));
 const SupportTickets = lazy(() => import('@/components/dashboard/settings/SupportTickets'));
+// AI components temporarily disabled for production deployment
+// const AISettings = lazy(() => import('@/components/dashboard/settings/AISettings'));
+// const AITestPanel = lazy(() => import('@/components/dashboard/AITestPanel'));
+// const AIUploadDemo = lazy(() => import('@/components/dashboard/AIUploadDemo'));
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
@@ -22,7 +26,7 @@ const SettingsPage = () => {
         <p className="text-slate">Manage your account, billing, and notification preferences.</p>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 max-w-5xl">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8 max-w-6xl">
           <TabsTrigger value="profile">
             <User className="mr-2 h-4 w-4" />
             Profile
@@ -31,6 +35,11 @@ const SettingsPage = () => {
             <Globe className="mr-2 h-4 w-4" />
             Service Areas
           </TabsTrigger>
+          {/* AI Features tab temporarily disabled for production deployment */}
+          {/* <TabsTrigger value="ai">
+            <Brain className="mr-2 h-4 w-4" />
+            AI Features
+          </TabsTrigger> */}
           <TabsTrigger value="billing">
             <CreditCard className="mr-2 h-4 w-4" />
             Billing
@@ -59,6 +68,14 @@ const SettingsPage = () => {
           <TabsContent value="service-areas">
             <MultiCitySettings />
           </TabsContent>
+          {/* AI Features content temporarily disabled for production deployment */}
+          {/* <TabsContent value="ai">
+            <div className="space-y-6">
+              <AISettings />
+              <AIUploadDemo />
+              <AITestPanel />
+            </div>
+          </TabsContent> */}
           <TabsContent value="billing">
             <BillingSettings />
           </TabsContent>

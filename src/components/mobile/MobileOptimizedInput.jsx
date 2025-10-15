@@ -30,3 +30,4 @@ const MobileOptimizedInput = ({ className, style, ...props }) => {
 };
 
 export default MobileOptimizedInput;
+

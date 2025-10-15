@@ -41,12 +41,18 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           console.log(`useJustListedEnhanced: Using profile city:`, finalCityFilter);
         }
         
+        // Add AI furniture filter from user profile
+        const enhancedFilters = {
+          ...filters,
+          aiFurnitureFilter: profile?.ai_furniture_filter || false
+        };
+
         const { data, count } = await fetchJustListed(
           null, // No run ID needed for just_listed table
           finalCityFilter || null, // Allow null city filter
           page, 
           pageSize, 
-          filters
+          enhancedFilters
         );
 
         const result = {

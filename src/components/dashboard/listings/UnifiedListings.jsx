@@ -39,6 +39,7 @@ import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
 import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
+import CreditConfirmationDialog from '@/components/ui/CreditConfirmationDialog';
 
 const PAGE_SIZE = 20;
 
@@ -124,6 +125,8 @@ const UnifiedListings = () => {
   
   // Local state to track immediately revealed listings
   const [localRevealedListings, setLocalRevealedListings] = useState(new Set());
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [pendingListingId, setPendingListingId] = useState(null);
   
   // Combine server and local revealed listings
   const allRevealedListings = React.useMemo(() => {
@@ -177,14 +180,47 @@ const UnifiedListings = () => {
     trackAction('pagination', { page, section: activeTab });
   };
 
-  const handleRowClick = (listingId) => {
+  const navigateToProperty = (listingId) => {
     navigate(`/dashboard/listings/property/${listingId}`);
+  };
+
+  const handleRowClick = (listingId) => {
+    // Check if user has credits or unlimited access
+    if (profile?.unlimited || allRevealedListings.has(listingId)) {
+      navigateToProperty(listingId);
+      return;
+    }
+
+    // Check if user has sufficient credits
+    const creditCost = activeTab === 'just-listed' ? 1 : 2;
+    if (profile?.credits_remaining < creditCost) {
+      toast.error("Insufficient Credits", `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to view this property. Please purchase more credits.`);
+      navigate('/pricing');
+      return;
+    }
+
+    // If user has credits, show confirmation dialog
+    setPendingListingId(listingId);
+    setShowCreditDialog(true);
+  };
+
+  const handleCreditDialogConfirm = () => {
+    if (pendingListingId) {
+      handleReveal(pendingListingId, { stopPropagation: () => {} });
+    }
+    setShowCreditDialog(false);
+    setPendingListingId(null);
+  };
+
+  const handleCreditDialogCancel = () => {
+    setShowCreditDialog(false);
+    setPendingListingId(null);
   };
 
   const handleReveal = async (listingId, e) => {
     e.stopPropagation();
     if (profile?.unlimited || allRevealedListings.has(listingId)) {
-        handleRowClick(listingId);
+        navigateToProperty(listingId);
         return;
     }
 
@@ -213,6 +249,9 @@ const UnifiedListings = () => {
         totalListings: currentData?.data?.length || 0,
         type: activeTab
       });
+      
+      // Navigate to property detail page after successful reveal
+      navigateToProperty(listingId);
       
     } catch (err) {
       if (err.message.includes('Insufficient credits')) {
@@ -591,7 +630,11 @@ const UnifiedListings = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="hover:bg-lightest-navy/5 transition-colors cursor-pointer"
+                        className={`hover:bg-lightest-navy/5 transition-colors cursor-pointer ${
+                          !profile?.unlimited && !allRevealedListings?.has(listing.id) 
+                            ? 'hover:border-teal/20 border border-transparent' 
+                            : ''
+                        }`}
                         onClick={() => handleRowClick(listing.id)}
                       >
                         <TableCell className="font-medium">
@@ -624,6 +667,14 @@ const UnifiedListings = () => {
                                   : 'Click Reveal to see address'
                                 }
                               </div>
+                              {!profile?.unlimited && !allRevealedListings?.has(listing.id) && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-teal/10 border-teal/20 text-teal">
+                                    {activeTab === 'just-listed' ? '1 credit' : '2 credits'}
+                                  </Badge>
+                                  <span className="text-xs text-slate/60">• Click to view details</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -723,6 +774,16 @@ const UnifiedListings = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Credit Confirmation Dialog */}
+      <CreditConfirmationDialog
+        isOpen={showCreditDialog}
+        onClose={handleCreditDialogCancel}
+        onConfirm={handleCreditDialogConfirm}
+        creditCost={activeTab === 'just-listed' ? 1 : 2}
+        remainingCredits={profile?.credits_remaining || 0}
+        propertyType={activeTab === 'just-listed' ? 'just-listed property' : 'sold property'}
+      />
       </motion.div>
     </motion.div>
   );
