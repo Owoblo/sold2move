@@ -55,11 +55,12 @@ export const contactSchema = z.object({
 
 // Onboarding schema
 export const onboardingSchema = z.object({
-  company_name: z.string().min(2, 'Company name must be at least 2 characters'),
-  city_name: z.string().min(2, 'City name must be at least 2 characters'),
-  state: z.string().min(2, 'State must be at least 2 characters'),
+  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
+  cityName: z.string().min(2, 'City name must be at least 2 characters'),
+  stateCode: z.string().min(2, 'State must be at least 2 characters'),
+  countryCode: z.string().min(2, 'Country must be selected'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
-  service_cities: z.array(z.string()).min(1, 'Please select at least one service city'),
+  serviceCities: z.array(z.string()).min(1, 'Please select at least one service city'),
 });
 
 // Profile schema

@@ -67,6 +67,7 @@ const OnboardingPage = () => {
   }, [profile, profileLoading, navigate, form]);
 
   const handleUpdateProfile = async (values) => {
+    console.log('Form submission started with values:', values);
     try {
       if (!session?.user) throw new Error('No user on the session!');
 
@@ -135,7 +136,9 @@ const OnboardingPage = () => {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(handleUpdateProfile, (errors) => {
+                console.log('Form validation errors:', errors);
+              })} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="companyName"
