@@ -85,7 +85,9 @@ const PropertyDetailPage = () => {
         const data = await fetchListingById(listingId);
         setListing(data);
         
+        // Create photos array from available data
         const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
+        
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
         }
@@ -275,6 +277,10 @@ const PropertyDetailPage = () => {
                       alt="Property" 
                       className="w-full h-full object-cover cursor-pointer transition-transform hover:scale-105" 
                       onClick={() => setIsFullscreen(true)}
+                      onError={(e) => {
+                        console.error('❌ Image failed to load:', selectedImage);
+                        e.target.style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full text-slate">
