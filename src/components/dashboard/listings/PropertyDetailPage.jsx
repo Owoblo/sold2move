@@ -85,8 +85,27 @@ const PropertyDetailPage = () => {
         const data = await fetchListingById(listingId);
         setListing(data);
         
-        // Create photos array from available data
-        const photos = data?.carouselPhotos || (data?.imgSrc ? [{ url: data.imgSrc }] : []);
+        // Process photos using the same logic as the component
+        const processCarouselPhotos = (listing) => {
+          if (listing?.carouselPhotosComposable?.photoData) {
+            const { baseUrl, photoData } = listing.carouselPhotosComposable;
+            return photoData.map(photo => ({
+              url: baseUrl.replace('{photoKey}', photo.photoKey)
+            }));
+          }
+          
+          if (listing?.carouselPhotos) {
+            return listing.carouselPhotos;
+          }
+          
+          if (listing?.imgSrc) {
+            return [{ url: listing.imgSrc }];
+          }
+          
+          return [];
+        };
+        
+        const photos = processCarouselPhotos(data);
         
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
@@ -102,7 +121,30 @@ const PropertyDetailPage = () => {
     getListing();
   }, [listingId]);
 
-  const photos = listing?.carouselPhotos || (listing?.imgSrc ? [{ url: listing.imgSrc }] : []);
+  // Process carousel photos from composable data
+  const processCarouselPhotos = (listing) => {
+    // First try carousel_photos_composable
+    if (listing?.carouselPhotosComposable?.photoData) {
+      const { baseUrl, photoData } = listing.carouselPhotosComposable;
+      return photoData.map(photo => ({
+        url: baseUrl.replace('{photoKey}', photo.photoKey)
+      }));
+    }
+    
+    // Fallback to regular carouselPhotos
+    if (listing?.carouselPhotos) {
+      return listing.carouselPhotos;
+    }
+    
+    // Final fallback to single image
+    if (listing?.imgSrc) {
+      return [{ url: listing.imgSrc }];
+    }
+    
+    return [];
+  };
+
+  const photos = processCarouselPhotos(listing);
   
   // Extract rich data from hdpData
   const homeInfo = listing?.hdpData?.homeInfo || {};

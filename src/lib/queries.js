@@ -346,6 +346,9 @@ export async function fetchListingById(listingId) {
     carouselPhotos: typeof data.carouselphotos === 'string' 
       ? JSON.parse(data.carouselphotos) 
       : data.carouselphotos,
+    carouselPhotosComposable: typeof data.carousel_photos_composable === 'string' 
+      ? JSON.parse(data.carousel_photos_composable) 
+      : data.carousel_photos_composable,
     
     // Additional fields that might be needed
     brokerName: data.brokername || data.broker_name,
