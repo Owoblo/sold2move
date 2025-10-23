@@ -9,6 +9,7 @@ import Hero from '@/components/Hero';
 import Stats from '@/components/Stats';
 import Features from '@/components/Features';
 import CallToAction from '@/components/CallToAction';
+import VideoDemo from '@/components/VideoDemo';
 
 const HomePage = () => {
   const problems = [
@@ -92,6 +93,25 @@ const HomePage = () => {
 
       {/* Solution Section (formerly Benefits) */}
       <Features />
+
+      {/* Demo Video Section */}
+      <section className="py-20 bg-deep-navy">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
+              See Sold2Move in Action
+            </h2>
+            <p className="text-lg text-slate mt-2 max-w-3xl mx-auto">
+              Watch how our platform delivers real-time sold listings and leads for moving companies across North America. 
+              Get a feel for the platform before you sign up.
+            </p>
+          </div>
+          <VideoDemo 
+            title="Platform Demo"
+            description="Experience the power of real-time sold listings data"
+          />
+        </div>
+      </section>
 
       {/* Testimonials Section */}
       <section className="py-20 bg-deep-navy">

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Shield, Target, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import VideoDemo from '@/components/VideoDemo';
 
 const Hero = () => {
   return (
@@ -67,32 +68,10 @@ const Hero = () => {
           </Button>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="relative"
-        >
-          <div className="relative mx-auto max-w-4xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-teal/20 to-navy-accent/20 rounded-3xl blur-3xl"></div>
-            <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-teal/20 rounded-3xl p-8 shadow-2xl">
-              <div className="w-full h-64 lg:h-96 bg-gradient-to-br from-deep-navy to-light-navy rounded-2xl shadow-2xl flex items-center justify-center">
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-4">
-                    <Target className="h-16 w-16 text-teal" />
-                    <TrendingUp className="h-12 w-12 text-navy-accent ml-4" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Real-Time Data Dashboard</h3>
-                  <p className="text-slate">Verified listings • Geo-targeted • 99% accuracy</p>
-                </div>
-              </div>
-              
-              <div className="absolute -top-4 -right-4 bg-gradient-to-r from-navy-accent to-teal rounded-full p-3 shadow-lg">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        <VideoDemo 
+          title="See Sold2Move in Action"
+          description="Watch how our platform delivers real-time sold listings and leads for moving companies across North America"
+        />
       </div>
     </section>
   );
