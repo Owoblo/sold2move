@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { useFilterOptions } from '@/hooks/useListingsEnhanced';
 import ComprehensiveSearchBar from '@/components/dashboard/search/ComprehensiveSearchBar';
 import SavedSearches from '@/components/dashboard/SavedSearches';
+import { useNavigate } from 'react-router-dom';
 
 const AdvancedFilters = ({ 
   filters, 
@@ -21,6 +22,7 @@ const AdvancedFilters = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSavedSearches, setShowSavedSearches] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || '');
+  const navigate = useNavigate();
 
   // Remove old search suggestions logic - now handled by ComprehensiveSearchBar
 
@@ -47,8 +49,8 @@ const AdvancedFilters = ({
 
   // Handle search selection from comprehensive search
   const handleSearchSelect = (suggestion) => {
-    setSearchTerm(suggestion.displayAddress);
-    onSearchChange(suggestion.displayAddress);
+    // Navigate directly to the property detail page
+    navigate(`/dashboard/listings/property/${suggestion.id}`);
   };
 
   // Handle loading saved search

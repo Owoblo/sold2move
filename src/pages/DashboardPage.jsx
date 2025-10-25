@@ -50,6 +50,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ComprehensiveSearchBar from '@/components/dashboard/search/ComprehensiveSearchBar';
 import { Badge } from '@/components/ui/badge';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
 import EmailAlertsSettings from '@/components/dashboard/EmailAlertsSettings';
@@ -74,6 +75,13 @@ const DashboardPage = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [priceFilter, setPriceFilter] = useState('all');
   const { trackAction, trackListingInteraction } = useAnalytics();
+  const navigate = useNavigate();
+
+  // Handle search result selection
+  const handleSearchSelect = (suggestion) => {
+    // Navigate directly to the property detail page
+    navigate(`/dashboard/listings/property/${suggestion.id}`);
+  };
 
   // Enhanced dashboard state
   const [todaysStats, setTodaysStats] = useState({
@@ -845,6 +853,7 @@ const DashboardPage = () => {
       >
         <div className="flex-1">
           <ComprehensiveSearchBar
+            onSearchSelect={handleSearchSelect}
             placeholder="Search any address, city, or zip code across all properties..."
             showStats={true}
             className="w-full"
