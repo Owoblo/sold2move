@@ -78,6 +78,13 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
       if (filters.maxSqft) {
         query = query.lte('area', filters.maxSqft);
       }
+      
+      // Search term filter - search across address, city, state, and zip
+      if (filters.searchTerm && filters.searchTerm.trim()) {
+        const searchTerm = filters.searchTerm.trim();
+        query = query.or(`addressstreet.ilike.%${searchTerm}%,lastcity.ilike.%${searchTerm}%,addresscity.ilike.%${searchTerm}%,addressstate.ilike.%${searchTerm}%,addresszipcode.ilike.%${searchTerm}%`);
+        console.log(`Search term filter for service areas: ${searchTerm}`);
+      }
 
       const { data, error, count } = await query;
 
