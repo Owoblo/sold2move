@@ -60,6 +60,10 @@ const ComprehensiveSearchBar = ({
 
   // Handle suggestion selection
   const handleSuggestionSelect = (suggestion) => {
+    console.log('🔍 Search suggestion selected:', suggestion);
+    console.log('🔍 onSearchSelect prop:', onSearchSelect);
+    console.log('🔍 Navigation URL:', `/dashboard/listings/property/${suggestion.id}`);
+    
     setSearchTerm(suggestion.displayAddress);
     setShowSuggestions(false);
     setSelectedIndex(-1);
@@ -71,8 +75,10 @@ const ComprehensiveSearchBar = ({
     });
 
     if (onSearchSelect) {
+      console.log('🔍 Calling onSearchSelect handler');
       onSearchSelect(suggestion);
     } else {
+      console.log('🔍 No onSearchSelect handler, navigating directly');
       // Navigate to property detail page
       navigate(`/dashboard/listings/property/${suggestion.id}`);
     }
