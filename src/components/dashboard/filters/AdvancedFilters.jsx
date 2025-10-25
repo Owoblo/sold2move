@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { useSearchSuggestions, useFilterOptions } from '@/hooks/useListingsEnhanced';
+import { useFilterOptions } from '@/hooks/useListingsEnhanced';
+import ComprehensiveSearchBar from '@/components/dashboard/search/ComprehensiveSearchBar';
 import SavedSearches from '@/components/dashboard/SavedSearches';
 
 const AdvancedFilters = ({ 
@@ -21,9 +22,7 @@ const AdvancedFilters = ({
   const [showSavedSearches, setShowSavedSearches] = useState(false);
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || '');
 
-  // Get search suggestions
-  const { data: suggestions = [] } = useSearchSuggestions(cityName, searchTerm);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  // Remove old search suggestions logic - now handled by ComprehensiveSearchBar
 
   // Get filter options
   const { data: filterOptions } = useFilterOptions(cityName);
@@ -44,14 +43,12 @@ const AdvancedFilters = ({
   const handleSearchChange = (value) => {
     setSearchTerm(value);
     onSearchChange(value);
-    setShowSuggestions(value.length >= 2);
   };
 
-  // Handle suggestion selection
-  const handleSuggestionSelect = (suggestion) => {
-    setSearchTerm(suggestion.address);
-    onSearchChange(suggestion.address);
-    setShowSuggestions(false);
+  // Handle search selection from comprehensive search
+  const handleSearchSelect = (suggestion) => {
+    setSearchTerm(suggestion.displayAddress);
+    onSearchChange(suggestion.displayAddress);
   };
 
   // Handle loading saved search
@@ -104,47 +101,13 @@ const AdvancedFilters = ({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Search Bar with Suggestions */}
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate" />
-          <Input
-            placeholder="Search by address, city, or zip code..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            onFocus={() => setShowSuggestions(searchTerm.length >= 2)}
-            className="pl-10 pr-10"
-          />
-          {searchTerm && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleSearchChange('')}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Search Suggestions Dropdown */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-light-navy border border-lightest-navy/20 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => handleSuggestionSelect(suggestion)}
-                className="w-full px-4 py-2 text-left text-lightest-slate hover:bg-lightest-navy/10 transition-colors"
-              >
-                <div className="font-medium">{suggestion.street}</div>
-                <div className="text-sm text-slate">
-                  {suggestion.city}, {suggestion.state} {suggestion.zip}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Comprehensive Search Bar */}
+      <ComprehensiveSearchBar
+        onSearchSelect={handleSearchSelect}
+        placeholder="Search any address, city, or zip code across all properties..."
+        showStats={true}
+        className="w-full"
+      />
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">

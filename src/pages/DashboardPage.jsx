@@ -48,6 +48,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ComprehensiveSearchBar from '@/components/dashboard/search/ComprehensiveSearchBar';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
@@ -843,15 +844,11 @@ const DashboardPage = () => {
         className="flex flex-col lg:flex-row gap-4"
       >
         <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate" />
-            <Input
-              placeholder="Search by address..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          <ComprehensiveSearchBar
+            placeholder="Search any address, city, or zip code across all properties..."
+            showStats={true}
+            className="w-full"
+          />
         </div>
         
         <Select value={priceFilter} onValueChange={setPriceFilter}>
