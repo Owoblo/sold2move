@@ -63,7 +63,8 @@ const SignUpPage = () => {
             last_name: values.lastName,
             full_name: `${values.firstName} ${values.lastName}`,
             phone: values.phone,
-          }
+          },
+          emailRedirectTo: `${getSiteUrl()}/auth/callback`
         }
       });
 

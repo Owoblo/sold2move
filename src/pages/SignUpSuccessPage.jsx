@@ -26,6 +26,8 @@ const SignUpSuccessPage = () => {
               </CardTitle>
               <CardDescription className="text-slate mt-2">
                 Welcome to Sold2Move! We're excited to have you on board.
+                <br />
+                <span className="text-teal font-medium">If you've already verified your email, you can go directly to your dashboard!</span>
               </CardDescription>
             </CardHeader>
 
@@ -42,8 +44,8 @@ const SignUpSuccessPage = () => {
                   <p className="font-medium mb-2">What's next?</p>
                   <ul className="space-y-1 text-left">
                     <li>• Check your email for verification link</li>
-                    <li>• Complete your profile setup</li>
-                    <li>• Start exploring property listings</li>
+                    <li>• Click the verification link to activate your account</li>
+                    <li>• You'll be automatically redirected to your dashboard</li>
                     <li>• Get your free credits to reveal properties</li>
                   </ul>
                 </div>
@@ -54,6 +56,12 @@ const SignUpSuccessPage = () => {
                   <Link to="/login">
                     Go to Sign In
                     <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                
+                <Button asChild variant="outline" className="w-full border-teal text-teal hover:bg-teal hover:text-white">
+                  <Link to="/dashboard">
+                    Go to Dashboard
                   </Link>
                 </Button>
                 
