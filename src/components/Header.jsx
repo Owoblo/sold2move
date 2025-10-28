@@ -46,6 +46,7 @@ const Header = () => {
           <Link to="/" className="text-slate hover:text-teal transition-colors duration-300 font-medium">Home</Link>
           <Link to="/how-it-works" className="text-slate hover:text-teal transition-colors duration-300 font-medium">How It Works</Link>
           <Link to="/pricing" className="text-slate hover:text-teal transition-colors duration-300 font-medium">Pricing</Link>
+          <Link to="/sample-mailers" className="text-slate hover:text-teal transition-colors duration-300 font-medium">Sample Mailers</Link>
           <Link to="/faq" className="text-slate hover:text-teal transition-colors duration-300 font-medium">FAQ</Link>
           <Link to="/contact" className="text-slate hover:text-teal transition-colors duration-300 font-medium">Contact</Link>
         </div>
@@ -81,6 +82,7 @@ const Header = () => {
             <Link to="/" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">Home</Link>
             <Link to="/how-it-works" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">How It Works</Link>
             <Link to="/pricing" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">Pricing</Link>
+            <Link to="/sample-mailers" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">Sample Mailers</Link>
             <Link to="/faq" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">FAQ</Link>
             <Link to="/contact" className="text-left text-slate hover:text-teal transition-colors duration-300 font-medium py-2">Contact</Link>
             <Button

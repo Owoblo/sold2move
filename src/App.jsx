@@ -20,6 +20,7 @@ const PricingPage = lazy(() => import('@/pages/PricingPage'));
 const FAQPage = lazy(() => import('@/pages/FAQPage'));
 const AboutPage = lazy(() => import('@/pages/AboutPage'));
 const ContactPage = lazy(() => import('@/pages/ContactPage'));
+const SampleMailersPage = lazy(() => import('@/pages/SampleMailersPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -123,6 +124,7 @@ function App() {
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/sample-mailers" element={<SampleMailersPage />} />
                 <Route path="/request-demo" element={<RequestDemoPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
