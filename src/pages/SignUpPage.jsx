@@ -212,7 +212,7 @@ const SignUpPage = () => {
                             <FormControl>
                               <Input
                                 placeholder="Enter your first name"
-                                className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
                                 {...field}
                               />
                             </FormControl>
@@ -233,7 +233,7 @@ const SignUpPage = () => {
                             <FormControl>
                               <Input
                                 placeholder="Enter your last name"
-                                className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
                                 {...field}
                               />
                             </FormControl>
@@ -256,7 +256,7 @@ const SignUpPage = () => {
                             <Input
                               type="email"
                               placeholder="Enter your email"
-                              className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate"
+                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
                               {...field}
                             />
                           </FormControl>
@@ -278,7 +278,7 @@ const SignUpPage = () => {
                             <Input
                               type="tel"
                               placeholder="Enter your phone number"
-                              className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate"
+                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
                               {...field}
                             />
                           </FormControl>
@@ -302,7 +302,7 @@ const SignUpPage = () => {
                                 <Input
                                   type={showPassword ? "text" : "password"}
                                   placeholder="Create a password"
-                                  className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate pr-10"
+                                  className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 pr-10 focus:text-white focus:placeholder:text-slate/50"
                                   {...field}
                                 />
                                 <Button
@@ -339,7 +339,7 @@ const SignUpPage = () => {
                                 <Input
                                   type={showConfirmPassword ? "text" : "password"}
                                   placeholder="Confirm your password"
-                                  className="bg-white/10 border-white/20 text-lightest-slate placeholder:text-slate pr-10"
+                                  className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 pr-10 focus:text-white focus:placeholder:text-slate/50"
                                   {...field}
                                 />
                                 <Button
