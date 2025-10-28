@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 
 const movingCompanyMailers = [
   {
@@ -106,6 +107,8 @@ const movingCompanyMailers = [
 ];
 
 const SampleMailersPage = () => {
+  const [selectedImage, setSelectedImage] = useState(null);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }} 
@@ -214,31 +217,45 @@ const SampleMailersPage = () => {
                       <p className="text-slate text-sm">{mailer.description}</p>
                     </div>
                     
-                    {/* Front and Back Images */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-2">
-                        <div className="text-xs text-slate text-center">Front</div>
-                        <div className="rounded-lg overflow-hidden border-2 border-teal/20 hover:border-teal transition-colors">
+                {/* Front and Back Images */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <div className="text-xs text-slate text-center">Front</div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div 
+                          className="rounded-lg overflow-hidden border-2 border-teal/20 hover:border-teal transition-colors cursor-pointer"
+                          onClick={() => setSelectedImage({ src: mailer.frontImage, alt: `${mailer.name} - Front`, name: mailer.name })}
+                        >
                           <img 
                             src={mailer.frontImage}
                             alt={`${mailer.name} - Front`}
-                            className="w-full h-auto object-cover"
+                            className="w-full h-auto object-cover hover:scale-105 transition-transform duration-200"
                             loading="lazy"
                           />
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-xs text-slate text-center">Back</div>
-                        <div className="rounded-lg overflow-hidden border-2 border-teal/20 hover:border-teal transition-colors">
+                      </DialogTrigger>
+                    </Dialog>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs text-slate text-center">Back</div>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div 
+                          className="rounded-lg overflow-hidden border-2 border-teal/20 hover:border-teal transition-colors cursor-pointer"
+                          onClick={() => setSelectedImage({ src: mailer.backImage, alt: `${mailer.name} - Back`, name: mailer.name })}
+                        >
                           <img 
                             src={mailer.backImage}
                             alt={`${mailer.name} - Back`}
-                            className="w-full h-auto object-cover"
+                            className="w-full h-auto object-cover hover:scale-105 transition-transform duration-200"
                             loading="lazy"
                           />
                         </div>
-                      </div>
-                    </div>
+                      </DialogTrigger>
+                    </Dialog>
+                  </div>
+                </div>
                     
                     {/* Features */}
                     <div className="mt-4">
@@ -285,6 +302,36 @@ const SampleMailersPage = () => {
           </Card>
         </motion.div>
       </div>
+
+      {/* Image Zoom Modal */}
+      {selectedImage && (
+        <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+          <DialogContent className="max-w-6xl bg-light-navy border-teal p-0">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white"
+                onClick={() => setSelectedImage(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <div className="p-6">
+                <h3 className="text-2xl font-bold text-teal mb-4 text-center font-heading">
+                  {selectedImage.name}
+                </h3>
+                <div className="flex justify-center">
+                  <img 
+                    src={selectedImage.src}
+                    alt={selectedImage.alt}
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                  />
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </motion.div>
   );
 };
