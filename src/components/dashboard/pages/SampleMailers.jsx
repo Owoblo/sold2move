@@ -8,96 +8,96 @@ const movingCompanyMailers = [
     id: 1,
     name: 'Andrews Moving & Storage',
     description: 'Official Mover of The Guardians - Baseball themed moving services',
-    frontImage: '/src/imggg/67e1b8cb08c2c873a713c37d_andrews front.webp',
-    backImage: '/src/imggg/67e1b42fa9f5b1fbdac7d8f5_andrews back.webp',
+    frontImage: '/images/mailers/67e1b8cb08c2c873a713c37d_andrews front.webp',
+    backImage: '/images/mailers/67e1b42fa9f5b1fbdac7d8f5_andrews back.webp',
     features: ['Baseball partnership', 'Special offers', 'Professional branding']
   },
   {
     id: 2,
     name: 'Happy Helpers Moving Co.',
     description: 'Veteran owned business with patriotic theme',
-    frontImage: '/src/imggg/67e1bb25e67a5308155c9cbe_happy front.webp',
-    backImage: '/src/imggg/67e1bb24b0f27a33a6496303_happy back.webp',
+    frontImage: '/images/mailers/67e1bb25e67a5308155c9cbe_happy front.webp',
+    backImage: '/images/mailers/67e1bb24b0f27a33a6496303_happy back.webp',
     features: ['Veteran owned', 'Patriotic design', 'Community focused']
   },
   {
     id: 3,
     name: 'Varsity Movers',
     description: 'Clean, professional design emphasizing strength and precision',
-    frontImage: '/src/imggg/67e1c494d7ee0390699f097f_varsity front.webp',
-    backImage: '/src/imggg/67e1c494e08c7f8303c6ee67_varsity back.webp',
+    frontImage: '/images/mailers/67e1c494d7ee0390699f097f_varsity front.webp',
+    backImage: '/images/mailers/67e1c494e08c7f8303c6ee67_varsity back.webp',
     features: ['Professional design', 'Service highlights', 'Modern layout']
   },
   {
     id: 4,
     name: 'Florida Moving Pros',
     description: 'Bear mascot branding with family-friendly approach',
-    frontImage: '/src/imggg/67e1c4950075aed581f09b8d_florida fornt.webp',
-    backImage: '/src/imggg/67e1c4949fb11397fbdde822_florida back.webp',
+    frontImage: '/images/mailers/67e1c4950075aed581f09b8d_florida fornt.webp',
+    backImage: '/images/mailers/67e1c4949fb11397fbdde822_florida back.webp',
     features: ['Mascot branding', 'Family friendly', 'Local expertise']
   },
   {
     id: 5,
     name: 'Dearman Moving & Storage',
     description: 'Emotional connection focused design emphasizing care',
-    frontImage: '/src/imggg/67e1d953dceab167ce276e8f_dearman front.webp',
-    backImage: '/src/imggg/67e1d95342e6ac8872f5608a_dearman back.webp',
+    frontImage: '/images/mailers/67e1d953dceab167ce276e8f_dearman front.webp',
+    backImage: '/images/mailers/67e1d95342e6ac8872f5608a_dearman back.webp',
     features: ['Emotional appeal', 'Family values', 'Service guarantees']
   },
   {
     id: 6,
     name: 'Move Indy Moving and Storage',
     description: 'Local family-owned business with community partnerships',
-    frontImage: '/src/imggg/67e1d953045b5adf261680d1_move indy front.webp',
-    backImage: '/src/imggg/67e1d953381b7dfd8804086f_move indi back.webp',
+    frontImage: '/images/mailers/67e1d953045b5adf261680d1_move indy front.webp',
+    backImage: '/images/mailers/67e1d953381b7dfd8804086f_move indi back.webp',
     features: ['Family owned', 'Community partnerships', 'Local focus']
   },
   {
     id: 7,
     name: 'Texas Best Moving & Storage',
     description: 'Texas pride with professional service offerings',
-    frontImage: '/src/imggg/67e1d953b0e4bf1b7bd3cdf7_texas front.webp',
-    backImage: '/src/imggg/67e1d95432cef390cfc0df38_texas back.webp',
+    frontImage: '/images/mailers/67e1d953b0e4bf1b7bd3cdf7_texas front.webp',
+    backImage: '/images/mailers/67e1d95432cef390cfc0df38_texas back.webp',
     features: ['Texas branding', 'Professional services', 'Local expertise']
   },
   {
     id: 8,
     name: 'LaBarbera Movers',
     description: 'Professional team showcase with service variety',
-    frontImage: '/src/imggg/67e1e1fc1b01a5f1de8aaf61_barbera front.webp',
-    backImage: '/src/imggg/67e1e1fc65fa960788c38504_barbera back.webp',
+    frontImage: '/images/mailers/67e1e1fc1b01a5f1de8aaf61_barbera front.webp',
+    backImage: '/images/mailers/67e1e1fc65fa960788c38504_barbera back.webp',
     features: ['Team showcase', 'Service variety', 'Professional image']
   },
   {
     id: 9,
     name: 'Moving Team Six',
     description: 'Mission-focused branding with comprehensive services',
-    frontImage: '/src/imggg/67e1b92a336ab16554a84832_six front.webp',
-    backImage: '/src/imggg/67e1b92a4a02d97dac749444_six back.webp',
+    frontImage: '/images/mailers/67e1b92a336ab16554a84832_six front.webp',
+    backImage: '/images/mailers/67e1b92a4a02d97dac749444_six back.webp',
     features: ['Mission focused', 'Comprehensive services', 'Professional team']
   },
   {
     id: 10,
     name: 'Meridian Moving & Storage',
     description: 'Clean, modern design with compass branding',
-    frontImage: '/src/imggg/67e1e1fcdbe0edb3e522534d_meridian front.webp',
-    backImage: '/src/imggg/67e1e1fcdac6e5b417eb84d2_meridian back.webp',
+    frontImage: '/images/mailers/67e1e1fcdbe0edb3e522534d_meridian front.webp',
+    backImage: '/images/mailers/67e1e1fcdac6e5b417eb84d2_meridian back.webp',
     features: ['Modern design', 'Compass branding', 'Professional services']
   },
   {
     id: 11,
     name: '2 College Brothers',
     description: 'Purple and gold branding with comprehensive services',
-    frontImage: '/src/imggg/67e1be79e67a530815608a8b_college front.webp',
-    backImage: '/src/imggg/67e1be79e9bec973dadea21e_college back.webp',
+    frontImage: '/images/mailers/67e1be79e67a530815608a8b_college front.webp',
+    backImage: '/images/mailers/67e1be79e9bec973dadea21e_college back.webp',
     features: ['College theme', 'Comprehensive services', 'Professional branding']
   },
   {
     id: 12,
     name: 'Blue Men Moving LLC',
     description: 'Blue theme with professional team showcase',
-    frontImage: '/src/imggg/67e1e1fceb351be4078a7f95_blue front.webp',
-    backImage: '/src/imggg/67e1e1fc40ffa27f9604bddd_blue back.webp',
+    frontImage: '/images/mailers/67e1e1fceb351be4078a7f95_blue front.webp',
+    backImage: '/images/mailers/67e1e1fc40ffa27f9604bddd_blue back.webp',
     features: ['Blue branding', 'Team showcase', 'Professional services']
   }
 ];
