@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, BarChart2, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
+const Sidebar = ({ isSidebarOpen, toggleSidebar, isDesktop, onClose }) => {
   const location = useLocation();
   const [expandedSections, setExpandedSections] = useState({
     listings: location.pathname.startsWith('/dashboard/listings')
@@ -65,24 +66,38 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const inactiveLinkClasses = "text-slate hover:bg-lightest-navy/10 hover:text-lightest-slate";
   const activeLinkClasses = "bg-teal/10 text-teal font-semibold";
 
+  const sidebarClasses = cn(
+    'fixed top-0 left-0 z-40 h-screen bg-light-navy border-r border-border transition-transform duration-300 ease-in-out md:shadow-none',
+    {
+      'translate-x-0 w-64': isDesktop && isSidebarOpen,
+      'translate-x-0 w-16': isDesktop && !isSidebarOpen,
+      'translate-x-0 w-64 shadow-2xl': !isDesktop && isSidebarOpen,
+      '-translate-x-full w-64 pointer-events-none': !isDesktop && !isSidebarOpen,
+    }
+  );
+
+  const handleNavItemSelect = () => {
+    if (!isDesktop && onClose) {
+      onClose();
+    } else if (isDesktop && isSidebarOpen && toggleSidebar) {
+      toggleSidebar();
+    }
+  };
+
   return (
     <>
-      <aside className={`fixed top-0 left-0 z-40 h-screen bg-light-navy border-r border-border transition-all duration-300 ${
-        isSidebarOpen 
-          ? 'w-64 translate-x-0' 
-          : 'w-16 -translate-x-0 md:translate-x-0'
-      }`}>
+      <aside className={sidebarClasses}>
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
             <Link to="/" className="flex items-center space-x-2 group">
               <div className="p-2 bg-deep-navy rounded-md">
                 <Home className="h-6 w-6 text-teal" />
               </div>
-              {isSidebarOpen && (
+              {(isDesktop ? isSidebarOpen : true) && (
                 <span className="text-xl font-bold text-lightest-slate font-heading">Sold2Move</span>
               )}
             </Link>
-            {isSidebarOpen && (
+            {isDesktop && isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
                 className="p-1 rounded-md hover:bg-lightest-navy/10 transition-colors"
@@ -104,23 +119,26 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
                       {item.hasSubmenu ? (
                         <div>
                           <button
-                            onClick={() => isSidebarOpen ? toggleSection(item.name.toLowerCase()) : toggleSidebar()}
-                            className={`${baseLinkClasses} ${inactiveLinkClasses} w-full ${
-                              !isSidebarOpen ? 'justify-center' : 'justify-between'
-                            }`}
+                            onClick={() => isDesktop ? (isSidebarOpen ? toggleSection(item.name.toLowerCase()) : toggleSidebar()) : toggleSection(item.name.toLowerCase())}
+                            className={cn(
+                              baseLinkClasses,
+                              inactiveLinkClasses,
+                              'w-full',
+                              isDesktop ? (isSidebarOpen ? 'justify-between' : 'justify-center') : 'justify-between'
+                            )}
                             title={!isSidebarOpen ? item.name : undefined}
                           >
                             <div className="flex items-center">
                               <item.icon className="w-5 h-5" />
-                              {isSidebarOpen && <span className="ml-3">{item.name}</span>}
+                              {(isDesktop ? isSidebarOpen : true) && <span className="ml-3">{item.name}</span>}
                             </div>
-                            {isSidebarOpen && (
+                            {isDesktop && isSidebarOpen && (
                               expandedSections[item.name.toLowerCase()] ? 
                                 <ChevronRight className="w-4 h-4 rotate-90" /> : 
                                 <ChevronRight className="w-4 h-4" />
                             )}
                           </button>
-                          {isSidebarOpen && expandedSections[item.name.toLowerCase()] && item.submenu && (
+                          {(isDesktop ? isSidebarOpen : true) && expandedSections[item.name.toLowerCase()] && item.submenu && (
                             <ul className="ml-6 mt-1 space-y-1">
                               {item.submenu.map((subItem) => (
                                 <li key={subItem.name}>
@@ -142,16 +160,21 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
                         <NavLink
                           to={item.path}
                           end={item.path === '/dashboard'}
-                          onClick={() => isSidebarOpen && toggleSidebar()}
-                          className={({ isActive }) => {
-                            return `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses} ${
-                              !isSidebarOpen ? 'justify-center' : ''
-                            }`
-                          }}
-                          title={!isSidebarOpen ? item.name : undefined}
+                          onClick={handleNavItemSelect}
+                          className={({ isActive }) =>
+                            cn(
+                              baseLinkClasses,
+                              isActive ? activeLinkClasses : inactiveLinkClasses,
+                              {
+                                'justify-center': isDesktop && !isSidebarOpen,
+                                'justify-start': !isDesktop,
+                              }
+                            )
+                          }
+                          title={isDesktop && !isSidebarOpen ? item.name : undefined}
                         >
                           <item.icon className="w-5 h-5" />
-                          {isSidebarOpen && <span className="ml-3">{item.name}</span>}
+                          {(isDesktop ? isSidebarOpen : true) && <span className="ml-3">{item.name}</span>}
                         </NavLink>
                       )}
                     </li>
@@ -164,7 +187,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       </aside>
       
       {/* Expand button when sidebar is collapsed */}
-      {!isSidebarOpen && (
+      {isDesktop && !isSidebarOpen && (
         <button
           onClick={toggleSidebar}
           className="fixed top-4 left-4 z-50 p-2 bg-light-navy border border-border rounded-md hover:bg-lightest-navy/10 transition-colors"
@@ -174,7 +197,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         </button>
       )}
       
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={toggleSidebar}></div>}
+      {!isDesktop && isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30" onClick={onClose}></div>}
     </>
   );
 };

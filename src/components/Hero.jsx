@@ -7,7 +7,7 @@ import VideoDemo from '@/components/VideoDemo';
 
 const Hero = () => {
   return (
-    <section className="relative px-6 py-20 lg:py-32">
+    <section className="relative px-4 sm:px-6 py-16 md:py-20 lg:py-32">
       <div className="max-w-7xl mx-auto text-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -25,7 +25,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="text-5xl lg:text-7xl font-bold mb-8 leading-tight"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 sm:mb-8 leading-tight"
         >
           <span className="bg-gradient-to-r from-white via-teal to-navy-accent bg-clip-text text-transparent">
             Real-Time Sold Listings for Movers in Canada & the U.S.
@@ -36,7 +36,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="text-xl lg:text-2xl text-slate mb-12 max-w-3xl mx-auto leading-relaxed"
+          className="text-lg sm:text-xl lg:text-2xl text-slate mb-10 sm:mb-12 max-w-2xl sm:max-w-3xl mx-auto leading-relaxed"
         >
           Guaranteed growth and competitive advantage. Verified, timely, and geo-targeted listings opening up the entire North American moving market, including inaccessible Canadian data.
         </motion.p>
@@ -45,12 +45,12 @@ const Hero = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
+          className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mb-12 sm:mb-16"
         >
           <Button
             asChild
             size="lg"
-            className="bg-gradient-to-r from-navy-accent to-teal hover:from-navy-accent/90 hover:to-teal/90 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-teal/25 transition-all duration-300 group"
+            className="bg-gradient-to-r from-navy-accent to-teal hover:from-navy-accent/90 hover:to-teal/90 text-white px-6 sm:px-8 py-4 rounded-full font-semibold text-base sm:text-lg shadow-2xl hover:shadow-teal/25 transition-all duration-300 group w-full sm:w-auto"
           >
             <Link to="/signup">
               Start Your Free Trial
@@ -62,7 +62,7 @@ const Hero = () => {
             asChild
             variant="outline"
             size="lg"
-            className="border-2 border-teal/50 text-teal hover:bg-teal/10 px-8 py-4 rounded-full font-semibold text-lg backdrop-blur-sm"
+            className="border-2 border-teal/50 text-teal hover:bg-teal/10 px-6 sm:px-8 py-4 rounded-full font-semibold text-base sm:text-lg backdrop-blur-sm w-full sm:w-auto"
           >
             <Link to="/request-demo">See Your ROI in 30 Days</Link>
           </Button>
@@ -71,6 +71,7 @@ const Hero = () => {
         <VideoDemo 
           title="See Sold2Move in Action"
           description="Watch how our platform delivers real-time sold listings and leads for moving companies across North America"
+          className="mt-8 sm:mt-12"
         />
       </div>
     </section>

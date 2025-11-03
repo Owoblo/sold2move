@@ -13,10 +13,10 @@ const CallToAction = ({ text, link, ctaText }) => {
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      <p className='text-xl text-lightest-slate max-w-2xl mx-auto mb-8'>
+      <p className='text-lg sm:text-xl text-lightest-slate max-w-xl sm:max-w-2xl mx-auto mb-6 sm:mb-8'>
         {text}
       </p>
-      <Button asChild size="lg" className="bg-gradient-to-r from-navy-accent to-teal text-white hover:from-navy-accent/90 hover:to-teal/90">
+      <Button asChild size="lg" className="bg-gradient-to-r from-navy-accent to-teal text-white hover:from-navy-accent/90 hover:to-teal/90 px-6 sm:px-8 py-4 text-base sm:text-lg">
         <Link to={link}>
           {ctaText} <ArrowRight className="ml-2 h-5 w-5" />
         </Link>

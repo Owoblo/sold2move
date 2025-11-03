@@ -57,17 +57,17 @@ const HomePage = () => {
       <Hero />
 
       {/* Problem Section */}
-      <section className="py-20 bg-light-navy">
-        <div className="container mx-auto px-6">
+      <section className="py-16 md:py-20 bg-light-navy">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
               How Sold2Move Helps Ontario Moving Companies Win More Jobs
             </h2>
-            <p className="text-lg text-slate mt-2 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg text-slate mt-2 max-w-2xl sm:max-w-3xl mx-auto">
               Moving companies struggle with low-quality leads, high customer acquisition costs, and missing out on the entire Canadian market.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
             {problems.map((problem, index) => (
               <motion.div
                 key={index}
@@ -95,13 +95,13 @@ const HomePage = () => {
       <Features />
 
       {/* Demo Video Section */}
-      <section className="py-20 bg-deep-navy">
-        <div className="container mx-auto px-6">
+      <section className="py-16 md:py-20 bg-deep-navy">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-lightest-slate font-heading">
               See Sold2Move in Action
             </h2>
-            <p className="text-lg text-slate mt-2 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg text-slate mt-2 max-w-2xl sm:max-w-3xl mx-auto">
               Watch how our platform delivers real-time sold listings and leads for moving companies across North America. 
               Get a feel for the platform before you sign up.
             </p>
@@ -114,13 +114,13 @@ const HomePage = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-deep-navy">
-        <div className="container mx-auto px-6">
+      <section className="py-16 md:py-20 bg-deep-navy">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate font-heading">Trusted by Industry Leaders</h2>
-            <p className="text-lg text-slate mt-2">See how Sold2Move delivers guaranteed growth and competitive advantage.</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-lightest-slate font-heading">Trusted by Industry Leaders</h2>
+            <p className="text-base sm:text-lg text-slate mt-2">See how Sold2Move delivers guaranteed growth and competitive advantage.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
@@ -152,12 +152,12 @@ const HomePage = () => {
       <Stats />
 
       {/* FAQ Link Section */}
-      <section className="py-20 bg-light-navy">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-lightest-slate mb-4 font-heading">
+      <section className="py-16 md:py-20 bg-light-navy">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-lightest-slate mb-3 sm:mb-4 font-heading">
             Ready to Dominate Your Market?
           </h2>
-          <p className="text-lg text-slate max-w-2xl mx-auto mb-8">
+          <p className="text-base sm:text-lg text-slate max-w-xl sm:max-w-2xl mx-auto mb-6 sm:mb-8">
             Get the exclusive data that drives your fleet and lands you the business. See your ROI in 30 days.
           </p>
           <Button asChild size="lg" variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal">
@@ -169,8 +169,8 @@ const HomePage = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-20 bg-deep-navy">
-        <div className="container mx-auto px-6 text-center">
+      <section className="py-16 md:py-20 bg-deep-navy">
+        <div className="container mx-auto px-4 sm:px-6 text-center">
           <CallToAction
             text="Ready to get the exclusive North American moving data your competitors can't access?"
             link="/signup"

@@ -58,7 +58,7 @@ const Header = () => {
     <motion.header
       className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-light-navy/80 shadow-lg backdrop-blur-sm' : 'bg-deep-navy'}`}
     >
-      <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
+      <nav className="container mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2 group">
           <div className="p-2 bg-light-navy rounded-md group-hover:bg-lightest-navy transition-colors">
             <Home className="h-6 w-6 text-teal" />
