@@ -32,9 +32,9 @@ const Footer = () => {
 
   return (
     <footer className="bg-light-navy text-slate">
-      <div className="container mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2 lg:col-span-1">
+      <div className="container mx-auto px-4 sm:px-6 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="col-span-1 sm:col-span-2 lg:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
               <div className="p-2 bg-lightest-navy rounded-md">
                 <Home className="h-6 w-6 text-teal" />
@@ -46,7 +46,7 @@ const Footer = () => {
 
           <div>
             <p className="font-semibold text-lightest-slate mb-4 font-heading">Quick Links</p>
-            <ul className="space-y-2">
+            <ul className="space-y-2 text-sm sm:text-base">
               {quickLinks.map(link => (
                 <li key={link.name}>
                   <Link to={link.path} className="hover:text-teal transition-colors">{link.name}</Link>
@@ -57,7 +57,7 @@ const Footer = () => {
 
           <div>
             <p className="font-semibold text-lightest-slate mb-4 font-heading">Legal</p>
-            <ul className="space-y-2">
+            <ul className="space-y-2 text-sm sm:text-base">
               {legalLinks.map(link => (
                 <li key={link.name}>
                   <Link to={link.path} className="hover:text-teal transition-colors">{link.name}</Link>

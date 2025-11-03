@@ -372,22 +372,22 @@ const DashboardPage = () => {
         break;
       case 'Export CSV':
         // TODO: Connect to existing ExportModal
-        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        toast({ title: `?? ${action}`, description: "This feature isn't implemented yet?but don't worry! You can request it in your next prompt! ??" });
         break;
       case 'Send Mail Pack':
         // TODO: Connect to existing mail pack generation
-        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        toast({ title: `?? ${action}`, description: "This feature isn't implemented yet?but don't worry! You can request it in your next prompt! ??" });
         break;
       case 'Buy Credits':
         // TODO: Connect to existing credit purchase flow
-        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        toast({ title: `?? ${action}`, description: "This feature isn't implemented yet?but don't worry! You can request it in your next prompt! ??" });
         break;
       case 'Update Service Area':
         // TODO: Connect to existing settings
-        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        toast({ title: `?? ${action}`, description: "This feature isn't implemented yet?but don't worry! You can request it in your next prompt! ??" });
         break;
       default:
-        toast({ title: `🚧 ${action}`, description: "This feature isn't implemented yet—but don't worry! You can request it in your next prompt! 🚀" });
+        toast({ title: `?? ${action}`, description: "This feature isn't implemented yet?but don't worry! You can request it in your next prompt! ??" });
     }
   };
   
@@ -404,7 +404,7 @@ const DashboardPage = () => {
       const countryName = Country.getCountryByCode(country_code)?.name || country_code;
       const stateName = State.getStateByCodeAndCountry(state_code, country_code)?.name || state_code;
     return (
-      <div className="flex items-center gap-4 text-slate">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-slate">
         <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{countryName}</span></div>
         <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{stateName}</span></div>
         <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
@@ -413,7 +413,7 @@ const DashboardPage = () => {
     } catch (error) {
       console.error('Error in LocationDisplay:', error);
       return (
-        <div className="flex items-center gap-4 text-slate">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-slate">
           <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-teal" /><span>{country_code}</span></div>
           <div className="flex items-center gap-2"><Building className="h-4 w-4 text-teal" /><span>{state_code}</span></div>
           <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal" /><span>{city_name}</span></div>
@@ -523,13 +523,13 @@ const DashboardPage = () => {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
       >
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 p-4 sm:p-6">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <Activity className="h-4 w-4" />
               New Leads
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="text-2xl font-bold text-lightest-slate">
               {todaysStats.newLeads}
             </div>
@@ -540,13 +540,13 @@ const DashboardPage = () => {
         </Card>
         
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 p-4 sm:p-6">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
               Sold Today
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="text-2xl font-bold text-teal">
               {todaysStats.soldToday}
             </div>
@@ -557,13 +557,13 @@ const DashboardPage = () => {
         </Card>
         
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 p-4 sm:p-6">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Total Value
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="text-2xl font-bold text-lightest-slate">
               ${todaysStats.totalValue}M
             </div>
@@ -574,13 +574,13 @@ const DashboardPage = () => {
         </Card>
         
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 p-4 sm:p-6">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
               Avg Price
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="text-2xl font-bold text-lightest-slate">
               ${todaysStats.avgPrice}K
             </div>
@@ -591,13 +591,13 @@ const DashboardPage = () => {
         </Card>
         
         <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 p-4 sm:p-6">
             <CardTitle className="text-sm font-medium text-slate flex items-center gap-2">
               <Target className="h-4 w-4" />
               Success Rate
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="text-2xl font-bold text-teal">
               {todaysStats.conversionRate}%
             </div>
@@ -615,15 +615,15 @@ const DashboardPage = () => {
         transition={{ delay: 0.15 }}
       >
         <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
               <Zap className="h-5 w-5 text-teal" />
               Quick Actions
             </CardTitle>
             <p className="text-slate text-sm">Common tasks to boost your lead generation</p>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 sm:gap-4">
               <Button 
                 onClick={() => handleActionClick('Send Mail Pack')} 
                 className="h-20 flex flex-col items-center justify-center gap-2 bg-teal/10 hover:bg-teal/20 border border-teal/30"
@@ -698,13 +698,13 @@ const DashboardPage = () => {
         transition={{ delay: 0.2 }}
       >
         <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
               <Filter className="h-5 w-5 text-teal" />
               Your Active Service Area
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <LocationDisplay />
           </CardContent>
       </Card>
@@ -719,15 +719,15 @@ const DashboardPage = () => {
       >
         {/* Recent Activity Feed */}
         <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
               <Activity className="h-5 w-5 text-teal" />
               Recent Activity
             </CardTitle>
             <p className="text-slate text-sm">What's happening in your pipeline</p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-3 sm:space-y-4">
               {recentActivity.map((activity, index) => {
                 const IconComponent = activity.icon;
                 return (
@@ -748,15 +748,15 @@ const DashboardPage = () => {
 
         {/* Service Area Performance */}
         <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
               <MapPin className="h-5 w-5 text-teal" />
               Service Area Performance
             </CardTitle>
             <p className="text-slate text-sm">Performance by location</p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="space-y-3 sm:space-y-4">
               {Object.keys(serviceAreaStats).length > 0 ? (
                 Object.entries(serviceAreaStats).map(([city, stats]) => (
                   <div key={city} className="p-4 rounded-lg bg-deep-navy/50 hover:bg-deep-navy/70 transition-colors">
@@ -795,16 +795,16 @@ const DashboardPage = () => {
         transition={{ delay: 0.3 }}
       >
         <Card className="bg-light-navy border-lightest-navy/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-xl text-lightest-slate">
               <CreditCard className="h-5 w-5 text-teal" />
               Account Status
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-lightest-slate mb-1">
+                <div className="text-xl sm:text-2xl font-bold text-lightest-slate mb-1">
                   {creditsRemaining}
                 </div>
                 <p className="text-sm text-slate">Credits Remaining</p>
@@ -817,7 +817,7 @@ const DashboardPage = () => {
               </div>
               
               <div className="text-center">
-                <div className="text-2xl font-bold text-lightest-slate mb-1">
+                <div className="text-xl sm:text-2xl font-bold text-lightest-slate mb-1">
                   {profile?.subscription_status === 'free' || !profile?.subscription_status ? 'Free' : profile.subscription_status}
                 </div>
                 <p className="text-sm text-slate">Plan Status</p>
@@ -829,7 +829,7 @@ const DashboardPage = () => {
                 </p>
               </div>
               
-              <div className="flex gap-2 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
                 <Button size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
                   <CreditCard className="h-4 w-4 mr-1" />
                   Buy Credits
@@ -905,8 +905,8 @@ const DashboardPage = () => {
         transition={{ delay: 0.4 }}
       >
         <Card className="bg-teal/10 border-teal/30">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               <Eye className="h-5 w-5 text-teal" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">
@@ -916,8 +916,8 @@ const DashboardPage = () => {
                   You're viewing {revealedListings.size} revealed listings. Use credits to unlock more leads and get full contact details.
                 </p>
               </div>
-              <div className="ml-auto">
-                <Button size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+              <div className="sm:ml-auto w-full sm:w-auto">
+                <Button size="sm" className="bg-teal text-deep-navy hover:bg-teal/90 w-full sm:w-auto">
                   <CreditCard className="h-4 w-4 mr-1" />
                   Buy Credits
                 </Button>
@@ -934,8 +934,8 @@ const DashboardPage = () => {
         transition={{ delay: 0.4 }}
       >
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
                 Recent Listings
@@ -948,7 +948,7 @@ const DashboardPage = () => {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
       <div className="bg-light-navy rounded-lg overflow-hidden">
         <Table>
                 <TableHeader>
