@@ -312,7 +312,7 @@ const PropertyDetailPage = () => {
             {/* Image Gallery */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="relative aspect-[4/3] max-w-[1200px] mx-auto bg-lightest-navy/10 rounded-lg overflow-hidden">
+                <div className="relative aspect-[4/3] max-w-[1000px] mx-auto bg-lightest-navy/10 rounded-lg overflow-hidden">
                   {selectedImage ? (
                     <img 
                       src={selectedImage} 
