@@ -312,12 +312,13 @@ const PropertyDetailPage = () => {
             {/* Image Gallery */}
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                <div className="relative aspect-[4/3] max-w-4xl mx-auto bg-lightest-navy/10 rounded-lg overflow-hidden">
+                <div className="relative aspect-[4/3] max-w-[1200px] mx-auto bg-lightest-navy/10 rounded-lg overflow-hidden">
                   {selectedImage ? (
                     <img 
                       src={selectedImage} 
                       alt="Property" 
                       className="w-full h-full object-contain cursor-pointer transition-transform hover:scale-105" 
+                      loading="lazy"
                       onClick={() => setIsFullscreen(true)}
                       onError={(e) => {
                         console.error('❌ Image failed to load:', selectedImage);
