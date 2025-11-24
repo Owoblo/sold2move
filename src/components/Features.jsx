@@ -52,7 +52,7 @@ const Features = () => {
   };
 
   return (
-    <section className="px-6 py-20 lg:py-32">
+    <section className="px-4 sm:px-6 py-16 md:py-20 lg:py-32">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -61,17 +61,17 @@ const Features = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-6xl font-bold mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6">
             <span className="bg-gradient-to-r from-teal to-navy-accent bg-clip-text text-transparent">
               We Find the Moves. You Land the Business.
             </span>
           </h2>
-          <p className="text-xl text-slate max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-slate max-w-2xl sm:max-w-3xl mx-auto">
             The exclusive, indispensable source of qualified leads and growth in a highly competitive industry.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={feature.title}
@@ -83,19 +83,19 @@ const Features = () => {
               onClick={() => handleFeatureClick(feature.title)}
               className="group cursor-pointer"
             >
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-teal/20 rounded-2xl p-8 h-full shadow-xl hover:shadow-2xl hover:shadow-teal/10 transition-all duration-300">
+              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-teal/20 rounded-2xl p-6 sm:p-8 h-full shadow-xl hover:shadow-2xl hover:shadow-teal/10 transition-all duration-300">
                 <div className="absolute inset-0 bg-gradient-to-br from-teal/5 to-navy-accent/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
                 <div className="relative z-10">
-                  <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <feature.icon className="h-8 w-8 text-white" />
+                  <div className={`inline-flex p-3 sm:p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-5 sm:mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    <feature.icon className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                   </div>
                   
-                  <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-teal transition-colors duration-300">
+                  <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white group-hover:text-teal transition-colors duration-300">
                     {feature.title}
                   </h3>
                   
-                  <p className="text-slate leading-relaxed group-hover:text-light-slate transition-colors duration-300">
+                  <p className="text-sm sm:text-base text-slate leading-relaxed group-hover:text-light-slate transition-colors duration-300">
                     {feature.description}
                   </p>
                 </div>

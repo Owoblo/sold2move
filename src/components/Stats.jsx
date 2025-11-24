@@ -31,7 +31,7 @@ const Stats = () => {
   ];
 
   return (
-    <section className="px-6 py-20 lg:py-32">
+    <section className="px-4 sm:px-6 py-16 md:py-20 lg:py-32">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -40,17 +40,17 @@ const Stats = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl lg:text-6xl font-bold mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6">
             <span className="bg-gradient-to-r from-teal to-navy-accent bg-clip-text text-transparent">
               The Only Moving Data You Can't Afford to Compete Without
             </span>
           </h2>
-          <p className="text-xl text-slate max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-slate max-w-2xl sm:max-w-3xl mx-auto">
             Guaranteed growth and competitive advantage with verified, timely, and geo-targeted listings.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
           {stats.map((stat, index) => (
             <motion.div
               key={stat.label}

@@ -10,29 +10,39 @@ import { cn } from '@/lib/utils';
 const MobileNavigation = () => {
   const location = useLocation();
 
+  if (!location.pathname.startsWith('/dashboard')) {
+    return null;
+  }
+
   const navItems = [
     {
       icon: Home,
-      label: 'Dashboard',
+      label: 'Overview',
       path: '/dashboard',
       active: location.pathname === '/dashboard'
     },
     {
       icon: List,
-      label: 'Leads',
-      path: '/listings',
-      active: location.pathname.includes('/listings') || location.pathname.includes('/sold')
+      label: 'Listings',
+      path: '/dashboard/listings',
+      active: location.pathname.startsWith('/dashboard/listings')
+    },
+    {
+      icon: Settings,
+      label: 'Settings',
+      path: '/dashboard/settings',
+      active: location.pathname.startsWith('/dashboard/settings')
     },
     {
       icon: User,
-      label: 'Profile',
-      path: '/settings',
-      active: location.pathname.includes('/settings')
+      label: 'Account',
+      path: '/dashboard/account',
+      active: location.pathname.startsWith('/dashboard/account')
     }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-deep-navy border-t border-teal/20 md:hidden z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-deep-navy/95 backdrop-blur border-t border-teal/20 md:hidden z-50">
       <div className="flex justify-around py-2 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -40,6 +50,7 @@ const MobileNavigation = () => {
             <Link
               key={item.path}
               to={item.path}
+              aria-current={item.active ? 'page' : undefined}
               className={cn(
                 "flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors",
                 "min-h-[44px] min-w-[44px]", // Ensure touch target size

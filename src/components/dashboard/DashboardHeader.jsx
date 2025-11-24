@@ -18,7 +18,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 
 const CreditMeter = lazy(() => import('@/components/dashboard/CreditMeter'));
 
-const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
+const DashboardHeader = ({ isSidebarOpen, toggleSidebar, isDesktop }) => {
   const { profile, loading } = useProfile();
   const supabase = useSupabaseClient();
   const navigate = useNavigate();
@@ -29,19 +29,20 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
   };
 
   return (
-    <header className="bg-light-navy border-b border-lightest-navy/20 p-4 flex justify-between items-center">
-      <div className="flex items-center gap-4">
+    <header className="bg-light-navy border-b border-lightest-navy/20 px-3 sm:px-4 py-3 flex flex-wrap md:flex-nowrap justify-between items-center gap-3">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={toggleSidebar}
           className="text-lightest-slate hover:bg-lightest-navy/10"
+          aria-label={isSidebarOpen ? 'Collapse navigation' : 'Expand navigation'}
         >
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </Button>
         <DashboardNotification />
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
         <ThemeToggle />
         <Suspense fallback={<SkeletonLoader className="h-8 w-28 rounded-full" />}>
           <CreditMeter />
