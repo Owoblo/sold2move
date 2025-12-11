@@ -62,6 +62,7 @@ const USASoldListings = lazy(() => import('@/pages/USASoldListings'));
 const TorontoSoldListings = lazy(() => import('@/pages/TorontoSoldListings'));
 const VancouverSoldListings = lazy(() => import('@/pages/VancouverSoldListings'));
 const RouteGuard = lazy(() => import('@/components/layout/RouteGuard'));
+const DashboardLayout = lazy(() => import('@/components/dashboard/layout/DashboardLayout'));
 
 const SuspenseFallback = () => (
   <div className="flex justify-center items-center h-screen bg-deep-navy">
@@ -176,26 +177,28 @@ function App() {
                   }
                 />
 
-                <Route 
+                <Route
                   path="/*"
                   element={
                     <RouteGuard>
-                      <Routes>
-                        <Route path="/dashboard" element={<DashboardPage />} />
-                        <Route path="/dashboard/account" element={<AccountHub />} />
-                        <Route path="/dashboard/settings" element={<SettingsPage />} />
-                        <Route path="/dashboard/orders" element={<Orders />} />
-                        <Route path="/dashboard/support" element={<SupportTicket />} />
-                        <Route path="/dashboard/billing" element={<Billing />} />
-                        <Route path="/dashboard/assets" element={<MailingAssets />} />
-                        <Route path="/dashboard/products" element={<Products />} />
-                        <Route path="/dashboard/listings/*" element={<Listings />} />
-                        <Route path="/dashboard/mailing" element={<Mailing />} />
-                        <Route path="/dashboard/digital-marketing" element={<DigitalMarketing />} />
-                        <Route path="/dashboard/resources" element={<Resources />} />
-                        <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
-                        <Route path="/dashboard/tutorials" element={<VideoTutorials />} />
-                      </Routes>
+                      <DashboardLayout>
+                        <Routes>
+                          <Route path="/dashboard" element={<DashboardPage />} />
+                          <Route path="/dashboard/account" element={<AccountHub />} />
+                          <Route path="/dashboard/settings" element={<SettingsPage />} />
+                          <Route path="/dashboard/orders" element={<Orders />} />
+                          <Route path="/dashboard/support" element={<SupportTicket />} />
+                          <Route path="/dashboard/billing" element={<Billing />} />
+                          <Route path="/dashboard/assets" element={<MailingAssets />} />
+                          <Route path="/dashboard/products" element={<Products />} />
+                          <Route path="/dashboard/listings/*" element={<Listings />} />
+                          <Route path="/dashboard/mailing" element={<Mailing />} />
+                          <Route path="/dashboard/digital-marketing" element={<DigitalMarketing />} />
+                          <Route path="/dashboard/resources" element={<Resources />} />
+                          <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
+                          <Route path="/dashboard/tutorials" element={<VideoTutorials />} />
+                        </Routes>
+                      </DashboardLayout>
                     </RouteGuard>
                   }
                 />
