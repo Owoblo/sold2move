@@ -255,6 +255,10 @@ export default defineConfig({
 			resolveExtensions: ['.jsx', '.js']
 		}
 	},
+	ssr: {
+		// Ensure React is not externalized
+		noExternal: []
+	},
 	build: {
 		commonjsOptions: {
 			include: [/node_modules/],
@@ -268,15 +272,30 @@ export default defineConfig({
 				'@babel/types'
 			],
 			output: {
+				// Ensure vendor-react chunk is prioritized for loading
+				chunkFileNames: (chunkInfo) => {
+					// Add 0- prefix to vendor-react to ensure it loads first alphabetically
+					if (chunkInfo.name === 'vendor-react') {
+						return 'assets/0-vendor-react-[hash].js';
+					}
+					return 'assets/[name]-[hash].js';
+				},
 				manualChunks: (id) => {
 					// Vendor chunks for better caching and performance
 					if (id.includes('node_modules')) {
-						// Core React ecosystem - MUST be in one chunk to prevent duplication
-						if (id.includes('react/') || id.includes('react-dom/') || id.includes('/react/') || id.includes('/react-dom/')) {
+						// Core React ecosystem - MUST be in SEPARATE chunk
+						// Include scheduler and any React internals
+						if (id.includes('/react/') || id.includes('/react-dom/') ||
+						    id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') ||
+						    id.includes('scheduler/')) {
 							return 'vendor-react';
 						}
-						if (id.includes('scheduler')) {
-							return 'vendor-react';
+						// Large data libraries - separate to avoid bloating main vendor
+						if (id.includes('country-state-city')) {
+							return 'vendor-geo-data';
+						}
+						if (id.includes('papaparse')) {
+							return 'vendor-csv';
 						}
 						// UI libraries
 						if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('@radix-ui')) {
