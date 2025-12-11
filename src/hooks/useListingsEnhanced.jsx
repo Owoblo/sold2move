@@ -119,23 +119,24 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
       const cityFilter = filters.city_name;
         
       const allSoldListings = await fetchSoldSincePrev(
-        currentRunId, 
-        prevRunId, 
-        cityFilter, 
+        currentRunId,
+        prevRunId,
+        cityFilter,
         filters
       );
 
+      // fetchSoldSincePrev returns { data, count }, not an array
       // Apply client-side pagination for sold listings
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
-      const paginatedData = allSoldListings.slice(startIndex, endIndex);
+      const paginatedData = allSoldListings.data.slice(startIndex, endIndex);
 
       return {
         data: paginatedData,
-        count: allSoldListings.length,
-        totalPages: Math.ceil(allSoldListings.length / pageSize),
+        count: allSoldListings.count,
+        totalPages: Math.ceil(allSoldListings.count / pageSize),
         currentPage: page,
-        hasNextPage: page < Math.ceil(allSoldListings.length / pageSize),
+        hasNextPage: page < Math.ceil(allSoldListings.count / pageSize),
         hasPrevPage: page > 1,
       };
     },
