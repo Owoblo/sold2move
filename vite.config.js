@@ -249,6 +249,10 @@ export default defineConfig({
 			'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
 		},
 	},
+	optimizeDeps: {
+		include: ['react', 'react-dom'],
+		force: true
+	},
 	build: {
 		rollupOptions: {
 			external: [
