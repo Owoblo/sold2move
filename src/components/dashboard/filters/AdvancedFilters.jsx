@@ -49,8 +49,6 @@ const AdvancedFilters = ({
 
   // Handle search selection from comprehensive search
   const handleSearchSelect = (suggestion) => {
-    console.log('🔍 AdvancedFilters: Search suggestion received:', suggestion);
-    console.log('🔍 AdvancedFilters: Navigating to:', `/dashboard/listings/property/${suggestion.id}`);
     // Navigate directly to the property detail page
     navigate(`/dashboard/listings/property/${suggestion.id}`);
   };

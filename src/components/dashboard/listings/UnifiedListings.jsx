@@ -76,21 +76,16 @@ const UnifiedListings = () => {
 
   // Update filters when profile changes
   useEffect(() => {
-    console.log('UnifiedListings: Profile changed:', profile);
     if (profile?.service_cities && profile.service_cities.length > 0) {
       // Extract city names from service cities (format: "City, State")
       const cityNames = profile.service_cities.map(cityState => {
         const [cityName] = cityState.split(', ');
         return cityName;
       });
-      console.log('UnifiedListings: Setting filters with service_cities:', profile.service_cities);
-      console.log('UnifiedListings: Extracted city names:', cityNames);
       setFilters(prev => ({ ...prev, city_name: cityNames }));
     } else if (profile?.city_name) {
-      console.log('UnifiedListings: Setting filters with city_name:', profile.city_name);
       setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
     } else {
-      console.log('UnifiedListings: No city information in profile, using empty filters');
       setFilters(prev => ({ ...prev, city_name: [] }));
     }
   }, [profile?.service_cities, profile?.city_name]);

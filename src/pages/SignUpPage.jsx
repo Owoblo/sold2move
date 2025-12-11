@@ -40,6 +40,7 @@ const SignUpPage = () => {
     defaultValues: {
       firstName: '',
       lastName: '',
+      companyName: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -52,8 +53,6 @@ const SignUpPage = () => {
 
   const signUpWithPassword = async (values) => {
     try {
-      console.log('Starting signup process with values:', values);
-      
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -70,7 +69,6 @@ const SignUpPage = () => {
 
       if (error) {
         const errorMessage = error.message || "Something went wrong";
-        console.error('Supabase signup error:', error);
         toast({
           variant: "destructive",
           title: "Sign up Failed",
@@ -80,13 +78,12 @@ const SignUpPage = () => {
       }
 
       if (data.user) {
-        console.log('User created successfully:', data.user.id);
-        
         // Create profile record
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
+            company_name: values.companyName,
             business_email: data.user.email,
             first_name: values.firstName,
             last_name: values.lastName,
@@ -95,7 +92,6 @@ const SignUpPage = () => {
           });
 
         if (profileError) {
-          console.error('Profile creation error:', profileError);
           // Don't throw error here as user is already created
         }
 
@@ -105,11 +101,7 @@ const SignUpPage = () => {
             body: { userId: data.user.id }
           });
           
-          if (creditsError) {
-            console.error('Free credits error:', creditsError);
-          }
         } catch (creditsError) {
-          console.error('Free credits function error:', creditsError);
         }
 
         toast({
@@ -121,7 +113,6 @@ const SignUpPage = () => {
         navigate('/signup-success');
       }
     } catch (error) {
-      console.error('Signup process error:', error);
       throw error;
     }
   };
@@ -129,19 +120,10 @@ const SignUpPage = () => {
   const signUpWithGoogle = async () => {
     try {
       setGoogleLoading(true);
-      console.log('🔄 Initiating Google OAuth sign-up via AuthContext');
-      
+
       // Use the same OAuth function as the login page for consistency
       const { error } = await signInWithGoogle();
-      
-      if (error) {
-        console.error('❌ Google OAuth sign-up error:', error);
-        // Error handling is already done in the AuthContext
-      } else {
-        console.log('✅ Google OAuth sign-up initiated successfully');
-      }
     } catch (error) {
-      console.error('Google OAuth sign-up exception:', error);
       toast({
         variant: "destructive",
         title: "Error",
@@ -153,11 +135,9 @@ const SignUpPage = () => {
   };
 
   const onSubmit = async (values) => {
-    console.log('SignUp form submitted with values:', values);
     try {
       await signUpWithPassword(values);
     } catch (error) {
-      console.error('SignUp submission error:', error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
@@ -245,21 +225,43 @@ const SignUpPage = () => {
 
                     <FormField
                       control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-2 text-lightest-slate">
+                            <User className="h-4 w-4" />
+                            Company Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Enter your company name"
+                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="email"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-lightest-slate">
                             <Mail className="h-4 w-4" />
-                            Email Address
+                            Business Email
                           </FormLabel>
                           <FormControl>
                             <Input
                               type="email"
-                              placeholder="Enter your email"
+                              placeholder="Enter your business email"
                               className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
                               {...field}
                             />
                           </FormControl>
+                          <p className="text-xs text-slate mt-1">Please use your company email (not Gmail, Yahoo, etc.)</p>
                           <FormMessage />
                         </FormItem>
                       )}

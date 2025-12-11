@@ -18,6 +18,7 @@ export interface Profile {
   country_code: string;
   state_code: string;
   city_name: string;
+  service_cities: string[];
   onboarding_complete: boolean;
   credits_remaining: number;
   unlimited: boolean;

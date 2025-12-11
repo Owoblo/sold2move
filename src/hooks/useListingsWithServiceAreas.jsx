@@ -22,12 +22,7 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
   return useQuery({
     queryKey: serviceAreaListingKeys.list(filters, page),
     queryFn: async () => {
-      console.log('🔍 useJustListedWithServiceAreas: Starting query');
-      console.log('🔍 Profile service cities:', profile?.service_cities);
-      console.log('🔍 Profile main service city:', profile?.main_service_city);
-
       if (!profile?.service_cities || profile.service_cities.length === 0) {
-        console.log('⚠️ No service cities configured, returning empty result');
         return {
           data: [],
           count: 0,
@@ -44,9 +39,6 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
         const [cityName] = cityState.split(', ');
         return cityName;
       });
-      
-      console.log('🔍 Querying just_listed table with service cities:', profile.service_cities);
-      console.log('🔍 Extracted city names for query:', cityNames);
 
       // Query just_listed table directly with service area filtering
       let query = supabase
@@ -83,20 +75,13 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
       if (filters.searchTerm && filters.searchTerm.trim()) {
         const searchTerm = filters.searchTerm.trim();
         query = query.or(`addressstreet.ilike.%${searchTerm}%,lastcity.ilike.%${searchTerm}%,addresscity.ilike.%${searchTerm}%,addressstate.ilike.%${searchTerm}%,addresszipcode.ilike.%${searchTerm}%`);
-        console.log(`Search term filter for service areas: ${searchTerm}`);
       }
 
       const { data, error, count } = await query;
 
       if (error) {
-        console.error('❌ Error fetching just listed with service areas:', error);
         throw new Error(error.message);
       }
-
-      console.log('✅ Just listed query successful:', {
-        dataCount: data?.length || 0,
-        totalCount: count || 0
-      });
 
       // Add service area match information to each listing
       const enrichedData = (data || []).map(listing => ({
@@ -124,7 +109,6 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
     staleTime: 2 * 60 * 1000, // 2 minutes
     cacheTime: 5 * 60 * 1000, // 5 minutes
     onError: (error) => {
-      console.error('❌ useJustListedWithServiceAreas error:', error);
       toast({
         variant: "destructive",
         title: "Error fetching listings",
@@ -143,11 +127,7 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
   return useQuery({
     queryKey: ['sold-listings-service-areas', filters, page],
     queryFn: async () => {
-      console.log('🔍 useSoldListingsWithServiceAreas: Starting query');
-      console.log('🔍 Profile service cities:', profile?.service_cities);
-
       if (!profile?.service_cities || profile.service_cities.length === 0) {
-        console.log('⚠️ No service cities configured, returning empty result');
         return {
           data: [],
           count: 0,
@@ -164,9 +144,6 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
         const [cityName] = cityState.split(', ');
         return cityName;
       });
-      
-      console.log('🔍 Querying sold_listings table with service cities:', profile.service_cities);
-      console.log('🔍 Extracted city names for query:', cityNames);
 
       // Query sold_listings table directly with service area filtering
       let query = supabase
@@ -202,14 +179,8 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
       const { data, error, count } = await query;
 
       if (error) {
-        console.error('❌ Error fetching sold listings with service areas:', error);
         throw new Error(error.message);
       }
-
-      console.log('✅ Sold listings query successful:', {
-        dataCount: data?.length || 0,
-        totalCount: count || 0
-      });
 
       // Add service area match information to each listing
       const enrichedData = (data || []).map(listing => ({
@@ -237,7 +208,6 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
     staleTime: 2 * 60 * 1000, // 2 minutes
     cacheTime: 5 * 60 * 1000, // 5 minutes
     onError: (error) => {
-      console.error('❌ useSoldListingsWithServiceAreas error:', error);
       toast({
         variant: "destructive",
         title: "Error fetching sold listings",

@@ -14,35 +14,29 @@ export const usePerformanceMonitoring = () => {
 
     // Check if PerformanceObserver is supported
     if (!('PerformanceObserver' in window)) {
-      console.log('Performance monitoring not supported in this browser');
       return;
     }
 
     // Monitor Core Web Vitals
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        console.log('📊 Performance metric:', {
-          name: entry.name,
-          value: entry.value,
-          type: entry.entryType,
-          timestamp: entry.startTime
-        });
+        // Performance metrics captured
       }
     });
 
     try {
       // Observe different performance metrics
-      observer.observe({ 
+      observer.observe({
         entryTypes: [
-          'largest-contentful-paint', 
-          'first-input', 
+          'largest-contentful-paint',
+          'first-input',
           'layout-shift',
           'navigation',
           'resource'
-        ] 
+        ]
       });
     } catch (error) {
-      console.log('Performance monitoring setup failed:', error);
+      // Performance monitoring setup error
     }
 
     // Cleanup

@@ -57,10 +57,6 @@ export const useOnboarding = () => {
     
     // Update profile to mark tour as completed
     // This would typically be done via an API call
-    if (profile) {
-      // You would call an API here to update the user's tour_completed status
-      console.log('Tour completed for user:', profile.id);
-    }
   };
 
   const skipTour = () => {

@@ -23,19 +23,6 @@ const AuthCallbackPage = () => {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isAndroid = /Android/.test(navigator.userAgent);
       
-      console.log('🔍 AuthCallbackPage: Starting auth callback handling');
-      console.log('🔍 Current URL:', window.location.href);
-      console.log('🔍 Current session:', session ? 'exists' : 'none');
-      console.log('🔍 Device info:', {
-        isMobile,
-        isPWA,
-        isIOS,
-        isAndroid,
-        userAgent: navigator.userAgent,
-        origin: window.location.origin,
-        pathname: window.location.pathname,
-        search: window.location.search
-      });
       
       // Check for offline state
       if (isOffline) {
@@ -60,7 +47,6 @@ const AuthCallbackPage = () => {
           
           // Provide more specific error messages for mobile users
           if (isMobile) {
-            console.log('📱 Mobile OAuth error detected');
             if (error === 'access_denied') {
               setError('mobile_access_denied');
             } else if (error === 'popup_closed_by_user') {
@@ -78,19 +64,9 @@ const AuthCallbackPage = () => {
 
         // If we have a code, exchange it for a session
         if (code) {
-          console.log('🔄 Exchanging OAuth code for session...');
-          console.log('🔄 Code length:', code.length);
-          
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           
           if (exchangeError) {
-            console.error('❌ Code exchange error:', {
-              message: exchangeError.message,
-              status: exchangeError.status,
-              code: exchangeError.code,
-              details: exchangeError
-            });
-            
             // Provide mobile-specific error handling
             if (isMobile) {
               if (exchangeError.message.includes('invalid_grant') || exchangeError.message.includes('code_expired')) {
@@ -105,15 +81,7 @@ const AuthCallbackPage = () => {
             return;
           }
 
-          console.log('✅ Code exchange successful:', {
-            hasSession: !!data.session,
-            hasUser: !!data.user,
-            sessionId: data.session?.access_token?.substring(0, 20) + '...',
-            userId: data.user?.id
-          });
-
           if (data.session) {
-            console.log('🎉 Session created successfully, redirecting to post-auth');
             // Add a longer delay for mobile devices to ensure session is fully established
             const delay = isMobile ? 500 : 100;
             setTimeout(() => {
@@ -134,19 +102,11 @@ const AuthCallbackPage = () => {
 
         // If we already have a session, redirect
         if (session) {
-          console.log('✅ Session already exists, redirecting to post-auth');
-          console.log('✅ Session details:', {
-            userId: session.user?.id,
-            email: session.user?.email,
-            expiresAt: session.expires_at
-          });
           navigate('/post-auth', { replace: true });
           return;
         }
 
         // If no code and no session, something went wrong
-        console.warn('⚠️ No code or session found in callback');
-        console.warn('⚠️ This might indicate a redirect issue or missing OAuth configuration');
         setError('no_code');
         setIsProcessing(false);
 
@@ -159,14 +119,10 @@ const AuthCallbackPage = () => {
 
     // Listen for auth state changes as a fallback
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session ? 'Session exists' : 'No session');
-      
       if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in successfully, redirecting to post-auth');
         subscription.unsubscribe();
         navigate('/post-auth', { replace: true });
       } else if (event === 'SIGN_IN_ERROR') {
-        console.error('Sign in error occurred');
         subscription.unsubscribe();
         setError('auth_failed');
         setIsProcessing(false);
@@ -175,7 +131,6 @@ const AuthCallbackPage = () => {
 
     // Set a timeout to handle cases where auth doesn't complete
     const timeoutId = setTimeout(() => {
-      console.warn('⚠️ Auth callback timeout - redirecting to login');
       setError('timeout');
       setIsProcessing(false);
     }, 10000); // 10 second timeout

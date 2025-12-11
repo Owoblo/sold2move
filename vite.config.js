@@ -256,62 +256,42 @@ export default defineConfig({
 				'@babel/types'
 			],
 			output: {
-				// Temporarily disable manualChunks to fix React bundling issue
-				// manualChunks: (id) => {
-				// 	// Vendor chunks for better caching and performance
-				// 	if (id.includes('node_modules')) {
-				// 		// Core React ecosystem - keep React and React-DOM together
-				// 		if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router')) {
-				// 			return 'vendor-react';
-				// 		}
-				// 		// React hooks and utilities
-				// 		if (id.includes('react-hooks') || id.includes('react-query')) {
-				// 			return 'vendor-react';
-				// 		}
-				// 		// UI libraries
-				// 		if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('@radix-ui')) {
-				// 			return 'vendor-ui';
-				// 		}
-				// 		// Form handling
-				// 		if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-				// 			return 'vendor-forms';
-				// 		}
-				// 		// Backend services
-				// 		if (id.includes('@supabase')) {
-				// 			return 'vendor-supabase';
-				// 		}
-				// 		// Payment processing
-				// 		if (id.includes('@stripe') || id.includes('stripe')) {
-				// 			return 'vendor-stripe';
-				// 		}
-				// 		// Data fetching
-				// 		if (id.includes('@tanstack/react-query')) {
-				// 			return 'vendor-query';
-				// 		}
-				// 		// Other vendor libraries
-				// 		return 'vendor';
-				// 	}
-				// 	
-				// 	// Separate large data files
-				// 	if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
-				// 		return 'data-cities';
-				// 	}
-				// 	
-				// 	// Dashboard components (lazy loaded)
-				// 	if (id.includes('/components/dashboard/')) {
-				// 		return 'dashboard';
-				// 	}
-				// 	
-				// 	// UI components
-				// 	if (id.includes('/components/ui/')) {
-				// 		return 'ui-components';
-				// 	}
-				// 	
-				// 	// Page components (lazy loaded)
-				// 	if (id.includes('/pages/')) {
-				// 		return 'pages';
-				// 	}
-				// }
+				manualChunks: (id) => {
+					// Vendor chunks for better caching and performance
+					if (id.includes('node_modules')) {
+						// Core React ecosystem - keep React and React-DOM together
+						if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+							return 'vendor-react';
+						}
+						// UI libraries
+						if (id.includes('framer-motion') || id.includes('lucide-react') || id.includes('@radix-ui')) {
+							return 'vendor-ui';
+						}
+						// Form handling
+						if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+							return 'vendor-forms';
+						}
+						// Backend services
+						if (id.includes('@supabase')) {
+							return 'vendor-supabase';
+						}
+						// Payment processing
+						if (id.includes('@stripe') || id.includes('stripe')) {
+							return 'vendor-stripe';
+						}
+						// Data fetching
+						if (id.includes('@tanstack/react-query')) {
+							return 'vendor-query';
+						}
+						// Other vendor libraries
+						return 'vendor';
+					}
+
+					// Separate large data files
+					if (id.includes('/data/databaseCities') || id.includes('/data/canadaCityClusters')) {
+						return 'data-cities';
+					}
+				}
 			}
 		},
 		// Optimize bundle size

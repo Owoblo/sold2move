@@ -33,7 +33,6 @@ const ComponentTestPage = lazy(() => import('@/pages/ComponentTestPage'));
 const BillingTestPage = lazy(() => import('@/pages/BillingTestPage'));
 const ProtectedRoute = lazy(() => import('@/components/layout/ProtectedRoute'));
 const PublicRoute = lazy(() => import('@/components/layout/PublicRoute'));
-const DashboardLayout = lazy(() => import('@/components/dashboard/layout/DashboardLayout'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const AccountHub = lazy(() => import('@/components/dashboard/pages/AccountHub'));
 const Orders = lazy(() => import('@/components/dashboard/pages/Orders'));
@@ -95,14 +94,6 @@ function App() {
   // Debug session changes and run auth flow test
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 App: Session changed', {
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userId: session?.user?.id,
-        currentPath: location.pathname,
-        loading
-      });
-      
       // Run comprehensive auth flow test
       testAuthFlow(supabase);
     }
@@ -190,25 +181,20 @@ function App() {
                   element={
                     <RouteGuard>
                       <Routes>
-                        <Route 
-                          path="/dashboard/*" 
-                          element={<DashboardLayout />} 
-                        >
-                          <Route index element={<DashboardPage />} />
-                          <Route path="account" element={<AccountHub />} />
-                          <Route path="settings" element={<SettingsPage />} />
-                          <Route path="orders" element={<Orders />} />
-                          <Route path="support" element={<SupportTicket />} />
-                          <Route path="billing" element={<Billing />} />
-                          <Route path="assets" element={<MailingAssets />} />
-                          <Route path="products" element={<Products />} />
-                          <Route path="listings/*" element={<Listings />} />
-                          <Route path="mailing" element={<Mailing />} />
-                          <Route path="digital-marketing" element={<DigitalMarketing />} />
-                          <Route path="resources" element={<Resources />} />
-                          <Route path="sample-mailers" element={<SampleMailers />} />
-                          <Route path="tutorials" element={<VideoTutorials />} />
-                        </Route>
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route path="/dashboard/account" element={<AccountHub />} />
+                        <Route path="/dashboard/settings" element={<SettingsPage />} />
+                        <Route path="/dashboard/orders" element={<Orders />} />
+                        <Route path="/dashboard/support" element={<SupportTicket />} />
+                        <Route path="/dashboard/billing" element={<Billing />} />
+                        <Route path="/dashboard/assets" element={<MailingAssets />} />
+                        <Route path="/dashboard/products" element={<Products />} />
+                        <Route path="/dashboard/listings/*" element={<Listings />} />
+                        <Route path="/dashboard/mailing" element={<Mailing />} />
+                        <Route path="/dashboard/digital-marketing" element={<DigitalMarketing />} />
+                        <Route path="/dashboard/resources" element={<Resources />} />
+                        <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
+                        <Route path="/dashboard/tutorials" element={<VideoTutorials />} />
                       </Routes>
                     </RouteGuard>
                   }

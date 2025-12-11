@@ -58,26 +58,27 @@ const ProfileSettings = () => {
   }, [profile, session, form]);
 
   const handleSubmit = async (values) => {
-    console.log('ProfileSettings: Submitting values:', values);
-    
     const payload = {
       id: session.user.id,
       ...values
     };
 
-    console.log('ProfileSettings: Payload to save:', payload);
-
     const { error } = await supabase
       .from('profiles')
       .upsert(payload, { onConflict: 'id' });
-    
+
     if (error) {
-      console.error('ProfileSettings: Save error:', error);
       toast({ variant: 'destructive', title: 'Error saving profile', description: error.message });
     } else {
-      console.log('ProfileSettings: Save successful');
       await refreshProfile();
       toast({ title: '✅ Profile Updated!', description: 'Your changes have been saved.' });
+    }
+  };
+
+  const onSubmit = (values) => {
+    try {
+      handleSubmit(values);
+    } catch (errors) {
     }
   };
 
@@ -107,9 +108,7 @@ const ProfileSettings = () => {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
-            console.log('ProfileSettings: Form validation errors:', errors);
-          })} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <FormField
                 control={form.control}

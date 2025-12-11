@@ -1,10 +1,28 @@
 import { z } from 'zod';
 
-// Simplified signup schema with essential fields only
+// Personal email domains to reject for business accounts
+const personalEmailDomains = [
+  'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com',
+  'aol.com', 'icloud.com', 'mail.com', 'protonmail.com',
+  'yandex.com', 'zoho.com', 'live.com', 'msn.com'
+];
+
+// Custom email validator for business emails
+const isBusinessEmail = (email) => {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain && !personalEmailDomains.includes(domain);
+};
+
+// Signup schema with company name and business email validation
 export const signUpSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
+  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
+  email: z.string()
+    .email('Please enter a valid email address')
+    .refine(isBusinessEmail, {
+      message: 'Please use a business email address (not Gmail, Yahoo, Hotmail, etc.)'
+    }),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
   phone: z.string().min(10, 'Please enter a valid phone number'),

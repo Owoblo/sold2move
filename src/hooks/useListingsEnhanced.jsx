@@ -24,21 +24,14 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
     queryKey: listingKeys.justListed(filters, page),
     queryFn: async () => {
       try {
-        console.log(`useJustListedEnhanced: Starting query with filters:`, filters);
-        console.log(`useJustListedEnhanced: City filter type:`, typeof filters.city_name, filters.city_name);
-        
         // Since just_listed table doesn't use run_id, we can pass null
         // Support both single city and multiple cities
         const cityFilter = filters.city_name;
-          
-        console.log(`useJustListedEnhanced: City filter:`, cityFilter);
-        console.log(`useJustListedEnhanced: Profile:`, profile);
         
         // If no city filter is provided, try to use profile city information
         let finalCityFilter = cityFilter;
         if (!finalCityFilter && profile?.city_name) {
           finalCityFilter = [profile.city_name];
-          console.log(`useJustListedEnhanced: Using profile city:`, finalCityFilter);
         }
         
         // Add AI furniture filter from user profile
@@ -64,16 +57,9 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           hasPrevPage: page > 1,
         };
 
-        console.log(`useJustListedEnhanced: Query successful:`, {
-          dataCount: result.data.length,
-          totalCount: result.count,
-          totalPages: result.totalPages,
-          currentPage: result.currentPage
-        });
 
         return result;
       } catch (error) {
-        console.error('useJustListedEnhanced: Query failed:', error);
         throw error;
       }
     },
@@ -157,7 +143,6 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     onError: (error) => {
-      console.error('useSoldListingsEnhanced: Error details:', error);
       
       // Don't show toast to avoid user annoyance - just log the error
       // toast({
@@ -218,16 +203,6 @@ export const useRevealListingEnhanced = () => {
       }
 
       // Check if already revealed
-      // Only log in development to reduce console noise
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Checking if listing is already revealed:', {
-          userId,
-          listingId,
-          listingIdType: typeof listingId,
-          listingIdNumber: Number(listingId),
-          listingIdString: String(listingId)
-        });
-      }
       
       // Try number first, then string as fallback
       let existingReveal, checkError;
@@ -242,9 +217,6 @@ export const useRevealListingEnhanced = () => {
         
       if (error1 && error1.code === 'PGRST116') {
         // Not found with number, try with string
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 Trying with string as fallback...');
-        }
         const { data: data2, error: error2 } = await supabase
           .from('listing_reveals')
           .select('id')
@@ -257,15 +229,6 @@ export const useRevealListingEnhanced = () => {
       } else {
         existingReveal = data1;
         checkError = error1;
-      }
-        
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Check result:', {
-          hasData: !!existingReveal,
-          error: checkError,
-          errorCode: checkError?.code,
-          errorMessage: checkError?.message
-        });
       }
 
       if (existingReveal) {
@@ -303,7 +266,6 @@ export const useRevealListingEnhanced = () => {
         });
 
       if (insertError) {
-        console.error('Insert error:', insertError);
         throw new Error('Failed to reveal listing');
       }
 

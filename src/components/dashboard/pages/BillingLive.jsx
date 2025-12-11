@@ -92,13 +92,10 @@ const BillingLive = () => {
     setLoadingPackageId(priceId);
     setIsSubmitting(true);
     try {
-      console.log('Creating checkout session for:', { priceId, mode });
       
       const { data, error } = await supabase.functions.invoke('create-checkout-session-fixed', {
         body: JSON.stringify({ priceId, mode }),
       });
-
-      console.log('Checkout session response:', { data, error });
 
       if (error) throw error;
       if (data.error) throw new Error(data.error);
@@ -108,8 +105,7 @@ const BillingLive = () => {
       }
 
       const stripe = await getStripe();
-      console.log('Redirecting to Stripe checkout with session:', data.sessionId);
-      
+
       const { error: stripeError } = await stripe.redirectToCheckout({
         sessionId: data.sessionId,
       });

@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useCallback } from 'react';
-import ErrorBoundary from '@/components/layout/ErrorBoundary';
-import ErrorFallback from '@/components/layout/ErrorFallback';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const ErrorContext = createContext(null);
 
@@ -25,7 +24,7 @@ export const ErrorProvider = ({ children }) => {
 
   return (
     <ErrorContext.Provider value={{ handleError }}>
-      <ErrorBoundary fallback={ErrorFallback}>
+      <ErrorBoundary>
         {children}
       </ErrorBoundary>
     </ErrorContext.Provider>

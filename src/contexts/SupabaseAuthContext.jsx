@@ -39,21 +39,16 @@ export const AuthProvider = ({ children }) => {
   // Handle auth state changes and session persistence
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state change:', event, session ? 'Session exists' : 'No session');
-      
       if (event === 'SIGNED_IN' && session) {
-        console.log('✅ User signed in successfully');
         // Session will be automatically updated by useSession hook
       } else if (event === 'SIGNED_OUT') {
-        console.log('👋 User signed out');
         // Clear any stored intended destination
         localStorage.removeItem('intendedDestination');
       } else if (event === 'TOKEN_REFRESHED' && session) {
-        console.log('🔄 Token refreshed successfully');
+        // Token refreshed successfully
       } else if (event === 'PASSWORD_RECOVERY') {
-        console.log('🔑 Password recovery initiated');
+        // Password recovery initiated
       } else if (event === 'SIGNED_OUT' && !session) {
-        console.log('🔄 Session expired or invalid');
         // Clear any stored intended destination on session expiry
         localStorage.removeItem('intendedDestination');
       }
@@ -142,19 +137,6 @@ export const AuthProvider = ({ children }) => {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isAndroid = /Android/.test(navigator.userAgent);
       
-      console.log('🔄 Initiating Google OAuth sign-in');
-      console.log('🔄 OAuth configuration:', {
-        siteUrl,
-        redirectTo: `${siteUrl}/auth/callback`,
-        provider: 'google',
-        isMobile,
-        isPWA,
-        isIOS,
-        isAndroid,
-        userAgent: navigator.userAgent,
-        currentOrigin: window.location.origin
-      });
-      
       const oauthOptions = {
         redirectTo: `${siteUrl}/auth/callback`,
         queryParams: {
@@ -177,8 +159,6 @@ export const AuthProvider = ({ children }) => {
         if (isAndroid) {
           oauthOptions.queryParams.response_type = 'code';
         }
-        
-        console.log('📱 Mobile device detected, using mobile-optimized OAuth parameters');
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -201,10 +181,8 @@ export const AuthProvider = ({ children }) => {
         return { error };
       }
 
-      console.log('✅ Google OAuth initiated successfully, redirecting to Google...');
       return { error: null };
     } catch (err) {
-      console.error('Google OAuth exception:', err);
       toast({
         variant: "destructive",
         title: "Google Sign in Failed",
