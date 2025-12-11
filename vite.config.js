@@ -250,10 +250,16 @@ export default defineConfig({
 		},
 	},
 	optimizeDeps: {
-		include: ['react', 'react-dom'],
-		force: true
+		include: ['react', 'react-dom', 'react/jsx-runtime'],
+		esbuildOptions: {
+			resolveExtensions: ['.jsx', '.js']
+		}
 	},
 	build: {
+		commonjsOptions: {
+			include: [/node_modules/],
+			transformMixedEsModules: true
+		},
 		rollupOptions: {
 			external: [
 				'@babel/parser',
@@ -265,8 +271,11 @@ export default defineConfig({
 				manualChunks: (id) => {
 					// Vendor chunks for better caching and performance
 					if (id.includes('node_modules')) {
-						// Core React ecosystem - keep React and React-DOM together
-						if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+						// Core React ecosystem - MUST be in one chunk to prevent duplication
+						if (id.includes('react/') || id.includes('react-dom/') || id.includes('/react/') || id.includes('/react-dom/')) {
+							return 'vendor-react';
+						}
+						if (id.includes('scheduler')) {
 							return 'vendor-react';
 						}
 						// UI libraries
