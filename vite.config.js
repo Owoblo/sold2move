@@ -283,13 +283,12 @@ export default defineConfig({
 				manualChunks: (id) => {
 					// Vendor chunks for better caching and performance
 					if (id.includes('node_modules')) {
-						// Core React ecosystem - MUST be in SEPARATE chunk
-						// Include scheduler and any React internals
-						if (id.includes('/react/') || id.includes('/react-dom/') ||
-						    id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') ||
-						    id.includes('scheduler/')) {
-							return 'vendor-react';
-						}
+						// DON'T chunk React separately - let it inline with main bundle
+						// This ensures React is available before ANY other code executes
+						// Comment out React chunking to fix load order issue
+						// if (id.includes('/react/') || id.includes('/react-dom/')) {
+						//   return 'vendor-react';
+						// }
 						// Large data libraries - separate to avoid bloating main vendor
 						if (id.includes('country-state-city')) {
 							return 'vendor-geo-data';
