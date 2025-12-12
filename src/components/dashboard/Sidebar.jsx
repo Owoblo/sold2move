@@ -67,10 +67,18 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
 
   return (
     <>
+      {/* Mobile overlay backdrop */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
       <aside className={`fixed top-0 left-0 z-40 h-screen bg-light-navy border-r border-border transition-all duration-300 ${
-        isSidebarOpen 
-          ? 'w-64 translate-x-0' 
-          : 'w-16 -translate-x-0 md:translate-x-0'
+        isSidebarOpen
+          ? 'w-64 translate-x-0'
+          : 'w-16 -translate-x-48 lg:translate-x-0'
       }`}>
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
@@ -126,7 +134,13 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
                                 <li key={subItem.name}>
                                   <NavLink
                                     to={subItem.path}
-                                    className={({ isActive }) => 
+                                    onClick={() => {
+                                      // Close sidebar on mobile after navigation
+                                      if (window.innerWidth < 1024) {
+                                        toggleSidebar();
+                                      }
+                                    }}
+                                    className={({ isActive }) =>
                                       `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses}`
                                     }
                                   >
@@ -142,7 +156,12 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
                         <NavLink
                           to={item.path}
                           end={item.path === '/dashboard'}
-                          onClick={() => isSidebarOpen && toggleSidebar()}
+                          onClick={() => {
+                            // Close sidebar on mobile after navigation
+                            if (window.innerWidth < 1024) {
+                              toggleSidebar();
+                            }
+                          }}
                           className={({ isActive }) => {
                             return `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses} ${
                               !isSidebarOpen ? 'justify-center' : ''
@@ -162,19 +181,17 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           </ul>
         </div>
       </aside>
-      
-      {/* Expand button when sidebar is collapsed */}
+
+      {/* Expand button when sidebar is collapsed - only on desktop */}
       {!isSidebarOpen && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-50 p-2 bg-light-navy border border-border rounded-md hover:bg-lightest-navy/10 transition-colors"
+          className="fixed top-4 left-4 z-50 p-2 bg-light-navy border border-border rounded-md hover:bg-lightest-navy/10 transition-colors hidden lg:block"
           title="Expand sidebar"
         >
           <ChevronRight className="h-4 w-4 text-slate" />
         </button>
       )}
-      
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={toggleSidebar}></div>}
     </>
   );
 };
