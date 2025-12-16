@@ -85,11 +85,10 @@ const PostAuthPage = () => {
       const userMetadata = session.user.user_metadata || {};
 
       // Create new profile with all required fields
+      // Note: first_name, last_name are stored in auth.users metadata, not in profiles table
       const profileData = {
         id: session.user.id,
         business_email: session.user.email,
-        first_name: userMetadata.first_name || userMetadata.firstName || null,
-        last_name: userMetadata.last_name || userMetadata.lastName || null,
         phone: userMetadata.phone || null,
         credits_remaining: 100, // Give 100 free credits on signup
         trial_granted: true,

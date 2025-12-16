@@ -86,8 +86,6 @@ const SignUpPage = () => {
             id: data.user.id,
             company_name: values.companyName,
             business_email: data.user.email,
-            first_name: values.firstName,
-            last_name: values.lastName,
             phone: values.phone,
             credits_remaining: 100, // Grant 100 free credits on signup
             trial_granted: true,
