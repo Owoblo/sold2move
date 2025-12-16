@@ -15,15 +15,16 @@ import GoogleIcon from '@/components/icons/GoogleIcon';
 import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingButton from '@/components/ui/LoadingButton';
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Phone, 
-  Eye, 
+import {
+  User,
+  Mail,
+  Lock,
+  Phone,
+  Eye,
   EyeOff,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Building2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -78,7 +79,7 @@ const SignUpPage = () => {
       }
 
       if (data.user) {
-        // Create profile record
+        // Create profile record with initial credits
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -88,20 +89,24 @@ const SignUpPage = () => {
             first_name: values.firstName,
             last_name: values.lastName,
             phone: values.phone,
+            credits_remaining: 100, // Grant 100 free credits on signup
+            trial_granted: true,
             onboarding_complete: false,
+            unlimited: false,
+            subscription_status: 'inactive',
           });
 
         if (profileError) {
-          // Don't throw error here as user is already created
-        }
-
-        // Grant free credits via Edge Function
-        try {
-          const { error: creditsError } = await supabase.functions.invoke('grant-free-credits', {
-            body: { userId: data.user.id }
-          });
-          
-        } catch (creditsError) {
+          console.error('Profile creation error:', profileError);
+          // If it's a duplicate key error, profile already exists (race condition)
+          if (profileError.code !== '23505') {
+            toast({
+              variant: "destructive",
+              title: "Profile Creation Failed",
+              description: "Your account was created but there was an error setting up your profile. Please contact support.",
+            });
+            // Still navigate to success as user was created and can login
+          }
         }
 
         toast({
@@ -178,7 +183,9 @@ const SignUpPage = () => {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Personal Information Section */}
                   <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-lightest-slate border-b border-white/10 pb-2">Personal Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -192,7 +199,7 @@ const SignUpPage = () => {
                             <FormControl>
                               <Input
                                 placeholder="Enter your first name"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                                className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                                 {...field}
                               />
                             </FormControl>
@@ -213,7 +220,7 @@ const SignUpPage = () => {
                             <FormControl>
                               <Input
                                 placeholder="Enter your last name"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                                className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                                 {...field}
                               />
                             </FormControl>
@@ -222,20 +229,24 @@ const SignUpPage = () => {
                         )}
                       />
                     </div>
+                  </div>
 
+                  {/* Company Information Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-lightest-slate border-b border-white/10 pb-2">Company Information</h3>
                     <FormField
                       control={form.control}
                       name="companyName"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-lightest-slate">
-                            <User className="h-4 w-4" />
+                            <Building2 className="h-4 w-4" />
                             Company Name
                           </FormLabel>
                           <FormControl>
                             <Input
                               placeholder="Enter your company name"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                              className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                               {...field}
                             />
                           </FormControl>
@@ -257,16 +268,20 @@ const SignUpPage = () => {
                             <Input
                               type="email"
                               placeholder="Enter your business email"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                              className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                               {...field}
                             />
                           </FormControl>
-                          <p className="text-xs text-slate mt-1">Please use your company email (not Gmail, Yahoo, etc.)</p>
+                          <p className="text-xs text-teal/80 mt-1 font-medium">⚠️ Please use your company email (not Gmail, Yahoo, etc.)</p>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+                  </div>
 
+                  {/* Contact Information Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-lightest-slate border-b border-white/10 pb-2">Contact Information</h3>
                     <FormField
                       control={form.control}
                       name="phone"
@@ -280,7 +295,7 @@ const SignUpPage = () => {
                             <Input
                               type="tel"
                               placeholder="Enter your phone number"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 focus:text-white focus:placeholder:text-slate/50"
+                              className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                               {...field}
                             />
                           </FormControl>
@@ -289,7 +304,7 @@ const SignUpPage = () => {
                       )}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <FormField
                         control={form.control}
                         name="password"
@@ -303,16 +318,17 @@ const SignUpPage = () => {
                               <div className="relative">
                                 <Input
                                   type={showPassword ? "text" : "password"}
-                                  placeholder="Create a password"
-                                  className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 pr-10 focus:text-white focus:placeholder:text-slate/50"
+                                  placeholder="Create a password (min 8 characters)"
+                                  className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 pr-10 focus:bg-white focus:border-teal"
                                   {...field}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate hover:text-lightest-slate"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-deep-navy hover:text-teal"
                                   onClick={() => setShowPassword(!showPassword)}
+                                  aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                   {showPassword ? (
                                     <EyeOff className="h-4 w-4" />
@@ -340,16 +356,17 @@ const SignUpPage = () => {
                               <div className="relative">
                                 <Input
                                   type={showConfirmPassword ? "text" : "password"}
-                                  placeholder="Confirm your password"
-                                  className="bg-white/10 border-white/20 text-white placeholder:text-slate/70 pr-10 focus:text-white focus:placeholder:text-slate/50"
+                                  placeholder="Re-enter your password"
+                                  className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 pr-10 focus:bg-white focus:border-teal"
                                   {...field}
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-slate hover:text-lightest-slate"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-deep-navy hover:text-teal"
                                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                                 >
                                   {showConfirmPassword ? (
                                     <EyeOff className="h-4 w-4" />
@@ -364,7 +381,10 @@ const SignUpPage = () => {
                         )}
                       />
                     </div>
+                  </div>
 
+                  {/* Terms and Conditions */}
+                  <div className="space-y-4">
                     <FormField
                       control={form.control}
                       name="agreeToTerms"

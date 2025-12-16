@@ -81,10 +81,16 @@ const PostAuthPage = () => {
 
       console.log('🔄 Profile does not exist, creating new one...');
 
+      // Extract user metadata if available
+      const userMetadata = session.user.user_metadata || {};
+
       // Create new profile with all required fields
       const profileData = {
         id: session.user.id,
         business_email: session.user.email,
+        first_name: userMetadata.first_name || userMetadata.firstName || null,
+        last_name: userMetadata.last_name || userMetadata.lastName || null,
+        phone: userMetadata.phone || null,
         credits_remaining: 100, // Give 100 free credits on signup
         trial_granted: true,
         onboarding_complete: false,

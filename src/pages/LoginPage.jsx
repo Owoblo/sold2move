@@ -17,6 +17,7 @@ import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/u
 import { useOffline } from '@/hooks/useOffline';
 import { debugAuthFlow, debugSupabaseError, debugNavigationFlow } from '@/utils/authDebugger';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
@@ -24,6 +25,7 @@ const LoginPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -188,9 +190,17 @@ const LoginPage = () => {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-light-slate">Email Address</FormLabel>
+                      <FormLabel className="text-light-slate flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Email Address
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="name@company.com" {...field} disabled={isSubmitting || googleLoading} />
+                        <Input
+                          placeholder="name@company.com"
+                          className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
+                          {...field}
+                          disabled={isSubmitting || googleLoading}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -201,9 +211,32 @@ const LoginPage = () => {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-light-slate">Password</FormLabel>
+                      <FormLabel className="text-light-slate flex items-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Password
+                      </FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} disabled={isSubmitting || googleLoading} />
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 pr-10 focus:bg-white focus:border-teal"
+                            {...field}
+                            disabled={isSubmitting || googleLoading}
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-0 top-0 h-full px-3 py-2 text-deep-navy hover:text-teal"
+                            onClick={() => setShowPassword(!showPassword)}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
