@@ -260,17 +260,16 @@ const SignUpPage = () => {
                         <FormItem>
                           <FormLabel className="flex items-center gap-2 text-lightest-slate">
                             <Mail className="h-4 w-4" />
-                            Business Email
+                            Email Address
                           </FormLabel>
                           <FormControl>
                             <Input
                               type="email"
-                              placeholder="Enter your business email"
+                              placeholder="Enter your email address"
                               className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                               {...field}
                             />
                           </FormControl>
-                          <p className="text-xs text-teal/80 mt-1 font-medium">⚠️ Please use your company email (not Gmail, Yahoo, etc.)</p>
                           <FormMessage />
                         </FormItem>
                       )}
