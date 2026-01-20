@@ -73,21 +73,21 @@ const SuspenseFallback = () => (
 function App() {
   const location = useLocation();
   const { session, loading } = useAuth();
-  const { 
-    showTour, 
-    showWelcomeMessage, 
-    startTour, 
-    completeTour, 
-    skipTour 
+  const {
+    showTour,
+    showWelcomeMessage,
+    startTour,
+    completeTour,
+    skipTour
   } = useOnboarding();
 
   // Store intended destination for deep links and protected routes
   useEffect(() => {
-    if (location.pathname && 
-        location.pathname !== '/login' && 
-        location.pathname !== '/signup' && 
-        location.pathname !== '/' &&
-        location.pathname !== '/auth/callback') {
+    if (location.pathname &&
+      location.pathname !== '/login' &&
+      location.pathname !== '/signup' &&
+      location.pathname !== '/' &&
+      location.pathname !== '/auth/callback') {
       storeIntendedDestination(location.pathname + location.search);
     }
   }, [location.pathname, location.search]);
@@ -103,7 +103,7 @@ function App() {
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || location.pathname === '/onboarding';
 
   return (
-    <div className="bg-deep-navy flex flex-col min-h-screen">
+    <div className="bg-background flex flex-col min-h-screen">
       {!isDashboardRoute && <Header />}
       <main className="flex-grow">
         <ErrorBoundary>
@@ -120,56 +120,56 @@ function App() {
                 <Route path="/request-demo" element={<RequestDemoPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
-                
+
                 {/* SEO Content Pages */}
                 <Route path="/how-moving-companies-can-use-sold-listings-ontario" element={<HowMovingCompaniesCanUseSoldListings />} />
                 <Route path="/sold-house-listings-canada-guide-movers" element={<SoldHouseListingsGuide />} />
-                
+
                 {/* Local SEO Landing Pages */}
                 <Route path="/ontario-sold-listings" element={<OntarioSoldListings />} />
                 <Route path="/canada-sold-listings" element={<CanadaSoldListings />} />
                 <Route path="/usa-sold-listings" element={<USASoldListings />} />
                 <Route path="/toronto-sold-listings" element={<TorontoSoldListings />} />
                 <Route path="/vancouver-sold-listings" element={<VancouverSoldListings />} />
-                
+
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />
                 <Route path="/signup-success" element={<PublicRoute><SignUpSuccessPage /></PublicRoute>} />
                 <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
                 <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-                
+
                 <Route path="/auth/callback" element={<AuthCallbackPage />} />
                 <Route path="/post-auth" element={<PostAuthPage />} />
-        <Route 
-          path="/welcome"
-          element={
-            <ProtectedRoute>
-              <WelcomePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route 
-          path="/test-components"
-          element={
-            <ProtectedRoute>
-              <ComponentTestPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route 
-          path="/test-billing"
-          element={
-            <ProtectedRoute>
-              <BillingTestPage />
-            </ProtectedRoute>
-          }
-        />
+                <Route
+                  path="/welcome"
+                  element={
+                    <ProtectedRoute>
+                      <WelcomePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/test-components"
+                  element={
+                    <ProtectedRoute>
+                      <ComponentTestPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/test-billing"
+                  element={
+                    <ProtectedRoute>
+                      <BillingTestPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/success" element={<Success />} />
                 <Route path="/health" element={<HealthCheck />} />
-                
-                <Route 
+
+                <Route
                   path="/onboarding"
                   element={
                     <ProtectedRoute>
@@ -209,11 +209,11 @@ function App() {
       </main>
       {!isDashboardRoute && <Footer />}
       <ShadToaster />
-      
+
       {/* Onboarding Components - Only show for authenticated users */}
       {session && (
         <>
-          <WelcomeMessage 
+          <WelcomeMessage
             onStartTour={startTour}
             onDismiss={skipTour}
             showWelcomeMessage={showWelcomeMessage}

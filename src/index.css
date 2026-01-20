@@ -19,17 +19,17 @@ button, .btn, [role="button"] {
 
 /* Hide scrollbar utility */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar { 
-  display: none;  /* Safari and Chrome */
+  display: none;
 }
 
 /* Better mobile scrolling */
 html, body {
-  touch-action: manipulation; /* Prevents double-tap zoom */
-  overscroll-behavior: contain; /* Prevents overscroll effects */
+  touch-action: manipulation;
+  overscroll-behavior: contain;
 }
 
 /* Mobile optimizations */
@@ -72,97 +72,113 @@ html, body {
   }
 }
 
+/* Typography System */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap');
 
 @layer base {
   :root {
-    --background: 222 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* --- Brand Primitives (HSL Channels) --- */
+    /* Navy Scale */
+    --navy-950: 222 84% 5%;   /* #020817 - Deepest */
+    --navy-900: 216 65% 11%;  /* #0A192F - Brand Background */
+    --navy-800: 224 64% 33%;  /* #1E3A8A - Lighter */
+    --navy-700: 220 100% 20%; /* Original Primary */
 
-    --card: 222 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 220 100% 20%; /* Deep Navy Blue */
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 180 100% 50%; /* Vibrant Teal/Aqua */
-    --secondary-foreground: 220 100% 20%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%; /* Dark accent for dark mode */
-    --accent-foreground: 210 40% 98%;
- 
+    /* Teal Scale */
+    --teal-500: 173 80% 40%;  /* #14B8A6 - Brand Primary */
+    --teal-600: 175 80% 30%;  /* Darker Teal */
+    --teal-400: 173 80% 50%;  /* Lighter Teal */
+
+    /* Slate Scale */
+    --slate-50: 210 40% 98%;  /* #F8FAFC */
+    --slate-100: 214 32% 91%;
+    --slate-200: 214 32% 84%; /* #CBD5E1 */
+    --slate-400: 215 20% 65%; /* #94A3B8 */
+    --slate-800: 215 28% 17%;
+    --slate-900: 222 47% 11%;
+
+    /* --- Semantic Tokens (The Truth) --- */
+    --background: var(--navy-900);
+    --foreground: var(--slate-50);
+
+    --card: var(--navy-900);
+    --card-foreground: var(--slate-50);
+
+    --popover: var(--navy-900);
+    --popover-foreground: var(--slate-50);
+
+    --primary: var(--teal-500); 
+    --primary-foreground: 222 47% 11%; /* Navy text on Teal */
+
+    --secondary: var(--navy-800);
+    --secondary-foreground: var(--slate-50);
+
+    --muted: var(--navy-800);
+    --muted-foreground: var(--slate-400);
+
+    --accent: var(--navy-800);
+    --accent-foreground: var(--slate-50);
+
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: var(--slate-50);
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 180 100% 50%; /* Vibrant Teal/Aqua for focus rings */
- 
-    --radius: 0.5rem;
+    --border: var(--navy-800);
+    --input: var(--navy-800);
+    --ring: var(--teal-500);
 
-    /* Brand colors - Deep Navy Blue (primary), Vibrant Teal/Aqua (secondary), Silver/Light Gray (accent) */
-    --deep-navy: #0A192F; /* Deep Navy Blue - Confidence, Trust, Stability */
-    --light-navy: #1E3A8A; /* Lighter Navy for cards */
-    --lightest-navy: #3B82F6; /* Even lighter navy for borders */
-    --slate: #94A3B8; /* Silver/Light Gray - Sophistication, Tech, Cleanliness */
-    --light-slate: #CBD5E1; /* Lighter silver */
-    --lightest-slate: #F1F5F9; /* Lightest silver */
-    --white: #FFFFFF;
-    --teal: #14B8A6; /* Vibrant Teal/Aqua - Innovation, Technology, Clarity */
-    --teal-hover: rgba(20, 184, 166, 0.8);
-    --teal-selection: rgba(20, 184, 166, 0.2);
-    --navy-accent: #1E40AF; /* Navy accent for buttons */
+    --radius: 0.5rem; /* Locked to 8px */
+
+    /* --- Legacy Compat (Mapped to System) --- */
+    --deep-navy: var(--navy-900);
+    --light-navy: var(--navy-800);
+    --lightest-navy: 217 91% 60%; /* Kept original Blue */
+    --slate: var(--slate-400);
+    --light-slate: var(--slate-200);
+    --lightest-slate: var(--slate-50);
+    --white: 0 0% 100%;
+    --teal: var(--teal-500);
+    --navy-accent: 225 73% 40%; /* #1E40AF - Button Blue */
   }
 
   [data-theme='light'] {
-    --background: 0 0% 100%; /* White */
-    --foreground: 220 8.9% 10.8%; /* Very dark gray for main text */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 8.9% 10.8%;
- 
+    --card-foreground: 222 47% 11%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 220 8.9% 10.8%;
- 
-    --primary: 220 100% 20%; /* Deep Navy Blue */
-    --primary-foreground: 210 40% 98%; /* White text on primary */
- 
-    --secondary: 180 100% 50%; /* Vibrant Teal/Aqua */
-    --secondary-foreground: 220 100% 20%;
- 
+    --popover-foreground: 222 47% 11%;
+
+    --primary: var(--teal-500);
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%; /* Light accent for light mode */
+
+    --accent: 210 40% 96.1%;
     --accent-foreground: 220 8.9% 10.8%;
- 
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 180 100% 50%; /* Vibrant Teal/Aqua for focus rings */
-    
-    /* Brand colors for light mode - maintaining brand consistency */
-    --deep-navy: #F8FAFC; /* Light background */
-    --light-navy: #FFFFFF; /* White cards/elements */
-    --lightest-navy: #E2E8F0; /* Light borders/accents */
-    --slate: #475569; /* Darker gray text */
-    --light-slate: #334155; /* Even darker gray text */
-    --lightest-slate: #1E293B; /* Very dark text */
-    --white: #000000; /* Black for contrast */
-    --teal: #0D9488; /* Vibrant Teal/Aqua - slightly darker for light mode */
-    --teal-hover: rgba(13, 148, 136, 0.8);
-    --teal-selection: rgba(13, 148, 136, 0.2);
-    --navy-accent: #1E40AF; /* Navy accent for buttons */
+    --ring: var(--teal-500);
+
+    /* Legacy Light Mode Mapping */
+    --deep-navy: 210 40% 98%; /* Light */
+    --light-navy: 0 0% 100%;  /* White */
+    --lightest-navy: 214 32% 91%;
+    --slate: 215 16% 47%;
+    --light-slate: 215 25% 27%;
+    --lightest-slate: 222 47% 11%;
+    --white: 0 0% 0%; /* In light mode, white becomes black (mapped) */
   }
 }
 
@@ -174,32 +190,40 @@ html, body {
     @apply bg-background text-foreground antialiased font-sans;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-heading tracking-tight;
+  }
+  
+  /* Premium Form Elements */
+  input, textarea, select {
+    @apply transition-all duration-200;
+  }
+  input:focus, textarea:focus, select:focus {
+    @apply ring-2 ring-ring/20 border-ring;
   }
 }
 
-/* Custom scrollbar */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: var(--deep-navy);
+  background-color: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full;
-  background-color: var(--teal);
+  background-color: hsl(var(--teal-500) / 0.3);
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--teal-hover);
+  background-color: hsl(var(--teal-500) / 0.6);
 }
 
 /* Horizontal scrollbar for tables */
 .table-scroll::-webkit-scrollbar {
-  height: 8px;
+  height: 6px;
 }
 
 .table-scroll::-webkit-scrollbar-track {
@@ -207,21 +231,20 @@ html, body {
 }
 
 .table-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(20, 184, 166, 0.3);
+  background-color: hsl(var(--teal-500) / 0.3);
   border-radius: 4px;
 }
 
 .table-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(20, 184, 166, 0.5);
+  background-color: hsl(var(--teal-500) / 0.5);
 }
 
-/* Smooth scrolling for tables */
+/* Smooth scrolling */
 .table-scroll {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Ensure tables can scroll horizontally */
 .table-container {
   overflow-x: auto;
   overflow-y: visible;
@@ -229,6 +252,6 @@ html, body {
 }
 
 ::selection {
-  background-color: var(--teal-selection);
-  color: var(--teal);
+  background-color: hsl(var(--teal-500) / 0.2);
+  color: hsl(var(--teal-500));
 }

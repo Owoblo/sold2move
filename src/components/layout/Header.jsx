@@ -37,7 +37,7 @@ const Header = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isMenuOpen]);
-  
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
@@ -51,19 +51,19 @@ const Header = () => {
     { name: 'Contact', path: '/contact' },
   ];
 
-  const activeLinkClass = "text-teal";
-  const inactiveLinkClass = "text-lightest-slate hover:text-teal transition-colors duration-300";
+  const activeLinkClass = "text-primary";
+  const inactiveLinkClass = "text-muted-foreground hover:text-primary transition-colors duration-300";
 
   return (
     <motion.header
-      className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-light-navy/80 shadow-lg backdrop-blur-sm' : 'bg-deep-navy'}`}
+      className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-background/80 shadow-lg backdrop-blur-md border-b border-border/40' : 'bg-background border-b border-transparent'}`}
     >
       <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2 group">
-          <div className="p-2 bg-light-navy rounded-md group-hover:bg-lightest-navy transition-colors">
-            <Home className="h-6 w-6 text-teal" />
+          <div className="p-2 bg-secondary/50 rounded-lg group-hover:bg-secondary transition-colors">
+            <Home className="h-6 w-6 text-primary" />
           </div>
-          <span className="text-xl font-bold text-lightest-slate group-hover:text-teal transition-colors font-heading">
+          <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors font-heading tracking-tight">
             Sold2Move
           </span>
         </Link>
@@ -73,7 +73,7 @@ const Header = () => {
             <NavLink
               key={item.name}
               to={item.path}
-              className={({ isActive }) => `${isActive ? activeLinkClass : inactiveLinkClass} font-medium`}
+              className={({ isActive }) => `${isActive ? activeLinkClass : inactiveLinkClass} font-medium text-sm tracking-wide`}
             >
               {item.name}
             </NavLink>
@@ -81,25 +81,25 @@ const Header = () => {
         </div>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-teal">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-primary">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           {session ? (
             <>
-              <span className="text-light-slate">Welcome, {session.user.user_metadata?.full_name || session.user.email}!</span>
-              <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
+              <span className="text-muted-foreground text-sm">Welcome, {session.user.user_metadata?.full_name || session.user.email}!</span>
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
                 <Link to="/dashboard">Dashboard</Link>
               </Button>
-              <Button onClick={handleLogout} variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal">
+              <Button onClick={handleLogout} variant="outline" className="border-primary/20 text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/50">
                 <LogOut className="h-4 w-4" />
               </Button>
             </>
           ) : (
             <>
-              <Button asChild variant="ghost" className="text-lightest-slate hover:text-teal">
+              <Button asChild variant="ghost" className="text-muted-foreground hover:text-primary">
                 <Link to="/login">Login</Link>
               </Button>
-              <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 font-semibold px-6">
                 <Link to="/signup">Sign Up</Link>
               </Button>
             </>
@@ -107,9 +107,9 @@ const Header = () => {
         </div>
 
         <div className="md:hidden">
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)} 
-            className="text-teal focus:outline-none focus:ring-2 focus:ring-teal focus:ring-offset-2 focus:ring-offset-deep-navy rounded-md p-1"
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-md p-1"
             aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
@@ -123,7 +123,7 @@ const Header = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:hidden absolute top-full left-0 w-full bg-light-navy shadow-xl"
+          className="md:hidden absolute top-full left-0 w-full bg-background/95 backdrop-blur-xl shadow-2xl border-b border-border"
           id="mobile-menu"
           role="navigation"
           aria-label="Mobile navigation"
@@ -133,31 +133,31 @@ const Header = () => {
               <NavLink
                 key={item.name}
                 to={item.path}
-                className={({ isActive }) => `${isActive ? activeLinkClass : inactiveLinkClass} text-lg`}
+                className={({ isActive }) => `${isActive ? activeLinkClass : inactiveLinkClass} text-lg font-medium`}
               >
                 {item.name}
               </NavLink>
             ))}
-            <div className="flex flex-col space-y-4 w-full pt-4 border-t border-lightest-navy/20 mt-4">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-lightest-slate hover:text-teal w-full">
+            <div className="flex flex-col space-y-4 w-full pt-4 border-t border-border mt-4">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-primary w-full justify-center">
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 <span className="ml-2">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
               </Button>
               {session ? (
-                 <>
-                  <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90 w-full">
+                <>
+                  <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 w-full shadow-lg shadow-primary/20">
                     <Link to="/dashboard">Dashboard</Link>
                   </Button>
-                  <Button onClick={handleLogout} variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal w-full">
+                  <Button onClick={handleLogout} variant="outline" className="border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/50 w-full">
                     Logout
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button asChild variant="outline" className="border-teal text-teal hover:bg-teal/10 hover:text-teal w-full">
+                  <Button asChild variant="ghost" className="text-muted-foreground hover:text-primary w-full border border-transparent hover:border-border">
                     <Link to="/login">Login</Link>
                   </Button>
-                  <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90 w-full">
+                  <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 w-full shadow-lg shadow-primary/20">
                     <Link to="/signup">Sign Up</Link>
                   </Button>
                 </>

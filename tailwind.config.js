@@ -17,16 +17,16 @@ module.exports = {
 		},
 		extend: {
 			colors: {
-				// Use CSS variables for colors
-				'deep-navy': 'var(--deep-navy)',
-				'light-navy': 'var(--light-navy)',
-				'lightest-navy': 'var(--lightest-navy)',
-				'slate': 'var(--slate)',
-				'light-slate': 'var(--light-slate)',
-				'lightest-slate': 'var(--lightest-slate)',
-				'white': 'var(--white)',
-				'teal': 'var(--teal)',
-				'navy-accent': 'var(--navy-accent)',
+				// Use CSS variables for colors - updated to support opacity
+				'deep-navy': 'hsl(var(--deep-navy))',
+				'light-navy': 'hsl(var(--light-navy))',
+				'lightest-navy': 'hsl(var(--lightest-navy))',
+				'slate': 'hsl(var(--slate))',
+				'light-slate': 'hsl(var(--light-slate))',
+				'lightest-slate': 'hsl(var(--lightest-slate))',
+				'white': 'hsl(var(--white))',
+				'teal': 'hsl(var(--teal))',
+				'navy-accent': 'hsl(var(--navy-accent))',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -67,10 +67,10 @@ module.exports = {
 				sm: 'calc(var(--radius) - 4px)',
 			},
 			fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        heading: ['"Plus Jakarta Sans"', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'monospace'],
-      },
+				sans: ['Inter', 'sans-serif'],
+				heading: ['"Plus Jakarta Sans"', 'sans-serif'],
+				mono: ['"IBM Plex Mono"', 'monospace'],
+			},
 			keyframes: {
 				'accordion-down': {
 					from: { height: 0 },
