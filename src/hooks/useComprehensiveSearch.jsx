@@ -15,7 +15,7 @@ export const useComprehensiveSearch = (searchTerm, options = {}) => {
 
   // Debounce the search term
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
-  
+
   useMemo(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -30,79 +30,71 @@ export const useComprehensiveSearch = (searchTerm, options = {}) => {
         return { suggestions: [], totalCount: 0 };
       }
 
-      const searchTerm = debouncedSearchTerm.trim();
-      const results = [];
+      const term = debouncedSearchTerm.trim();
 
       try {
-        // Search in just_listed table
-        if (includeJustListed) {
-          const { data: justListedData, error: justListedError } = await supabase
-            .from('just_listed')
-            .select(`
-              id,
-              addressstreet,
-              lastcity,
-              addresscity,
-              addressstate,
-              addresszipcode,
-              price,
-              unformattedprice,
-              beds,
-              baths,
-              area,
-              statustext,
-              lastseenat,
-              created_at
-            `)
-            .or(`addressstreet.ilike.%${searchTerm}%,lastcity.ilike.%${searchTerm}%,addresscity.ilike.%${searchTerm}%,addressstate.ilike.%${searchTerm}%,addresszipcode.ilike.%${searchTerm}%`)
-            .order('lastseenat', { ascending: false })
-            .limit(limit);
+        // Build status filter based on options
+        const statusFilters = [];
+        if (includeJustListed) statusFilters.push('just_listed');
+        if (includeSold) statusFilters.push('sold');
 
-          if (!justListedError && justListedData) {
-            results.push(...justListedData.map(item => ({
-              ...item,
-              type: 'just_listed',
-              source: 'Just Listed',
-              displayAddress: `${item.addressstreet}, ${item.lastcity}, ${item.addressstate} ${item.addresszipcode}`,
-              searchScore: calculateSearchScore(item, searchTerm)
-            })));
-          }
+        if (statusFilters.length === 0) {
+          return { suggestions: [], totalCount: 0 };
         }
 
-        // Search in sold_listings table
-        if (includeSold) {
-          const { data: soldData, error: soldError } = await supabase
-            .from('sold_listings')
-            .select(`
-              id,
-              addressstreet,
-              lastcity,
-              addresscity,
-              addressstate,
-              addresszipcode,
-              price,
-              unformattedprice,
-              beds,
-              baths,
-              area,
-              statustext,
-              lastseenat,
-              created_at
-            `)
-            .or(`addressstreet.ilike.%${searchTerm}%,lastcity.ilike.%${searchTerm}%,addresscity.ilike.%${searchTerm}%,addressstate.ilike.%${searchTerm}%,addresszipcode.ilike.%${searchTerm}%`)
-            .order('lastseenat', { ascending: false })
-            .limit(limit);
+        // Search in unified listings table
+        let query = supabase
+          .from('listings')
+          .select(`
+            zpid,
+            addressstreet,
+            lastcity,
+            addresscity,
+            addressstate,
+            addresszipcode,
+            price,
+            unformattedprice,
+            beds,
+            baths,
+            area,
+            statustext,
+            status,
+            lastseenat,
+            first_seen_at
+          `)
+          .or(`addressstreet.ilike.%${term}%,lastcity.ilike.%${term}%,addresscity.ilike.%${term}%,addressstate.ilike.%${term}%,addresszipcode.ilike.%${term}%`)
+          .in('status', statusFilters)
+          .order('lastseenat', { ascending: false })
+          .limit(limit);
 
-          if (!soldError && soldData) {
-            results.push(...soldData.map(item => ({
-              ...item,
-              type: 'sold_listings',
-              source: 'Sold',
-              displayAddress: `${item.addressstreet}, ${item.lastcity}, ${item.addressstate} ${item.addresszipcode}`,
-              searchScore: calculateSearchScore(item, searchTerm)
-            })));
-          }
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Comprehensive search error:', error);
+          return { suggestions: [], totalCount: 0, error: error.message };
         }
+
+        const results = (data || []).map(item => ({
+          id: item.zpid,
+          zpid: item.zpid,
+          addressstreet: item.addressstreet,
+          lastcity: item.lastcity,
+          addresscity: item.addresscity,
+          addressstate: item.addressstate,
+          addresszipcode: item.addresszipcode,
+          price: item.price,
+          unformattedprice: item.unformattedprice,
+          beds: item.beds,
+          baths: item.baths,
+          area: item.area,
+          statustext: item.statustext,
+          lastseenat: item.lastseenat,
+          created_at: item.first_seen_at,
+          type: item.status,
+          source: item.status === 'just_listed' ? 'Just Listed' : item.status === 'sold' ? 'Sold' : 'Active',
+          displayAddress: `${item.addressstreet}, ${item.lastcity}, ${item.addressstate} ${item.addresszipcode}`,
+          searchScore: calculateSearchScore(item, term)
+        }));
 
         // Sort by search score (most relevant first)
         results.sort((a, b) => b.searchScore - a.searchScore);
@@ -110,7 +102,7 @@ export const useComprehensiveSearch = (searchTerm, options = {}) => {
         // Remove duplicates based on address
         const uniqueResults = [];
         const seenAddresses = new Set();
-        
+
         for (const result of results) {
           const addressKey = `${result.addressstreet}-${result.lastcity}-${result.addressstate}`.toLowerCase();
           if (!seenAddresses.has(addressKey)) {
@@ -186,15 +178,16 @@ export const useSearchStats = () => {
     queryKey: ['search-stats'],
     queryFn: async () => {
       try {
-        const [justListedCount, soldCount] = await Promise.all([
-          supabase.from('just_listed').select('*', { count: 'exact', head: true }),
-          supabase.from('sold_listings').select('*', { count: 'exact', head: true })
+        const [justListedCount, soldCount, totalCount] = await Promise.all([
+          supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'just_listed'),
+          supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
+          supabase.from('listings').select('*', { count: 'exact', head: true })
         ]);
 
         return {
           justListedCount: justListedCount.count || 0,
           soldCount: soldCount.count || 0,
-          totalCount: (justListedCount.count || 0) + (soldCount.count || 0)
+          totalCount: totalCount.count || 0
         };
       } catch (error) {
         console.error('Error fetching search stats:', error);
@@ -213,20 +206,20 @@ export const usePopularSearches = () => {
     queryKey: ['popular-searches'],
     queryFn: async () => {
       try {
-        // Get most common street names, cities, and zip codes
+        // Get most common street names, cities, and zip codes from unified listings table
         const [streets, cities, zips] = await Promise.all([
           supabase
-            .from('just_listed')
+            .from('listings')
             .select('addressstreet')
             .not('addressstreet', 'is', null)
             .limit(1000),
           supabase
-            .from('just_listed')
+            .from('listings')
             .select('lastcity')
             .not('lastcity', 'is', null)
             .limit(1000),
           supabase
-            .from('just_listed')
+            .from('listings')
             .select('addresszipcode')
             .not('addresszipcode', 'is', null)
             .limit(1000)

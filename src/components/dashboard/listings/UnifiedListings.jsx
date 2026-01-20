@@ -48,7 +48,10 @@ const UnifiedListings = () => {
   const location = useLocation();
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
-  
+
+  // Track whether initial cities have been set from profile
+  const [initialCitiesSet, setInitialCitiesSet] = useState(false);
+
   // Determine active tab based on URL
   const getActiveTabFromUrl = () => {
     if (location.pathname.includes('/sold')) {
@@ -56,7 +59,7 @@ const UnifiedListings = () => {
     }
     return 'just-listed';
   };
-  
+
   const [activeTab, setActiveTab] = useState(getActiveTabFromUrl());
   const [filters, setFilters] = useState({
     city_name: [],
@@ -74,21 +77,27 @@ const UnifiedListings = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const { trackAction } = useAnalytics();
 
-  // Update filters when profile changes
+  // Set initial cities from profile only once when profile first loads
   useEffect(() => {
-    if (profile?.service_cities && profile.service_cities.length > 0) {
-      // Extract city names from service cities (format: "City, State")
-      const cityNames = profile.service_cities.map(cityState => {
-        const [cityName] = cityState.split(', ');
-        return cityName;
-      });
-      setFilters(prev => ({ ...prev, city_name: cityNames }));
-    } else if (profile?.city_name) {
-      setFilters(prev => ({ ...prev, city_name: [profile.city_name] }));
-    } else {
-      setFilters(prev => ({ ...prev, city_name: [] }));
+    // Only set initial cities if we haven't done so yet and profile is loaded
+    if (!initialCitiesSet && !profileLoading && profile) {
+      let cityNames = [];
+      if (profile.service_cities && profile.service_cities.length > 0) {
+        // Extract city names from service cities (format: "City, State")
+        cityNames = profile.service_cities.map(cityState => {
+          const [cityName] = cityState.split(', ');
+          return cityName;
+        });
+      } else if (profile.city_name) {
+        cityNames = [profile.city_name];
+      }
+
+      if (cityNames.length > 0) {
+        setFilters(prev => ({ ...prev, city_name: cityNames }));
+      }
+      setInitialCitiesSet(true);
     }
-  }, [profile?.service_cities, profile?.city_name]);
+  }, [profile, profileLoading, initialCitiesSet]);
 
   // Update active tab when URL changes
   useEffect(() => {

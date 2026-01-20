@@ -98,59 +98,51 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
   return useQuery({
     queryKey: listingKeys.soldListings(filters, page),
     queryFn: async () => {
-      // Get the most recent run with data and the previous one
-      const currentRunId = await getMostRecentRunWithData();
-      
-      // Get the previous run ID
-      const { data: runsData, error: runsError } = await supabase
-        .from('runs')
-        .select('id')
-        .order('started_at', { ascending: false })
-        .limit(2);
-
-      if (runsError || runsData.length < 2) {
-        throw new Error(runsError?.message || 'Could not fetch run data');
-      }
-
-      const prevRunId = runsData[1].id;
-      
-      // Get all sold listings
       // Support both single city and multiple cities
       const cityFilter = filters.city_name;
-        
-      const allSoldListings = await fetchSoldSincePrev(
-        currentRunId,
-        prevRunId,
-        cityFilter,
-        filters
+
+      // If no city filter is provided, try to use profile city information
+      let finalCityFilter = cityFilter;
+      if (!finalCityFilter && profile?.city_name) {
+        finalCityFilter = [profile.city_name];
+      }
+
+      // Add AI furniture filter from user profile
+      const enhancedFilters = {
+        ...filters,
+        aiFurnitureFilter: profile?.ai_furniture_filter || false
+      };
+
+      // fetchSoldSincePrev now uses server-side pagination via fetchListings
+      const { data, count } = await fetchSoldSincePrev(
+        null, // currentRunId not needed anymore
+        null, // prevRunId not needed anymore
+        finalCityFilter || null,
+        { ...enhancedFilters, page, pageSize }
       );
 
-      // fetchSoldSincePrev returns { data, count }, not an array
-      // Apply client-side pagination for sold listings
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedData = allSoldListings.data.slice(startIndex, endIndex);
-
       return {
-        data: paginatedData,
-        count: allSoldListings.count,
-        totalPages: Math.ceil(allSoldListings.count / pageSize),
+        data: data || [],
+        count: count || 0,
+        totalPages: Math.ceil((count || 0) / pageSize),
         currentPage: page,
-        hasNextPage: page < Math.ceil(allSoldListings.count / pageSize),
+        hasNextPage: page < Math.ceil((count || 0) / pageSize),
         hasPrevPage: page > 1,
       };
     },
     enabled: true, // Always enabled - let the query handle empty filters gracefully
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
+    retry: (failureCount, error) => {
+      // Don't retry on certain error types
+      if (error.code === 'COLUMN_NOT_FOUND' || error.code === 'TABLE_NOT_FOUND') {
+        return false;
+      }
+      return failureCount < 3;
+    },
     onError: (error) => {
-      
+      console.error('useSoldListingsEnhanced: Error occurred:', error);
       // Don't show toast to avoid user annoyance - just log the error
-      // toast({
-      //   variant: "destructive",
-      //   title: "Error fetching sold listings",
-      //   description: error.message,
-      // });
     },
   });
 };
@@ -327,30 +319,42 @@ export const useFilterOptions = (cityName) => {
   return useQuery({
     queryKey: ['filter-options', cityName],
     queryFn: async () => {
-      if (!cityName) return null;
+      // Return default filter options if no city is provided
+      if (!cityName) {
+        return {
+          priceRange: { min: 0, max: 10000000 },
+          beds: [1, 2, 3, 4, 5],
+          baths: [1, 2, 3, 4],
+          areaRange: { min: 0, max: 10000 },
+          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
+        };
+      }
 
-      // Get the latest run ID
-      const { data: runsData, error: runsError } = await supabase
-        .from('runs')
-        .select('id')
-        .order('started_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (runsError) return null;
-
-      const currentRunId = runsData.id;
-
-      // Get unique values for filter options from just_listed table
-      // Since just_listed doesn't have run_id column, we'll query without it
+      // Get unique values for filter options from unified listings table
       let query = supabase
-        .from('just_listed')
-        .select('unformattedprice, beds, baths, area, statustext')
-        .eq('lastcity', cityName);
-      
-      const { data: listings, error } = await query;
+        .from('listings')
+        .select('unformattedprice, beds, baths, area, statustext');
 
-      if (error) return null;
+      // Handle both single city and array of cities
+      if (Array.isArray(cityName)) {
+        query = query.in('lastcity', cityName);
+      } else {
+        query = query.or(`lastcity.eq.${cityName},addresscity.eq.${cityName}`);
+      }
+
+      const { data: listings, error } = await query.limit(1000); // Limit for performance
+
+      if (error) {
+        console.error('useFilterOptions: Error fetching filter options:', error);
+        // Return default values on error
+        return {
+          priceRange: { min: 0, max: 10000000 },
+          beds: [1, 2, 3, 4, 5],
+          baths: [1, 2, 3, 4],
+          areaRange: { min: 0, max: 10000 },
+          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
+        };
+      }
 
       const prices = listings?.map(l => l.unformattedprice).filter(Boolean) || [];
       const beds = [...new Set(listings?.map(l => l.beds).filter(Boolean))].sort((a, b) => a - b);
@@ -360,19 +364,19 @@ export const useFilterOptions = (cityName) => {
 
       return {
         priceRange: {
-          min: Math.min(...prices),
-          max: Math.max(...prices),
+          min: prices.length > 0 ? Math.min(...prices) : 0,
+          max: prices.length > 0 ? Math.max(...prices) : 10000000,
         },
-        beds: beds,
-        baths: baths,
+        beds: beds.length > 0 ? beds : [1, 2, 3, 4, 5],
+        baths: baths.length > 0 ? baths : [1, 2, 3, 4],
         areaRange: {
-          min: Math.min(...areas),
-          max: Math.max(...areas),
+          min: areas.length > 0 ? Math.min(...areas) : 0,
+          max: areas.length > 0 ? Math.max(...areas) : 10000,
         },
-        propertyTypes: propertyTypes,
+        propertyTypes: propertyTypes.length > 0 ? propertyTypes : ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
       };
     },
-    enabled: !!cityName,
+    enabled: true, // Always enabled - we have default values now
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
@@ -384,16 +388,29 @@ export const useSearchSuggestions = (cityName, searchTerm) => {
   return useQuery({
     queryKey: ['search-suggestions', cityName, searchTerm],
     queryFn: async () => {
-      if (!cityName || !searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 2) return [];
 
-      const { data, error } = await supabase
-        .from('just_listed')
+      let query = supabase
+        .from('listings')
         .select('addressstreet, lastcity, addressstate, addresszipcode')
-        .eq('lastcity', cityName)
         .or(`addressstreet.ilike.%${searchTerm}%,addresszipcode.ilike.%${searchTerm}%`)
         .limit(10);
 
-      if (error) return [];
+      // Apply city filter if provided
+      if (cityName) {
+        if (Array.isArray(cityName)) {
+          query = query.in('lastcity', cityName);
+        } else {
+          query = query.eq('lastcity', cityName);
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('useSearchSuggestions: Error:', error);
+        return [];
+      }
 
       return data?.map(listing => ({
         address: `${listing.addressstreet}, ${listing.lastcity}, ${listing.addressstate} ${listing.addresszipcode}`,
@@ -403,7 +420,7 @@ export const useSearchSuggestions = (cityName, searchTerm) => {
         zip: listing.addresszipcode,
       })) || [];
     },
-    enabled: !!cityName && !!searchTerm && searchTerm.length >= 2,
+    enabled: !!searchTerm && searchTerm.length >= 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

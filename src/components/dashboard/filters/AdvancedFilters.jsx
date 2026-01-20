@@ -26,8 +26,9 @@ const AdvancedFilters = ({
 
   // Remove old search suggestions logic - now handled by ComprehensiveSearchBar
 
-  // Get filter options
-  const { data: filterOptions } = useFilterOptions(cityName);
+  // Get filter options - use city_name from filters (array) or fallback to cityName prop
+  const cityForOptions = localFilters.city_name?.length > 0 ? localFilters.city_name : cityName;
+  const { data: filterOptions } = useFilterOptions(cityForOptions);
 
   // Update local filters when props change
   useEffect(() => {
@@ -64,9 +65,10 @@ const AdvancedFilters = ({
     setShowSavedSearches(false);
   };
 
-  // Clear all filters
+  // Clear all filters (preserve city selection)
   const clearFilters = () => {
     const clearedFilters = {
+      city_name: localFilters.city_name, // Preserve current city selection
       searchTerm: '',
       minPrice: null,
       maxPrice: null,
@@ -75,6 +77,7 @@ const AdvancedFilters = ({
       propertyType: null,
       minSqft: null,
       maxSqft: null,
+      dateRange: 'all',
     };
     setLocalFilters(clearedFilters);
     setSearchTerm('');
@@ -82,10 +85,12 @@ const AdvancedFilters = ({
     onSearchChange('');
   };
 
-  // Get active filter count
-  const activeFilterCount = Object.values(localFilters).filter(value => 
-    value !== null && value !== undefined && value !== '' && value !== 'all'
-  ).length;
+  // Get active filter count (exclude city_name and dateRange='all' from count)
+  const activeFilterCount = Object.entries(localFilters).filter(([key, value]) => {
+    if (key === 'city_name') return false;
+    if (key === 'dateRange' && value === 'all') return false;
+    return value !== null && value !== undefined && value !== '' && value !== 'all';
+  }).length;
 
   // Price range slider
   const handlePriceRangeChange = (values) => {
@@ -113,8 +118,8 @@ const AdvancedFilters = ({
 
       {/* Quick Filters */}
       <div className="flex flex-wrap gap-2">
-        <Select 
-          value={localFilters.propertyType || 'all'} 
+        <Select
+          value={localFilters.propertyType || 'all'}
           onValueChange={(value) => handleFilterChange('propertyType', value === 'all' ? null : value)}
         >
           <SelectTrigger className="w-full sm:w-48">
@@ -129,9 +134,9 @@ const AdvancedFilters = ({
           </SelectContent>
         </Select>
 
-        <Select 
-          value={localFilters.beds || 'all'} 
-          onValueChange={(value) => handleFilterChange('beds', value === 'all' ? null : parseInt(value))}
+        <Select
+          value={localFilters.beds ? String(localFilters.beds) : 'all'}
+          onValueChange={(value) => handleFilterChange('beds', value === 'all' ? null : parseInt(value, 10))}
         >
           <SelectTrigger className="w-full sm:w-32">
             <SelectValue placeholder="Beds" />
@@ -139,14 +144,14 @@ const AdvancedFilters = ({
           <SelectContent>
             <SelectItem value="all">Any Beds</SelectItem>
             {filterOptions?.beds?.map((beds) => (
-              <SelectItem key={beds} value={beds.toString()}>{beds}+</SelectItem>
+              <SelectItem key={beds} value={String(beds)}>{beds}+</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select 
-          value={localFilters.baths || 'all'} 
-          onValueChange={(value) => handleFilterChange('baths', value === 'all' ? null : parseInt(value))}
+        <Select
+          value={localFilters.baths ? String(localFilters.baths) : 'all'}
+          onValueChange={(value) => handleFilterChange('baths', value === 'all' ? null : parseInt(value, 10))}
         >
           <SelectTrigger className="w-full sm:w-32">
             <SelectValue placeholder="Baths" />
@@ -154,7 +159,7 @@ const AdvancedFilters = ({
           <SelectContent>
             <SelectItem value="all">Any Baths</SelectItem>
             {filterOptions?.baths?.map((baths) => (
-              <SelectItem key={baths} value={baths.toString()}>{baths}+</SelectItem>
+              <SelectItem key={baths} value={String(baths)}>{baths}+</SelectItem>
             ))}
           </SelectContent>
         </Select>
