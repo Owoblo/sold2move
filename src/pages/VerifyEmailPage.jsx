@@ -90,7 +90,10 @@ const VerifyEmailPage = () => {
         body: { email, code: fullCode },
       });
 
+      console.log('Verify code response:', { data, error });
+
       if (error || !data?.success) {
+        console.error('Verification error:', error || data?.error);
         toast({
           variant: "destructive",
           title: "Verification Failed",
@@ -128,11 +131,14 @@ const VerifyEmailPage = () => {
         body: { email },
       });
 
+      console.log('Resend verification code response:', { data, error });
+
       if (error || !data?.success) {
+        console.error('Resend error:', error || data?.error);
         toast({
           variant: "destructive",
           title: "Failed to Resend",
-          description: "Could not send verification code. Please try again.",
+          description: data?.error || "Could not send verification code. Please try again.",
         });
         return;
       }

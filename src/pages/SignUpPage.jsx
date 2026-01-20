@@ -220,16 +220,18 @@ const SignUpPage = () => {
         }
 
         // Send verification code email
-        const { error: codeError } = await supabase.functions.invoke('send-verification-code', {
+        const { data: codeData, error: codeError } = await supabase.functions.invoke('send-verification-code', {
           body: { email: values.email },
         });
 
-        if (codeError) {
-          console.error('Error sending verification code:', codeError);
+        console.log('Verification code response:', { codeData, codeError });
+
+        if (codeError || !codeData?.success) {
+          console.error('Error sending verification code:', codeError || codeData?.error);
           toast({
             variant: "destructive",
             title: "Verification Email Failed",
-            description: "Account created but we couldn't send the verification email. Please try resending from the verification page.",
+            description: codeData?.error || "Account created but we couldn't send the verification email. Please try resending from the verification page.",
           });
         } else {
           toast({
