@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { Helmet } from 'react-helmet-async';
 import PageWrapper from '@/components/layout/PageWrapper';
@@ -15,6 +17,7 @@ import GoogleIcon from '@/components/icons/GoogleIcon';
 import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingButton from '@/components/ui/LoadingButton';
+import { useAvailableCities, getStateName } from '@/hooks/useAvailableCities';
 import {
   User,
   Mail,
@@ -24,7 +27,10 @@ import {
   EyeOff,
   CheckCircle,
   ArrowRight,
-  Building2
+  Building2,
+  MapPin,
+  Globe,
+  X
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -35,6 +41,35 @@ const SignUpPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Service area state
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCities, setSelectedCities] = useState([]);
+
+  // Fetch cities from database based on selected country
+  const { data: availableCities, isLoading: citiesLoading } = useAvailableCities(selectedCountry || null);
+
+  // Get unique states from available cities
+  const availableStates = useMemo(() => {
+    if (!availableCities) return [];
+    const stateMap = new Map();
+    availableCities.forEach(city => {
+      if (!stateMap.has(city.state)) {
+        stateMap.set(city.state, { state: city.state, count: city.count });
+      } else {
+        stateMap.get(city.state).count += city.count;
+      }
+    });
+    return Array.from(stateMap.values()).sort((a, b) => b.count - a.count);
+  }, [availableCities]);
+
+  // Get cities filtered by selected state
+  const citiesInState = useMemo(() => {
+    if (!availableCities || !selectedState) return [];
+    return availableCities.filter(city => city.state === selectedState);
+  }, [availableCities, selectedState]);
 
   const form = useForm({
     resolver: zodResolver(signUpSchema),
@@ -52,7 +87,83 @@ const SignUpPage = () => {
 
   const { isSubmitting } = form.formState;
 
+  // Handle country change - reset state and city selections
+  const handleCountryChange = (country) => {
+    setSelectedCountry(country);
+    setSelectedState('');
+    setSelectedCity('');
+    setSelectedCities([]);
+  };
+
+  // Handle state change - reset city selection
+  const handleStateChange = (state) => {
+    setSelectedState(state);
+    setSelectedCity('');
+  };
+
+  // Handle primary city selection
+  const handleCitySelect = (city) => {
+    setSelectedCity(city);
+    // Add to selected cities if not already there
+    const cityString = `${city}, ${selectedState}`;
+    if (!selectedCities.includes(cityString)) {
+      setSelectedCities([cityString, ...selectedCities.filter(c => c !== cityString)]);
+    }
+  };
+
+  // Add additional service city
+  const addServiceCity = (city) => {
+    const cityString = `${city}, ${selectedState}`;
+    if (!selectedCities.includes(cityString) && selectedCities.length < 10) {
+      setSelectedCities([...selectedCities, cityString]);
+    }
+  };
+
+  // Remove service city
+  const removeServiceCity = (cityToRemove) => {
+    setSelectedCities(selectedCities.filter(c => c !== cityToRemove));
+    // If removing the primary city, clear it
+    const [cityName] = cityToRemove.split(', ');
+    if (cityName === selectedCity) {
+      setSelectedCity('');
+    }
+  };
+
   const signUpWithPassword = async (values) => {
+    // Validate service area selection
+    if (!selectedCountry) {
+      toast({
+        variant: "destructive",
+        title: "Service Area Required",
+        description: "Please select your country.",
+      });
+      return;
+    }
+    if (!selectedState) {
+      toast({
+        variant: "destructive",
+        title: "Service Area Required",
+        description: "Please select your state/province.",
+      });
+      return;
+    }
+    if (!selectedCity) {
+      toast({
+        variant: "destructive",
+        title: "Service Area Required",
+        description: "Please select your primary city.",
+      });
+      return;
+    }
+    if (selectedCities.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Service Area Required",
+        description: "Please select at least one service city.",
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
@@ -79,7 +190,7 @@ const SignUpPage = () => {
       }
 
       if (data.user) {
-        // Create profile record with initial credits
+        // Create profile record with initial credits AND service area
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -89,9 +200,14 @@ const SignUpPage = () => {
             phone: values.phone,
             credits_remaining: 100, // Grant 100 free credits on signup
             trial_granted: true,
-            onboarding_complete: false,
+            onboarding_complete: false, // Still need to complete onboarding for credits info
             unlimited: false,
             subscription_status: 'inactive',
+            // Service area fields
+            country_code: selectedCountry,
+            state_code: selectedState,
+            city_name: selectedCity,
+            service_cities: selectedCities,
           });
 
         if (profileError) {
@@ -378,6 +494,151 @@ const SignUpPage = () => {
                         )}
                       />
                     </div>
+                  </div>
+
+                  {/* Service Area Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-lightest-slate border-b border-white/10 pb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Service Area
+                    </h3>
+                    <p className="text-xs text-slate">Select the areas where you operate. You'll only see listings from your selected country.</p>
+
+                    {/* Country Selection */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-lightest-slate flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        Country
+                      </label>
+                      <Select value={selectedCountry} onValueChange={handleCountryChange}>
+                        <SelectTrigger className="bg-white/90 border-white/30 text-deep-navy">
+                          <SelectValue placeholder="Select your country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CA">
+                            <span className="flex items-center gap-2">🇨🇦 Canada</span>
+                          </SelectItem>
+                          <SelectItem value="US">
+                            <span className="flex items-center gap-2">🇺🇸 United States</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* State/Province Selection */}
+                    {selectedCountry && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-lightest-slate">
+                          {selectedCountry === 'CA' ? 'Province' : 'State'}
+                        </label>
+                        <Select value={selectedState} onValueChange={handleStateChange} disabled={citiesLoading}>
+                          <SelectTrigger className="bg-white/90 border-white/30 text-deep-navy">
+                            <SelectValue placeholder={citiesLoading ? "Loading..." : `Select ${selectedCountry === 'CA' ? 'province' : 'state'}`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableStates.map((state) => (
+                              <SelectItem key={state.state} value={state.state}>
+                                <span className="flex items-center justify-between w-full">
+                                  {getStateName(state.state, selectedCountry)}
+                                  <Badge variant="secondary" className="ml-2 text-xs">
+                                    {state.count.toLocaleString()} listings
+                                  </Badge>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {availableStates.length === 0 && !citiesLoading && (
+                          <p className="text-xs text-amber-400">No listings available for this country yet.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Primary City Selection */}
+                    {selectedState && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-lightest-slate">
+                          Primary City
+                        </label>
+                        <Select value={selectedCity} onValueChange={handleCitySelect}>
+                          <SelectTrigger className="bg-white/90 border-white/30 text-deep-navy">
+                            <SelectValue placeholder="Select your primary city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {citiesInState.map((city) => (
+                              <SelectItem key={`${city.city}-${city.state}`} value={city.city}>
+                                <span className="flex items-center justify-between w-full">
+                                  {city.city}
+                                  <Badge variant="secondary" className="ml-2 text-xs">
+                                    {city.count.toLocaleString()} listings
+                                  </Badge>
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Additional Service Cities */}
+                    {selectedCity && citiesInState.length > 1 && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-lightest-slate">
+                          Add More Service Cities (Optional)
+                        </label>
+                        <Select onValueChange={addServiceCity}>
+                          <SelectTrigger className="bg-white/90 border-white/30 text-deep-navy">
+                            <SelectValue placeholder="Add another city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {citiesInState
+                              .filter(city => !selectedCities.includes(`${city.city}, ${selectedState}`))
+                              .map((city) => (
+                                <SelectItem key={`add-${city.city}-${city.state}`} value={city.city}>
+                                  <span className="flex items-center justify-between w-full">
+                                    {city.city}
+                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                      {city.count.toLocaleString()}
+                                    </Badge>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Selected Cities Display */}
+                    {selectedCities.length > 0 && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-lightest-slate">
+                          Your Service Cities ({selectedCities.length})
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedCities.map((city, index) => (
+                            <Badge
+                              key={city}
+                              variant={index === 0 ? "default" : "secondary"}
+                              className={`flex items-center gap-1 ${index === 0 ? 'bg-teal text-deep-navy' : 'bg-white/20 text-lightest-slate'}`}
+                            >
+                              {index === 0 && <span className="text-xs">Primary:</span>}
+                              {city}
+                              <button
+                                type="button"
+                                onClick={() => removeServiceCity(city)}
+                                className="ml-1 hover:text-red-400"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate">
+                      You can change your service area later in Settings.
+                    </p>
                   </div>
 
                   {/* Terms and Conditions */}

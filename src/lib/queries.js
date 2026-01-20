@@ -32,7 +32,7 @@ export async function getMostRecentRunWithData() {
  * @param {string|array} cityName - City name(s) to filter by
  * @param {number} page - Page number for pagination
  * @param {number} pageSize - Number of items per page
- * @param {object} filters - Additional filters (price, beds, baths, dates, etc.)
+ * @param {object} filters - Additional filters (price, beds, baths, dates, countryCode, etc.)
  */
 export async function fetchListings(status = null, cityName = null, page = 1, pageSize = 20, filters = {}) {
   try {
@@ -52,6 +52,16 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
 
     // Order by lastseenat (most recent first)
     query = query.order('lastseenat', { ascending: false });
+
+    // Country filtering based on state codes
+    if (filters.countryCode) {
+      if (filters.countryCode === 'CA') {
+        query = query.in('addressstate', CA_PROVINCES);
+      } else if (filters.countryCode === 'US') {
+        // Exclude Canadian provinces to get only US states
+        query = query.not('addressstate', 'in', `(${CA_PROVINCES.join(',')})`);
+      }
+    }
 
     // City filtering
     if (cityName) {
@@ -369,6 +379,119 @@ export async function getListingsCountByStatus(cityName = null) {
       total: (justListedResult.count || 0) + (soldResult.count || 0) + (activeResult.count || 0)
     };
   } catch (error) {
+    throw error;
+  }
+}
+
+// Canadian provinces/territories
+const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU'];
+
+/**
+ * Fetch available cities from the listings table
+ * Returns unique city/state combinations with listing counts
+ * @param {string} countryCode - 'US', 'CA', or null for all
+ * @returns {Promise<Array<{city: string, state: string, count: number}>>}
+ */
+export async function fetchAvailableCities(countryCode = null) {
+  try {
+    // Query to get city/state combinations from listings
+    let query = supabase
+      .from('listings')
+      .select('lastcity, addressstate')
+      .not('lastcity', 'is', null)
+      .not('addressstate', 'is', null);
+
+    // Filter by country based on state/province codes
+    if (countryCode === 'CA') {
+      query = query.in('addressstate', CA_PROVINCES);
+    } else if (countryCode === 'US') {
+      // Exclude Canadian provinces to get US states
+      query = query.not('addressstate', 'in', `(${CA_PROVINCES.join(',')})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('fetchAvailableCities error:', error);
+      throw error;
+    }
+
+    // Deduplicate and count occurrences in JavaScript
+    const cityMap = new Map();
+    (data || []).forEach(row => {
+      if (row.lastcity && row.addressstate) {
+        const key = `${row.lastcity}-${row.addressstate}`;
+        const existing = cityMap.get(key);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          cityMap.set(key, {
+            city: row.lastcity,
+            state: row.addressstate,
+            count: 1
+          });
+        }
+      }
+    });
+
+    // Convert to array and sort by count (most listings first)
+    const cities = Array.from(cityMap.values())
+      .sort((a, b) => b.count - a.count);
+
+    return cities;
+  } catch (error) {
+    console.error('fetchAvailableCities error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch available states/provinces from the listings table
+ * @param {string} countryCode - 'US', 'CA', or null for all
+ * @returns {Promise<Array<{state: string, count: number}>>}
+ */
+export async function fetchAvailableStates(countryCode = null) {
+  try {
+    let query = supabase
+      .from('listings')
+      .select('addressstate')
+      .not('addressstate', 'is', null);
+
+    // Filter by country
+    if (countryCode === 'CA') {
+      query = query.in('addressstate', CA_PROVINCES);
+    } else if (countryCode === 'US') {
+      query = query.not('addressstate', 'in', `(${CA_PROVINCES.join(',')})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('fetchAvailableStates error:', error);
+      throw error;
+    }
+
+    // Count occurrences per state
+    const stateMap = new Map();
+    (data || []).forEach(row => {
+      if (row.addressstate) {
+        const existing = stateMap.get(row.addressstate);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          stateMap.set(row.addressstate, {
+            state: row.addressstate,
+            count: 1
+          });
+        }
+      }
+    });
+
+    // Convert to array and sort by count
+    return Array.from(stateMap.values())
+      .sort((a, b) => b.count - a.count);
+  } catch (error) {
+    console.error('fetchAvailableStates error:', error);
     throw error;
   }
 }

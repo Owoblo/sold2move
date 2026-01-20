@@ -24,31 +24,36 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
     queryKey: listingKeys.justListed(filters, page),
     queryFn: async () => {
       try {
-        // Since just_listed table doesn't use run_id, we can pass null
         // Support both single city and multiple cities
         const cityFilter = filters.city_name;
-        
-        // If no city filter is provided, try to use profile city information
+
+        // If no city filter is provided, use profile's service_cities (user markets)
+        // This ensures users only see listings from their selected markets
         let finalCityFilter = cityFilter;
-        if (!finalCityFilter && profile?.city_name) {
+        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+          // Extract city names from "City, State" format
+          finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
+        } else if (!finalCityFilter && profile?.city_name) {
+          // Fallback to primary city if service_cities not set
           finalCityFilter = [profile.city_name];
         }
-        
-        // Add AI furniture filter from user profile
+
+        // Add AI furniture filter and country code from user profile
         const enhancedFilters = {
           ...filters,
-          aiFurnitureFilter: profile?.ai_furniture_filter || false
+          aiFurnitureFilter: profile?.ai_furniture_filter || false,
+          countryCode: profile?.country_code || null, // Add country restriction
         };
 
         const { data, count } = await fetchJustListed(
-          null, // No run ID needed for just_listed table
+          null, // No run ID needed
           finalCityFilter || null, // Allow null city filter
-          page, 
-          pageSize, 
+          page,
+          pageSize,
           enhancedFilters
         );
 
-        const result = {
+        return {
           data: data || [],
           count: count || 0,
           totalPages: Math.ceil((count || 0) / pageSize),
@@ -56,9 +61,6 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           hasNextPage: page < Math.ceil((count || 0) / pageSize),
           hasPrevPage: page > 1,
         };
-
-
-        return result;
       } catch (error) {
         throw error;
       }
@@ -75,16 +77,7 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
     },
     onError: (error) => {
       const errorDetails = handleQueryError(error, 'useJustListedEnhanced', { filters, page, pageSize });
-      const userMessage = getUserFriendlyMessage(error);
-      
       console.error('useJustListedEnhanced: Error details:', errorDetails);
-      
-      // Don't show toast to avoid user annoyance - just log the error
-      // toast({
-      //   variant: "destructive",
-      //   title: "Error fetching just listed properties",
-      //   description: userMessage,
-      // });
     },
   });
 };
@@ -101,16 +94,22 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
       // Support both single city and multiple cities
       const cityFilter = filters.city_name;
 
-      // If no city filter is provided, try to use profile city information
+      // If no city filter is provided, use profile's service_cities (user markets)
+      // This ensures users only see listings from their selected markets
       let finalCityFilter = cityFilter;
-      if (!finalCityFilter && profile?.city_name) {
+      if (!finalCityFilter && profile?.service_cities?.length > 0) {
+        // Extract city names from "City, State" format
+        finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
+      } else if (!finalCityFilter && profile?.city_name) {
+        // Fallback to primary city if service_cities not set
         finalCityFilter = [profile.city_name];
       }
 
-      // Add AI furniture filter from user profile
+      // Add AI furniture filter and country code from user profile
       const enhancedFilters = {
         ...filters,
-        aiFurnitureFilter: profile?.ai_furniture_filter || false
+        aiFurnitureFilter: profile?.ai_furniture_filter || false,
+        countryCode: profile?.country_code || null, // Add country restriction
       };
 
       // fetchSoldSincePrev now uses server-side pagination via fetchListings
@@ -142,7 +141,6 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
     },
     onError: (error) => {
       console.error('useSoldListingsEnhanced: Error occurred:', error);
-      // Don't show toast to avoid user annoyance - just log the error
     },
   });
 };
@@ -312,72 +310,82 @@ export const useRevealListingEnhanced = () => {
   });
 };
 
-// Hook for getting available filter options
-export const useFilterOptions = (cityName) => {
+// Hook for getting available filter options - fetches unique values from listings table
+export const useFilterOptions = () => {
   const supabase = useSupabaseClient();
 
   return useQuery({
-    queryKey: ['filter-options', cityName],
+    queryKey: ['filter-options-global'],
     queryFn: async () => {
-      // Return default filter options if no city is provided
-      if (!cityName) {
+      try {
+        // Get unique beds values
+        const { data: bedsData, error: bedsError } = await supabase
+          .from('listings')
+          .select('beds')
+          .not('beds', 'is', null)
+          .order('beds', { ascending: true });
+
+        // Get unique baths values
+        const { data: bathsData, error: bathsError } = await supabase
+          .from('listings')
+          .select('baths')
+          .not('baths', 'is', null)
+          .order('baths', { ascending: true });
+
+        // Get unique property types
+        const { data: typesData, error: typesError } = await supabase
+          .from('listings')
+          .select('statustext')
+          .not('statustext', 'is', null);
+
+        // Get price range
+        const { data: priceData, error: priceError } = await supabase
+          .from('listings')
+          .select('unformattedprice')
+          .not('unformattedprice', 'is', null)
+          .order('unformattedprice', { ascending: true });
+
+        // Get area range
+        const { data: areaData, error: areaError } = await supabase
+          .from('listings')
+          .select('area')
+          .not('area', 'is', null)
+          .order('area', { ascending: true });
+
+        // Extract unique values
+        const beds = [...new Set(bedsData?.map(d => d.beds) || [])].filter(b => b > 0).sort((a, b) => a - b);
+        const baths = [...new Set(bathsData?.map(d => d.baths) || [])].filter(b => b > 0).sort((a, b) => a - b);
+        const propertyTypes = [...new Set(typesData?.map(d => d.statustext) || [])].filter(Boolean);
+        const prices = priceData?.map(d => d.unformattedprice).filter(p => p > 0) || [];
+        const areas = areaData?.map(d => d.area).filter(a => a > 0) || [];
+
         return {
-          priceRange: { min: 0, max: 10000000 },
-          beds: [1, 2, 3, 4, 5],
-          baths: [1, 2, 3, 4],
-          areaRange: { min: 0, max: 10000 },
-          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
+          beds: beds.length > 0 ? beds : [1, 2, 3, 4, 5, 6],
+          baths: baths.length > 0 ? baths : [1, 2, 3, 4, 5],
+          propertyTypes: propertyTypes.length > 0 ? propertyTypes : ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale'],
+          priceRange: {
+            min: prices.length > 0 ? Math.min(...prices) : 0,
+            max: prices.length > 0 ? Math.max(...prices) : 10000000,
+          },
+          areaRange: {
+            min: areas.length > 0 ? Math.min(...areas) : 0,
+            max: areas.length > 0 ? Math.max(...areas) : 10000,
+          },
         };
-      }
-
-      // Get unique values for filter options from unified listings table
-      let query = supabase
-        .from('listings')
-        .select('unformattedprice, beds, baths, area, statustext');
-
-      // Handle both single city and array of cities
-      if (Array.isArray(cityName)) {
-        query = query.in('lastcity', cityName);
-      } else {
-        query = query.or(`lastcity.eq.${cityName},addresscity.eq.${cityName}`);
-      }
-
-      const { data: listings, error } = await query.limit(1000); // Limit for performance
-
-      if (error) {
+      } catch (error) {
         console.error('useFilterOptions: Error fetching filter options:', error);
         // Return default values on error
         return {
+          beds: [1, 2, 3, 4, 5, 6],
+          baths: [1, 2, 3, 4, 5],
+          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale'],
           priceRange: { min: 0, max: 10000000 },
-          beds: [1, 2, 3, 4, 5],
-          baths: [1, 2, 3, 4],
           areaRange: { min: 0, max: 10000 },
-          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
         };
       }
-
-      const prices = listings?.map(l => l.unformattedprice).filter(Boolean) || [];
-      const beds = [...new Set(listings?.map(l => l.beds).filter(Boolean))].sort((a, b) => a - b);
-      const baths = [...new Set(listings?.map(l => l.baths).filter(Boolean))].sort((a, b) => a - b);
-      const areas = listings?.map(l => l.area).filter(Boolean) || [];
-      const propertyTypes = [...new Set(listings?.map(l => l.statustext).filter(Boolean))];
-
-      return {
-        priceRange: {
-          min: prices.length > 0 ? Math.min(...prices) : 0,
-          max: prices.length > 0 ? Math.max(...prices) : 10000000,
-        },
-        beds: beds.length > 0 ? beds : [1, 2, 3, 4, 5],
-        baths: baths.length > 0 ? baths : [1, 2, 3, 4],
-        areaRange: {
-          min: areas.length > 0 ? Math.min(...areas) : 0,
-          max: areas.length > 0 ? Math.max(...areas) : 10000,
-        },
-        propertyTypes: propertyTypes.length > 0 ? propertyTypes : ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'For sale'],
-      };
     },
-    enabled: true, // Always enabled - we have default values now
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes - filter options don't change often
+    cacheTime: 60 * 60 * 1000, // 1 hour
   });
 };
 

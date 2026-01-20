@@ -11,12 +11,24 @@ import ComprehensiveSearchBar from '@/components/dashboard/search/ComprehensiveS
 import SavedSearches from '@/components/dashboard/SavedSearches';
 import { useNavigate } from 'react-router-dom';
 
-const AdvancedFilters = ({ 
-  filters, 
-  onFiltersChange, 
-  onSearchChange, 
+// Price range options for quick filter
+const PRICE_OPTIONS = [
+  { value: 'all', label: 'Any Price', min: null, max: null },
+  { value: '0-300000', label: 'Under $300K', min: 0, max: 300000 },
+  { value: '300000-500000', label: '$300K - $500K', min: 300000, max: 500000 },
+  { value: '500000-750000', label: '$500K - $750K', min: 500000, max: 750000 },
+  { value: '750000-1000000', label: '$750K - $1M', min: 750000, max: 1000000 },
+  { value: '1000000-1500000', label: '$1M - $1.5M', min: 1000000, max: 1500000 },
+  { value: '1500000-2000000', label: '$1.5M - $2M', min: 1500000, max: 2000000 },
+  { value: '2000000-', label: '$2M+', min: 2000000, max: null },
+];
+
+const AdvancedFilters = ({
+  filters,
+  onFiltersChange,
+  onSearchChange,
   cityName,
-  className = "" 
+  className = ""
 }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -24,11 +36,8 @@ const AdvancedFilters = ({
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || '');
   const navigate = useNavigate();
 
-  // Remove old search suggestions logic - now handled by ComprehensiveSearchBar
-
-  // Get filter options - use city_name from filters (array) or fallback to cityName prop
-  const cityForOptions = localFilters.city_name?.length > 0 ? localFilters.city_name : cityName;
-  const { data: filterOptions } = useFilterOptions(cityForOptions);
+  // Get filter options from database - no city restriction, gets global options
+  const { data: filterOptions, isLoading: filterOptionsLoading } = useFilterOptions();
 
   // Update local filters when props change
   useEffect(() => {

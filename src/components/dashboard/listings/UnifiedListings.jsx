@@ -347,19 +347,17 @@ const UnifiedListings = () => {
   };
 
   const handleTabChange = (tab) => {
+    if (tab === activeTab) return; // Don't do anything if already on this tab
     setActiveTab(tab);
     setCurrentPage(1);
     trackAction('tab_change', { from: activeTab, to: tab });
-    
-    // Navigate to the appropriate URL
-    if (tab === 'sold') {
-      navigate('/dashboard/listings/sold');
-    } else {
-      navigate('/dashboard/listings/just-listed');
-    }
+    // Update URL without causing a page refresh - use replaceState for instant feel
+    const newPath = tab === 'sold' ? '/dashboard/listings/sold' : '/dashboard/listings/just-listed';
+    window.history.replaceState(null, '', newPath);
   };
 
-  if (currentLoading || profileLoading) {
+  // Only show full loading state on initial profile load, not on tab switch
+  if (profileLoading) {
     return (
       <Card className="bg-light-navy border-border">
         <CardHeader className="flex flex-row items-center justify-between">

@@ -1,45 +1,29 @@
-import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
-import { ChevronDown, MapPin, Check, X, Search, Globe, Plus } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, MapPin, Check, X, Search, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAvailableCities, getStateName } from '@/hooks/useAvailableCities';
 
-// Lazy load the heavy data
-const loadDatabaseCities = () => import('@/data/databaseCities');
-
-const DatabaseCitySelector = ({ 
-  selectedCities = [], 
-  onCitiesChange, 
+const DatabaseCitySelector = ({
+  selectedCities = [],
+  onCitiesChange,
   className = "",
   placeholder = "Select cities from your listings...",
   maxSelections = 20,
   showSearch = true,
-  showGrouped = true
+  showGrouped = true,
+  countryCode = null // 'US', 'CA', or null for all
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedGroups, setExpandedGroups] = useState(new Set());
-  const [citiesData, setCitiesData] = useState(null);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Load cities data when component mounts
-  useEffect(() => {
-    if (!citiesData && !loading) {
-      setLoading(true);
-      loadDatabaseCities()
-        .then(module => {
-          setCitiesData(module);
-          setLoading(false);
-        })
-        .catch(error => {
-          console.error('Failed to load cities data:', error);
-          setLoading(false);
-        });
-    }
-  }, [citiesData, loading]);
+  // Fetch cities dynamically from database
+  const { data: citiesData, isLoading: loading } = useAvailableCities(countryCode);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -54,15 +38,32 @@ const DatabaseCitySelector = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Transform cities data to expected format
+  const cities = citiesData || [];
+
   // Filter cities based on search term
-  const filteredCities = citiesData && searchTerm ? citiesData.searchCities(searchTerm) : (citiesData?.DATABASE_CITIES || []);
-  const groupedCities = citiesData ? citiesData.getCitiesByState() : {};
+  const filteredCities = searchTerm
+    ? cities.filter(city =>
+        city.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        city.state.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : cities;
+
+  // Group cities by state
+  const groupedCities = cities.reduce((acc, city) => {
+    const stateKey = `${getStateName(city.state)} (${city.state})`;
+    if (!acc[stateKey]) {
+      acc[stateKey] = [];
+    }
+    acc[stateKey].push(city);
+    return acc;
+  }, {});
 
   // Handle city selection/deselection
   const handleCityToggle = (cityName, stateCode) => {
     const cityKey = `${cityName}, ${stateCode}`;
     const isSelected = selectedCities.includes(cityKey);
-    
+
     let newCities;
     if (isSelected) {
       newCities = selectedCities.filter(city => city !== cityKey);
@@ -72,7 +73,7 @@ const DatabaseCitySelector = ({
       }
       newCities = [...selectedCities, cityKey];
     }
-    
+
     onCitiesChange(newCities);
   };
 
@@ -115,7 +116,7 @@ const DatabaseCitySelector = ({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
           <span className="text-lightest-slate truncate">
-            {selectedCities.length > 0 
+            {selectedCities.length > 0
               ? `${selectedCities.length} cit${selectedCities.length === 1 ? 'y' : 'ies'} selected`
               : placeholder
             }
@@ -128,11 +129,11 @@ const DatabaseCitySelector = ({
       </motion.button>
 
       {/* Loading State */}
-      {loading && (
+      {loading && isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 p-4 bg-deep-navy border border-slate/30 rounded-lg shadow-lg z-50">
           <div className="flex items-center justify-center gap-2 text-slate">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal"></div>
-            <span>Loading cities...</span>
+            <span>Loading cities from database...</span>
           </div>
         </div>
       )}
@@ -171,7 +172,7 @@ const DatabaseCitySelector = ({
 
       {/* Dropdown */}
       <AnimatePresence>
-        {isOpen && citiesData && !loading && (
+        {isOpen && !loading && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -196,18 +197,22 @@ const DatabaseCitySelector = ({
 
             {/* Cities List */}
             <div className="max-h-64 overflow-y-auto">
-              {searchTerm ? (
+              {cities.length === 0 ? (
+                <div className="p-4 text-center text-slate">
+                  No cities available in the database
+                </div>
+              ) : searchTerm ? (
                 // Search Results
                 <div className="p-2">
                   {filteredCities.length > 0 ? (
                     filteredCities.map((city) => {
-                      const cityKey = `${city.name}, ${city.state}`;
-                      const isSelected = isCitySelected(city.name, city.state);
-                      
+                      const cityKey = `${city.city}, ${city.state}`;
+                      const isSelected = isCitySelected(city.city, city.state);
+
                       return (
                         <motion.button
                           key={cityKey}
-                          onClick={() => handleCityToggle(city.name, city.state)}
+                          onClick={() => handleCityToggle(city.city, city.state)}
                           className={cn(
                             "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
                             isSelected && "bg-teal/10"
@@ -218,13 +223,16 @@ const DatabaseCitySelector = ({
                           <div className="flex items-center gap-2 flex-1">
                             <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
                             <div>
-                              <div className="text-lightest-slate font-medium">{city.name}</div>
-                              <div className="text-slate text-sm">{city.state}, {city.country}</div>
+                              <div className="text-lightest-slate font-medium">{city.city}</div>
+                              <div className="text-slate text-sm">{getStateName(city.state)} ({city.state})</div>
                             </div>
                           </div>
-                          {isSelected && (
-                            <Check className="h-4 w-4 text-teal" />
-                          )}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate">{city.count} listings</span>
+                            {isSelected && (
+                              <Check className="h-4 w-4 text-teal" />
+                            )}
+                          </div>
                         </motion.button>
                       );
                     })
@@ -237,9 +245,9 @@ const DatabaseCitySelector = ({
               ) : showGrouped ? (
                 // Grouped by State
                 <div className="p-2">
-                  {Object.entries(groupedCities).map(([stateKey, cities]) => {
+                  {Object.entries(groupedCities).sort(([a], [b]) => a.localeCompare(b)).map(([stateKey, stateCities]) => {
                     const isExpanded = expandedGroups.has(stateKey);
-                    
+
                     return (
                       <div key={stateKey} className="border border-slate/20 rounded-lg overflow-hidden mb-2">
                         <button
@@ -250,7 +258,7 @@ const DatabaseCitySelector = ({
                             <Globe className="h-4 w-4 text-teal" />
                             <span className="text-lightest-slate font-medium">{stateKey}</span>
                             <Badge variant="secondary" className="bg-slate/20 text-slate">
-                              {cities.length}
+                              {stateCities.length}
                             </Badge>
                           </div>
                           <ChevronDown className={cn(
@@ -258,7 +266,7 @@ const DatabaseCitySelector = ({
                             isExpanded && "rotate-180"
                           )} />
                         </button>
-                        
+
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
@@ -268,14 +276,14 @@ const DatabaseCitySelector = ({
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden"
                             >
-                              {cities.map((city) => {
-                                const cityKey = `${city.name}, ${city.state}`;
-                                const isSelected = isCitySelected(city.name, city.state);
-                                
+                              {stateCities.map((city) => {
+                                const cityKey = `${city.city}, ${city.state}`;
+                                const isSelected = isCitySelected(city.city, city.state);
+
                                 return (
                                   <motion.button
                                     key={cityKey}
-                                    onClick={() => handleCityToggle(city.name, city.state)}
+                                    onClick={() => handleCityToggle(city.city, city.state)}
                                     className={cn(
                                       "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left border-t border-slate/10",
                                       isSelected && "bg-teal/10"
@@ -285,11 +293,14 @@ const DatabaseCitySelector = ({
                                   >
                                     <div className="flex items-center gap-2 flex-1">
                                       <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
-                                      <span className="text-lightest-slate">{city.name}</span>
+                                      <span className="text-lightest-slate">{city.city}</span>
                                     </div>
-                                    {isSelected && (
-                                      <Check className="h-4 w-4 text-teal" />
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-slate">{city.count} listings</span>
+                                      {isSelected && (
+                                        <Check className="h-4 w-4 text-teal" />
+                                      )}
+                                    </div>
                                   </motion.button>
                                 );
                               })}
@@ -303,14 +314,14 @@ const DatabaseCitySelector = ({
               ) : (
                 // Flat List
                 <div className="p-2">
-                  {DATABASE_CITIES.map((city) => {
-                    const cityKey = `${city.name}, ${city.state}`;
-                    const isSelected = isCitySelected(city.name, city.state);
-                    
+                  {cities.map((city) => {
+                    const cityKey = `${city.city}, ${city.state}`;
+                    const isSelected = isCitySelected(city.city, city.state);
+
                     return (
                       <motion.button
                         key={cityKey}
-                        onClick={() => handleCityToggle(city.name, city.state)}
+                        onClick={() => handleCityToggle(city.city, city.state)}
                         className={cn(
                           "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
                           isSelected && "bg-teal/10"
@@ -321,13 +332,16 @@ const DatabaseCitySelector = ({
                         <div className="flex items-center gap-2 flex-1">
                           <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
                           <div>
-                            <div className="text-lightest-slate font-medium">{city.name}</div>
-                            <div className="text-slate text-sm">{city.state}, {city.country}</div>
+                            <div className="text-lightest-slate font-medium">{city.city}</div>
+                            <div className="text-slate text-sm">{getStateName(city.state)} ({city.state})</div>
                           </div>
                         </div>
-                        {isSelected && (
-                          <Check className="h-4 w-4 text-teal" />
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate">{city.count} listings</span>
+                          {isSelected && (
+                            <Check className="h-4 w-4 text-teal" />
+                          )}
+                        </div>
                       </motion.button>
                     );
                   })}

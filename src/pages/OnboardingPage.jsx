@@ -6,15 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { onboardingSchema } from '@/lib/validationSchemas';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useProfile } from '@/hooks/useProfile';
-import { Country, State, City } from 'country-state-city';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Mail, Phone, MapPin, Globe, CheckCircle, Plus, Zap, TrendingUp, Target, ArrowRight, Sparkles, DollarSign, Home, Search } from 'lucide-react';
+import { Building, Mail, Phone, CheckCircle, Zap, TrendingUp, Target, ArrowRight, Sparkles, DollarSign, Home, Search } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import LoadingButton from '@/components/ui/LoadingButton';
 import CongratulationsDialog from '@/components/ui/CongratulationsDialog';
@@ -34,23 +31,10 @@ const OnboardingPage = () => {
     defaultValues: {
       companyName: '',
       phone: '',
-      countryCode: 'US',
-      stateCode: '',
-      cityName: '',
-      serviceCities: [],
     },
   });
 
-  const { isSubmitting, watch, setValue } = form;
-  const countryCode = watch('countryCode');
-  const stateCode = watch('stateCode');
-
-  const countries = Country.getAllCountries()
-    .filter(c => ['US', 'CA'].includes(c.isoCode))
-    .map(c => ({ label: c.name, value: c.isoCode }));
-  
-  const states = State.getStatesOfCountry(countryCode).map(s => ({ label: s.name, value: s.isoCode }));
-  const cities = City.getCitiesOfState(countryCode, stateCode).map(c => ({ label: c.name, value: c.name }));
+  const { isSubmitting } = form;
 
   useEffect(() => {
     if (!profileLoading) {
@@ -60,10 +44,6 @@ const OnboardingPage = () => {
         form.reset({
           companyName: profile.company_name || '',
           phone: profile.phone || '',
-          countryCode: profile.country_code || 'US',
-          stateCode: profile.state_code || '',
-          cityName: profile.city_name || '',
-          serviceCities: profile.service_cities || [],
         });
       }
     }
@@ -73,14 +53,11 @@ const OnboardingPage = () => {
     try {
       if (!session?.user) throw new Error('No user on the session!');
 
+      // Only update company info - service area was set during signup
       const updates = {
         id: session.user.id,
         company_name: values.companyName,
         phone: values.phone,
-        country_code: values.countryCode,
-        state_code: values.stateCode,
-        city_name: values.cityName,
-        service_cities: values.serviceCities,
         onboarding_complete: true,
         updated_at: new Date(),
       };
@@ -116,7 +93,7 @@ const OnboardingPage = () => {
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 2) { // Now only 3 steps (0, 1, 2)
       setCurrentStep(currentStep + 1);
     }
   };
@@ -131,12 +108,6 @@ const OnboardingPage = () => {
     return true; // Welcome and credit explanation don't need validation
   };
 
-  const canProceedToStep4 = () => {
-    const companyName = form.getValues('companyName');
-    const phone = form.getValues('phone');
-    return companyName && companyName.length >= 2 && phone && phone.length >= 10;
-  };
-
   if (profileLoading || !session) {
     return (
       <div className="flex justify-center items-center h-screen bg-deep-navy">
@@ -145,7 +116,7 @@ const OnboardingPage = () => {
     );
   }
 
-  const totalSteps = 4;
+  const totalSteps = 3; // Simplified: Welcome, Credits, Company Details
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   return (
@@ -170,7 +141,7 @@ const OnboardingPage = () => {
 
             {/* Step Indicators */}
             <div className="flex justify-between mt-4">
-              {['Welcome', 'Credits', 'Company', 'Service Area'].map((label, index) => (
+              {['Welcome', 'Credits', 'Company'].map((label, index) => (
                 <div key={index} className="flex flex-col items-center flex-1">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                     index < currentStep ? 'bg-teal text-deep-navy' :
@@ -457,169 +428,6 @@ const OnboardingPage = () => {
                   </div>
                 )}
 
-                {/* Step 4: Service Area */}
-                {currentStep === 3 && (
-                  <div className="space-y-6 py-4">
-                    <div className="text-center mb-6">
-                      <div className="mx-auto bg-gradient-to-br from-teal/20 to-teal/5 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                        <MapPin className="w-8 h-8 text-teal" />
-                      </div>
-                      <h2 className="text-2xl font-bold font-heading text-lightest-slate mb-2">
-                        Select Your Service Areas
-                      </h2>
-                      <p className="text-slate">
-                        We'll show you properties in these locations
-                      </p>
-                    </div>
-
-                    <Form {...form}>
-                      <div className="space-y-5">
-                        <div className="space-y-4 rounded-lg border border-lightest-navy/20 p-5 bg-deep-navy/30">
-                          <h3 className="font-semibold text-lightest-slate flex items-center">
-                            <Globe className="inline-block mr-2 h-5 w-5 text-teal" />
-                            Primary Service Area
-                          </h3>
-                          <p className="text-sm text-slate">
-                            Your main operational area - we'll prioritize leads here
-                          </p>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="countryCode"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-lightest-slate">Country</FormLabel>
-                                  <FormControl>
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={(val) => {
-                                        field.onChange(val);
-                                        setValue('stateCode', '');
-                                        setValue('cityName', '');
-                                      }}
-                                    >
-                                      <SelectTrigger className="bg-deep-navy/50 border-lightest-navy/30">
-                                        <SelectValue placeholder="Select Country..." />
-                                      </SelectTrigger>
-                                      <SelectContent className="max-h-60 overflow-y-auto">
-                                        {countries.map((country) => (
-                                          <SelectItem key={country.value} value={country.value}>
-                                            {country.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="stateCode"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-lightest-slate">State / Province</FormLabel>
-                                  <FormControl>
-                                    <Select
-                                      value={field.value}
-                                      onValueChange={(val) => {
-                                        field.onChange(val);
-                                        setValue('cityName', '');
-                                      }}
-                                      disabled={!countryCode}
-                                    >
-                                      <SelectTrigger className="bg-deep-navy/50 border-lightest-navy/30">
-                                        <SelectValue placeholder="Select State..." />
-                                      </SelectTrigger>
-                                      <SelectContent className="max-h-60 overflow-y-auto">
-                                        {states.map((state) => (
-                                          <SelectItem key={state.value} value={state.value}>
-                                            {state.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <FormField
-                            control={form.control}
-                            name="cityName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-lightest-slate">City</FormLabel>
-                                <FormControl>
-                                  <Select
-                                    value={field.value}
-                                    onValueChange={field.onChange}
-                                    disabled={!stateCode}
-                                  >
-                                    <SelectTrigger className="bg-deep-navy/50 border-lightest-navy/30">
-                                      <SelectValue placeholder="Select City..." />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-60 overflow-y-auto">
-                                      {cities.map((city) => (
-                                        <SelectItem key={city.value} value={city.value}>
-                                          {city.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={form.control}
-                          name="serviceCities"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2 text-lightest-slate">
-                                <Plus className="h-4 w-4 text-teal" />
-                                Additional Service Cities
-                              </FormLabel>
-                              <FormControl>
-                                <DatabaseCitySelector
-                                  selectedCities={field.value}
-                                  onCitiesChange={field.onChange}
-                                  placeholder="Search and select cities where you provide services..."
-                                  maxSelections={10}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                              <p className="text-sm text-slate">
-                                Choose up to 10 cities where you want to receive property listings
-                              </p>
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
-                          <div className="flex items-start gap-3">
-                            <Target className="w-5 h-5 text-blue-400 mt-0.5" />
-                            <div>
-                              <h4 className="font-semibold text-blue-400 mb-1">Tip: Start Focused</h4>
-                              <p className="text-sm text-slate">
-                                Select 2-3 cities to start. You can always expand your service areas later in settings.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Form>
-                  </div>
-                )}
-
               </motion.div>
             </AnimatePresence>
 
@@ -636,11 +444,10 @@ const OnboardingPage = () => {
               </Button>
 
               <div className="flex gap-2">
-                {currentStep < 3 ? (
+                {currentStep < 2 ? (
                   <Button
                     type="button"
                     onClick={nextStep}
-                    disabled={currentStep === 2 && !canProceedToStep4()}
                     className="bg-teal text-deep-navy hover:bg-teal/90 flex items-center gap-2"
                   >
                     Continue
