@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle, Target, Mail, BarChart, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Target, Mail, BarChart, XCircle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Hero from '@/components/Hero';
 import Stats from '@/components/Stats';
@@ -160,11 +160,19 @@ const HomePage = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             Get the exclusive data that drives your fleet and lands you the business. See your ROI in 30 days.
           </p>
-          <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/50">
-            <Link to="/faq">
-              View All FAQs <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button asChild size="lg" className="bg-brand-gradient hover:brightness-110 text-white shadow-lg hover:shadow-glow-lg transition-all duration-300">
+              <Link to="/request-demo">
+                <Calendar className="mr-2 h-5 w-5" />
+                Book a Demo
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-primary text-primary hover:bg-primary/10 hover:text-primary hover:border-primary/50">
+              <Link to="/faq">
+                View All FAQs <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
