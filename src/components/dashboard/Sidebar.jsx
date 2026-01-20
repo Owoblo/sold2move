@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, BarChart2, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp } from 'lucide-react';
+import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp } from 'lucide-react';
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const location = useLocation();
@@ -46,7 +46,6 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       title: 'Campaigns',
       items: [
         { name: 'Mailing', icon: Mail, path: '/dashboard/mailing' },
-        { name: 'Digital Marketing', icon: BarChart2, path: '/dashboard/digital-marketing' },
         { name: 'Products', icon: Package, path: '/dashboard/products' },
         { name: 'Mailing Assets', icon: Archive, path: '/dashboard/assets' },
       ],

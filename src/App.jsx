@@ -42,7 +42,6 @@ const MailingAssets = lazy(() => import('@/components/dashboard/pages/MailingAss
 const Products = lazy(() => import('@/components/dashboard/pages/Products'));
 const Listings = lazy(() => import('@/components/dashboard/pages/Listings'));
 const Mailing = lazy(() => import('@/components/dashboard/pages/Mailing'));
-const DigitalMarketing = lazy(() => import('@/components/dashboard/pages/DigitalMarketing'));
 const Resources = lazy(() => import('@/components/dashboard/pages/Resources'));
 const SampleMailers = lazy(() => import('@/components/dashboard/pages/SampleMailers'));
 const VideoTutorials = lazy(() => import('@/components/dashboard/pages/VideoTutorials'));
@@ -193,7 +192,6 @@ function App() {
                           <Route path="/dashboard/products" element={<Products />} />
                           <Route path="/dashboard/listings/*" element={<Listings />} />
                           <Route path="/dashboard/mailing" element={<Mailing />} />
-                          <Route path="/dashboard/digital-marketing" element={<DigitalMarketing />} />
                           <Route path="/dashboard/resources" element={<Resources />} />
                           <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
                           <Route path="/dashboard/tutorials" element={<VideoTutorials />} />
