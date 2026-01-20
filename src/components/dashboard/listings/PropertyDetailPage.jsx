@@ -235,12 +235,28 @@ const PropertyDetailPage = () => {
   }
 
   if (error) {
+    // Check if it's a "not found" error specifically
+    const isNotFound = error.toLowerCase().includes('not found') || error.includes('NOT_FOUND');
+
     return (
       <PageWrapper>
         <div className="flex flex-col items-center justify-center h-96 bg-light-navy/30 rounded-lg">
-          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <p className="text-xl text-lightest-slate font-semibold">Failed to load property details</p>
-          <p className="text-slate mt-2">{error}</p>
+          <AlertCircle className={`h-12 w-12 mb-4 ${isNotFound ? 'text-amber-500' : 'text-red-500'}`} />
+          <p className="text-xl text-lightest-slate font-semibold">
+            {isNotFound ? 'Property Not Found' : 'Failed to load property details'}
+          </p>
+          <p className="text-slate mt-2 text-center max-w-md px-4">
+            {isNotFound
+              ? 'This property may have been removed or the link is incorrect.'
+              : error}
+          </p>
+          <Button
+            onClick={() => navigate('/dashboard/listings/just-listed')}
+            className="mt-6 bg-teal text-deep-navy hover:bg-teal/90"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Listings
+          </Button>
         </div>
       </PageWrapper>
     );

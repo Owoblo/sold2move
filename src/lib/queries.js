@@ -303,11 +303,20 @@ export async function revealListing(userId, listingId) {
  */
 export async function fetchListingById(listingId) {
   try {
+    // Validate listingId
+    if (!listingId) {
+      const error = new Error('Invalid property ID');
+      error.code = 'INVALID_ID';
+      throw error;
+    }
+
+    // Use maybeSingle() instead of single() to gracefully handle "not found"
+    // single() throws PGRST116 when no rows returned, maybeSingle() returns null
     const { data, error } = await supabase
       .from('listings')
       .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at')
       .eq('zpid', listingId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       throw handleDatabaseError(error, 'fetchListingById', {
@@ -318,7 +327,10 @@ export async function fetchListingById(listingId) {
     }
 
     if (!data) {
-      throw new Error(`Listing with ID ${listingId} not found`);
+      // Specific error for not found - provides clear messaging to UI
+      const notFoundError = new Error(`Property ${listingId} not found`);
+      notFoundError.code = 'NOT_FOUND';
+      throw notFoundError;
     }
 
     // Map database column names to expected property names
