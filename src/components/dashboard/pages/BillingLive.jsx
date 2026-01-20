@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, DollarSign, CreditCard, RefreshCw, Zap, ArrowRight, Star, TrendingUp, Package, ExternalLink } from 'lucide-react';
+import { CheckCircle, DollarSign, CreditCard, RefreshCw, Zap, ArrowRight, Star, TrendingUp, Package, ExternalLink, MapPin, Users, Calculator, Info } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
 import { getStripe } from '@/lib/getStripe';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import PageWrapper from '@/components/layout/PageWrapper';
+import { useCalculatedPrice } from '@/hooks/useCalculatedPrice';
+import { formatPrice, formatPopulation, TIERS } from '@/lib/pricingUtils';
 
 // Live pricing plans with real Stripe price IDs
 const pricingPlans = [
@@ -61,6 +63,26 @@ const BillingLive = () => {
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingPackageId, setLoadingPackageId] = useState(null);
+
+  // Extract city names from service_cities (format: "CityName, StateCode")
+  const serviceCityNames = useMemo(() => {
+    if (!profile?.service_cities || profile.service_cities.length === 0) {
+      return profile?.city_name ? [profile.city_name] : [];
+    }
+    return profile.service_cities.map(cityState => cityState.split(', ')[0]);
+  }, [profile?.service_cities, profile?.city_name]);
+
+  // Get calculated prices based on user's service areas
+  const {
+    loading: priceLoading,
+    prices,
+    totalPopulation,
+    cityPopulations,
+    citiesWithoutData,
+  } = useCalculatedPrice(serviceCityNames);
+
+  const isOnFreeTrial = profile?.subscription_status === 'trialing' ||
+    (!profile?.subscription_status && profile?.onboarding_complete);
 
   // Handle payment success/cancellation from URL parameters
   useEffect(() => {
@@ -117,6 +139,41 @@ const BillingLive = () => {
         variant: 'destructive',
         title: 'Payment Failed',
         description: error.message || 'Could not initiate checkout. Please try again.',
+      });
+    } finally {
+      setIsSubmitting(false);
+      setLoadingPackageId(null);
+    }
+  };
+
+  // Handle dynamic subscription checkout based on calculated price
+  const handleDynamicSubscription = async (tier) => {
+    setLoadingPackageId(`dynamic-${tier}`);
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-dynamic-subscription', {
+        body: JSON.stringify({ tier }),
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      if (!data.sessionId) {
+        throw new Error('No session ID returned from checkout function');
+      }
+
+      const stripe = await getStripe();
+      const { error: stripeError } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      });
+
+      if (stripeError) throw stripeError;
+    } catch (error) {
+      console.error('Dynamic subscription error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Subscription Failed',
+        description: error.message || 'Could not initiate subscription. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -218,6 +275,145 @@ const BillingLive = () => {
           </CardContent>
         </Card>
 
+        {/* Your Calculated Price Based on Service Areas */}
+        <Card className="bg-gradient-to-br from-light-navy to-deep-navy border-teal/30">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-lightest-slate flex items-center gap-2">
+              <Calculator className="h-6 w-6 text-teal" />
+              Your Price Based on Service Areas
+            </CardTitle>
+            <p className="text-slate text-sm mt-1">
+              Your monthly price is calculated based on the total population of your selected service cities.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {priceLoading ? (
+              <div className="flex justify-center py-4">
+                <LoadingSpinner size="md" />
+              </div>
+            ) : (
+              <>
+                {/* Service Areas Summary */}
+                <div className="bg-deep-navy/50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MapPin className="h-5 w-5 text-teal" />
+                    <h3 className="font-semibold text-lightest-slate">Your Service Areas</h3>
+                  </div>
+                  {cityPopulations.length > 0 ? (
+                    <div className="space-y-2">
+                      {cityPopulations.map((city) => (
+                        <div key={city.id} className="flex items-center justify-between text-sm">
+                          <span className="text-slate">{city.city_name}, {city.state_province_code}</span>
+                          <span className="text-lightest-slate font-medium">
+                            <Users className="h-3 w-3 inline mr-1" />
+                            {formatPopulation(city.population)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="border-t border-lightest-navy/20 pt-2 mt-2 flex items-center justify-between">
+                        <span className="text-slate font-medium">Total Population</span>
+                        <span className="text-teal font-bold text-lg">{formatPopulation(totalPopulation)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate text-sm">
+                      No service areas selected.{' '}
+                      <Link to="/dashboard/settings" className="text-teal hover:underline">
+                        Add service areas
+                      </Link>
+                    </p>
+                  )}
+                  {citiesWithoutData.length > 0 && (
+                    <div className="mt-2 flex items-start gap-2 text-amber-400 text-sm">
+                      <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>
+                        {citiesWithoutData.length} city(ies) not found in our database: {citiesWithoutData.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Calculated Prices */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Basic Tier */}
+                  <div className="bg-deep-navy/30 rounded-lg p-4 border border-lightest-navy/20">
+                    <h4 className="font-semibold text-lightest-slate mb-1">Basic Plan</h4>
+                    <p className="text-slate text-xs mb-3">{TIERS.basic.description}</p>
+                    <p className="text-3xl font-bold text-teal mb-3">
+                      {formatPrice(prices.basic)}
+                      <span className="text-sm text-slate font-normal">/month</span>
+                    </p>
+                    {!isOnFreeTrial && cityPopulations.length > 0 && (
+                      <Button
+                        onClick={() => handleDynamicSubscription('basic')}
+                        disabled={loadingPackageId === 'dynamic-basic' || profile?.subscription_status === 'active'}
+                        className="w-full bg-lightest-navy/50 text-lightest-slate hover:bg-lightest-navy/70"
+                      >
+                        {loadingPackageId === 'dynamic-basic' ? 'Processing...' : 'Subscribe to Basic'}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Movers Special Tier */}
+                  <div className="bg-deep-navy/30 rounded-lg p-4 border border-teal/50 relative">
+                    <Badge className="absolute -top-2 -right-2 bg-teal text-deep-navy">Recommended</Badge>
+                    <h4 className="font-semibold text-lightest-slate mb-1">Movers Special</h4>
+                    <p className="text-slate text-xs mb-3">{TIERS.moversSpecial.description}</p>
+                    <p className="text-3xl font-bold text-teal mb-3">
+                      {formatPrice(prices.moversSpecial)}
+                      <span className="text-sm text-slate font-normal">/month</span>
+                    </p>
+                    {!isOnFreeTrial && cityPopulations.length > 0 && (
+                      <Button
+                        onClick={() => handleDynamicSubscription('moversSpecial')}
+                        disabled={loadingPackageId === 'dynamic-moversSpecial' || profile?.subscription_status === 'active'}
+                        className="w-full bg-teal text-deep-navy hover:bg-teal/90"
+                      >
+                        {loadingPackageId === 'dynamic-moversSpecial' ? 'Processing...' : 'Subscribe to Movers Special'}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Free Trial Notice */}
+                {isOnFreeTrial && (
+                  <div className="bg-teal/10 border border-teal/30 rounded-lg p-4 flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-teal flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-lightest-slate">You're on your free trial!</p>
+                      <p className="text-slate text-sm">
+                        Enjoy full access for 1 month. After your trial ends, you'll pay based on your selected service areas.
+                        You can modify your service areas anytime to adjust your price.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing Info */}
+                <div className="text-xs text-slate bg-deep-navy/30 rounded-lg p-3">
+                  <p className="flex items-center gap-1">
+                    <Info className="h-3 w-3" />
+                    <strong>How pricing works:</strong> Your price is based on the total population of your service areas.
+                    Larger cities = more leads = higher price. Minimum price is $25/month.
+                  </p>
+                </div>
+              </>
+            )}
+          </CardContent>
+          <CardFooter className="flex gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="border-teal text-teal hover:bg-teal/10"
+            >
+              <Link to="/dashboard/settings">
+                <MapPin className="h-4 w-4 mr-2" />
+                Manage Service Areas
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Subscription Plans */}
         <h2 className="text-3xl font-bold text-lightest-slate font-heading mt-12 mb-6">Choose Your Plan</h2>
