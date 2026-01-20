@@ -4,7 +4,7 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, RefreshCw, Zap, ArrowRight, MapPin, Users, Calculator, Info } from 'lucide-react';
+import { CreditCard, RefreshCw, Zap, ArrowRight, MapPin, Users, Calculator, Info, Clock, Calendar } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { useToast } from '@/components/ui/use-toast';
@@ -13,6 +13,23 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import PageWrapper from '@/components/layout/PageWrapper';
 import { useCalculatedPrice } from '@/hooks/useCalculatedPrice';
 import { formatPrice, formatPopulation, TIERS } from '@/lib/pricingUtils';
+
+// Calculate days remaining in trial (30 days from account creation)
+const calculateTrialDaysRemaining = (createdAt) => {
+  if (!createdAt) return 30;
+  const created = new Date(createdAt);
+  const trialEnd = new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  const now = new Date();
+  const daysRemaining = Math.ceil((trialEnd - now) / (24 * 60 * 60 * 1000));
+  return Math.max(0, daysRemaining);
+};
+
+const getTrialEndDate = (createdAt) => {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  const trialEnd = new Date(created.getTime() + 30 * 24 * 60 * 60 * 1000);
+  return trialEnd;
+};
 
 const BillingLive = () => {
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
@@ -41,7 +58,19 @@ const BillingLive = () => {
   } = useCalculatedPrice(serviceCityNames);
 
   const isOnFreeTrial = profile?.subscription_status === 'trialing' ||
-    (!profile?.subscription_status && profile?.onboarding_complete);
+    (!profile?.subscription_status && profile?.onboarding_complete) ||
+    profile?.trial_granted;
+
+  // Calculate trial info
+  const trialDaysRemaining = useMemo(() =>
+    calculateTrialDaysRemaining(profile?.created_at),
+    [profile?.created_at]
+  );
+
+  const trialEndDate = useMemo(() =>
+    getTrialEndDate(profile?.created_at),
+    [profile?.created_at]
+  );
 
   // Handle payment success/cancellation from URL parameters
   useEffect(() => {
@@ -191,8 +220,35 @@ const BillingLive = () => {
                 "Subscribe to get full access to all property listings."
               )}
             </p>
+            {/* Trial countdown display */}
+            {isOnFreeTrial && trialDaysRemaining > 0 && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-teal/10 to-deep-navy rounded-lg border border-teal/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-teal/20 rounded-full p-2">
+                      <Clock className="h-5 w-5 text-teal" />
+                    </div>
+                    <div>
+                      <p className="text-lightest-slate font-semibold">
+                        {trialDaysRemaining} {trialDaysRemaining === 1 ? 'day' : 'days'} remaining
+                      </p>
+                      <p className="text-slate text-sm flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Trial ends {trialEndDate?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate">After trial</p>
+                    <p className="text-teal font-bold">
+                      {priceLoading ? '...' : formatPrice(prices.moversSpecial)}/mo
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {profile?.subscription_status === 'active' && (
-              <p className="text-sm text-slate">
+              <p className="text-sm text-slate mt-2">
                 Next billing date: {profile?.next_billing_date ? new Date(profile.next_billing_date).toLocaleDateString() : 'N/A'}
               </p>
             )}
@@ -300,15 +356,45 @@ const BillingLive = () => {
                   </div>
                 </div>
 
-                {/* Free Trial Notice */}
+                {/* Free Trial Notice with Pricing Breakdown */}
                 {isOnFreeTrial && (
-                  <div className="bg-teal/10 border border-teal/30 rounded-lg p-4 flex items-start gap-3">
-                    <Zap className="h-5 w-5 text-teal flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-semibold text-lightest-slate">You're on your free trial!</p>
-                      <p className="text-slate text-sm">
-                        Enjoy full access for 1 month. After your trial ends, you'll pay based on your selected service areas.
-                        You can modify your service areas anytime to adjust your price.
+                  <div className="bg-teal/10 border border-teal/30 rounded-lg p-4 space-y-4">
+                    <div className="flex items-start gap-3">
+                      <Zap className="h-5 w-5 text-teal flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-lightest-slate">
+                          You're on your free trial - {trialDaysRemaining} {trialDaysRemaining === 1 ? 'day' : 'days'} left!
+                        </p>
+                        <p className="text-slate text-sm">
+                          Enjoy full access until {trialEndDate?.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.
+                          After your trial ends, you'll pay based on your selected service areas.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Pricing Breakdown After Trial */}
+                    <div className="border-t border-teal/20 pt-4">
+                      <p className="text-sm font-medium text-lightest-slate mb-3">
+                        Your pricing after trial ends:
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-deep-navy/50 rounded-lg p-3">
+                          <p className="text-xs text-slate mb-1">Basic Plan</p>
+                          <p className="text-xl font-bold text-lightest-slate">{formatPrice(prices.basic)}<span className="text-sm font-normal text-slate">/mo</span></p>
+                          <p className="text-xs text-slate mt-1">{TIERS.basic.description}</p>
+                        </div>
+                        <div className="bg-deep-navy/50 rounded-lg p-3 border border-teal/30">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs text-slate">Movers Special</p>
+                            <Badge className="bg-teal/20 text-teal text-xs">Recommended</Badge>
+                          </div>
+                          <p className="text-xl font-bold text-teal">{formatPrice(prices.moversSpecial)}<span className="text-sm font-normal text-slate">/mo</span></p>
+                          <p className="text-xs text-slate mt-1">{TIERS.moversSpecial.description}</p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate mt-3 flex items-center gap-1">
+                        <Info className="h-3 w-3" />
+                        Based on {formatPopulation(totalPopulation)} total population across {cityPopulations.length} service {cityPopulations.length === 1 ? 'area' : 'areas'}.
                       </p>
                     </div>
                   </div>

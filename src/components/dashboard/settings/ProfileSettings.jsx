@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Country, State } from 'country-state-city';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+import { Badge } from '@/components/ui/badge';
+import { MapPin } from 'lucide-react';
 
 // Simple schema for company profile only
 const companyProfileSchema = z.object({
@@ -29,23 +31,32 @@ const ProfileSettings = () => {
   const form = useForm({
     resolver: zodResolver(companyProfileSchema),
     defaultValues: {
-      company_name: '',
-      phone: '',
-      business_email: '',
-      country_code: '',
-      state_code: '',
+      company_name: profile?.company_name || '',
+      phone: profile?.phone || '',
+      business_email: profile?.business_email || '',
+      country_code: profile?.country_code || '',
+      state_code: profile?.state_code || '',
     },
   });
 
   const { isSubmitting, watch, setValue } = form;
   const countryCode = watch('country_code');
 
-  const countries = Country.getAllCountries()
-    .filter(c => ['US', 'CA'].includes(c.isoCode))
-    .map(c => ({ label: c.name, value: c.isoCode }));
+  const countries = useMemo(() =>
+    Country.getAllCountries()
+      .filter(c => ['US', 'CA'].includes(c.isoCode))
+      .map(c => ({ label: c.name, value: c.isoCode })),
+    []
+  );
 
-  const states = State.getStatesOfCountry(countryCode).map(s => ({ label: s.name, value: s.isoCode }));
+  // Use the watched countryCode, but fall back to profile's country_code for initial render
+  const effectiveCountryCode = countryCode || profile?.country_code || '';
+  const states = useMemo(() =>
+    State.getStatesOfCountry(effectiveCountryCode).map(s => ({ label: s.name, value: s.isoCode })),
+    [effectiveCountryCode]
+  );
 
+  // Reset form when profile loads
   useEffect(() => {
     if (profile) {
       form.reset({
@@ -139,9 +150,34 @@ const ProfileSettings = () => {
               )}
             />
 
+            {/* Current Service Areas Summary */}
+            {profile?.service_cities && profile.service_cities.length > 0 && (
+              <div className="md:col-span-2 p-4 bg-light-navy/30 rounded-lg border border-teal/20">
+                <h4 className="text-sm font-medium text-lightest-slate mb-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-teal" />
+                  Your Service Areas ({profile.service_cities.length} cities)
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {profile.service_cities.slice(0, 5).map((city, index) => (
+                    <Badge key={city} variant="secondary" className="bg-teal/20 text-teal border-teal/30">
+                      {index === 0 && "📍 "}{city}
+                    </Badge>
+                  ))}
+                  {profile.service_cities.length > 5 && (
+                    <Badge variant="outline" className="text-slate">
+                      +{profile.service_cities.length - 5} more
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate mt-2">
+                  Manage your service cities in the "Service Areas" tab.
+                </p>
+              </div>
+            )}
+
             <div className="md:col-span-2 border-t border-lightest-navy/20 pt-6 mt-2">
               <p className="text-lg font-semibold text-lightest-slate mb-2">Primary Location</p>
-              <p className="text-sm text-slate mb-4">Select your primary country and state/province.</p>
+              <p className="text-sm text-slate mb-4">Your main country and state/province.</p>
             </div>
 
             <FormField
