@@ -27,7 +27,7 @@ const FAQPage = () => {
     },
     {
       question: 'Do you offer a free trial?',
-      answer: 'Yes! We offer a 30-day free trial with 100 credits so you can experience the full power of Sold2Move. No credit card required to start.',
+      answer: 'Yes! We offer a 1 month free trial worth over $500 so you can experience the full power of Sold2Move. No credit card required to start.',
     },
     {
       question: 'What is your refund policy?',

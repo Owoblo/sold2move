@@ -26,6 +26,7 @@ const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
 const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'));
@@ -134,6 +135,7 @@ function App() {
                 <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute><SignUpPage /></PublicRoute>} />
                 <Route path="/signup-success" element={<PublicRoute><SignUpSuccessPage /></PublicRoute>} />
+                <Route path="/verify-email" element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
                 <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
                 <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
                 

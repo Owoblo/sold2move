@@ -54,7 +54,7 @@ export const contactSchema = z.object({
   message: z.string().min(10, 'Message must be at least 10 characters'),
 });
 
-// Onboarding schema
+// Onboarding schema (full - for reference, not currently used)
 export const onboardingSchema = z.object({
   companyName: z.string().min(2, 'Company name must be at least 2 characters'),
   cityName: z.string().min(2, 'City name must be at least 2 characters'),
@@ -62,6 +62,12 @@ export const onboardingSchema = z.object({
   countryCode: z.string().min(2, 'Country must be selected'),
   phone: z.string().min(10, 'Please enter a valid phone number'),
   serviceCities: z.array(z.string()).min(1, 'Please select at least one service city'),
+});
+
+// Simplified onboarding schema - service area collected during signup
+export const onboardingSchemaSimple = z.object({
+  companyName: z.string().min(2, 'Company name must be at least 2 characters'),
+  phone: z.string().min(10, 'Please enter a valid phone number'),
 });
 
 // Profile schema

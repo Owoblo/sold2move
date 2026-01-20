@@ -13,9 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { Helmet } from 'react-helmet-async';
 import PageWrapper from '@/components/layout/PageWrapper';
-import GoogleIcon from '@/components/icons/GoogleIcon';
 import { supabase, getSiteUrl } from '@/lib/customSupabaseClient';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingButton from '@/components/ui/LoadingButton';
 import { useAvailableCities, getStateName } from '@/hooks/useAvailableCities';
 import {
@@ -37,8 +35,6 @@ import { motion } from 'framer-motion';
 const SignUpPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signInWithGoogle } = useAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -219,37 +215,34 @@ const SignUpPage = () => {
               title: "Profile Creation Failed",
               description: "Your account was created but there was an error setting up your profile. Please contact support.",
             });
-            // Still navigate to success as user was created and can login
+            // Still proceed with verification
           }
         }
 
-        toast({
-          title: "Account Created!",
-          description: "Please check your email to verify your account.",
+        // Send verification code email
+        const { error: codeError } = await supabase.functions.invoke('send-verification-code', {
+          body: { email: values.email },
         });
 
-        // Navigate to success page
-        navigate('/signup-success');
+        if (codeError) {
+          console.error('Error sending verification code:', codeError);
+          toast({
+            variant: "destructive",
+            title: "Verification Email Failed",
+            description: "Account created but we couldn't send the verification email. Please try resending from the verification page.",
+          });
+        } else {
+          toast({
+            title: "Account Created!",
+            description: "We've sent a verification code to your email.",
+          });
+        }
+
+        // Navigate to verification page with email
+        navigate('/verify-email', { state: { email: values.email } });
       }
     } catch (error) {
       throw error;
-    }
-  };
-
-  const signUpWithGoogle = async () => {
-    try {
-      setGoogleLoading(true);
-
-      // Use the same OAuth function as the login page for consistency
-      const { error } = await signInWithGoogle();
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong with Google sign up",
-      });
-    } finally {
-      setGoogleLoading(false);
     }
   };
 
@@ -682,40 +675,6 @@ const SignUpPage = () => {
                   </LoadingButton>
                 </form>
               </Form>
-
-              {/* OAuth Section */}
-              <div className="mt-8">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/20" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white/5 px-2 text-slate">Or continue with</span>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-white/20 text-lightest-slate hover:bg-white/10"
-                    onClick={signUpWithGoogle}
-                    disabled={googleLoading}
-                  >
-                    {googleLoading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-lightest-slate mr-2"></div>
-                        Signing up...
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <GoogleIcon className="h-4 w-4 mr-2" />
-                        Sign up with Google
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </div>
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-slate">

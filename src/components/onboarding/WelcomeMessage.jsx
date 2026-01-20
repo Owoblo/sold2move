@@ -61,10 +61,10 @@ const WelcomeMessage = ({ onStartTour, onDismiss, showWelcomeMessage }) => {
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Zap className="h-5 w-5 text-teal" />
-                <span className="font-semibold text-lightest-slate">You have {profile?.credits_remaining || 100} free credits!</span>
+                <span className="font-semibold text-lightest-slate">1 Month Free - Worth Over $500!</span>
               </div>
               <p className="text-sm text-slate">
-                Each property reveal costs 1-2 credits. That's enough to reveal 50-100 properties to get you started.
+                Full access to all features during your free trial. No credit card required.
               </p>
             </motion.div>
             

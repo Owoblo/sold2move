@@ -52,10 +52,10 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
           <div className="bg-deep-navy/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="h-4 w-4 text-teal" />
-              <span className="text-sm font-medium text-lightest-slate">You have 100 free credits to start!</span>
+              <span className="text-sm font-medium text-lightest-slate">1 Month Free - Worth Over $500!</span>
             </div>
             <p className="text-xs text-slate">
-              Each property reveal costs 1-2 credits depending on the listing type.
+              Full access to all features during your free trial. No credit card required.
             </p>
           </div>
         </div>
@@ -75,13 +75,13 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
               <Building className="h-6 w-6 text-teal mx-auto mb-2" />
               <h4 className="text-sm font-medium text-lightest-slate">Just Listed</h4>
               <p className="text-xs text-slate">New properties on the market</p>
-              <Badge className="mt-1 text-xs">1 credit each</Badge>
+              <Badge className="mt-1 text-xs">Full Access</Badge>
             </div>
             <div className="text-center p-3 bg-deep-navy/30 rounded-lg">
               <Target className="h-6 w-6 text-amber-400 mx-auto mb-2" />
               <h4 className="text-sm font-medium text-lightest-slate">Recently Sold</h4>
               <p className="text-xs text-slate">High-potential moving leads</p>
-              <Badge className="mt-1 text-xs bg-amber-400/10 text-amber-400">2 credits each</Badge>
+              <Badge className="mt-1 text-xs bg-amber-400/10 text-amber-400">Full Access</Badge>
             </div>
           </div>
           <div className="bg-teal/5 border border-teal/20 rounded-lg p-3">
@@ -119,7 +119,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
           </div>
           <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-3">
             <p className="text-sm text-amber-400">
-              <strong>Remember:</strong> You can reveal multiple properties at once with bulk operations to save credits!
+              <strong>Remember:</strong> You can reveal multiple properties at once with bulk operations!
             </p>
           </div>
         </div>
@@ -221,12 +221,12 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
           </p>
           <div className="bg-deep-navy/30 rounded-lg p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate">Your starting credits:</span>
-              <span className="text-teal font-semibold">100 credits</span>
+              <span className="text-slate">Your free trial:</span>
+              <span className="text-teal font-semibold">1 Month Free</span>
             </div>
             <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-slate">Estimated reveals:</span>
-              <span className="text-lightest-slate font-semibold">50-100 properties</span>
+              <span className="text-slate">Value:</span>
+              <span className="text-lightest-slate font-semibold">Over $500</span>
             </div>
           </div>
         </div>

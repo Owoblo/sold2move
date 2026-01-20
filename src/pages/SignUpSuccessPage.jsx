@@ -43,10 +43,10 @@ const SignUpSuccessPage = () => {
                 <div className="bg-lightest-navy/30 rounded-lg p-4 text-sm text-slate">
                   <p className="font-medium mb-2">What's next?</p>
                   <ul className="space-y-1 text-left">
-                    <li>• Check your email for verification link</li>
-                    <li>• Click the verification link to activate your account</li>
-                    <li>• You'll be automatically redirected to your dashboard</li>
-                    <li>• Get your free credits to reveal properties</li>
+                    <li>• Check your email for verification code</li>
+                    <li>• Enter the code to activate your account</li>
+                    <li>• You'll be redirected to your dashboard</li>
+                    <li>• Enjoy 1 month free - worth over $500!</li>
                   </ul>
                 </div>
               </div>

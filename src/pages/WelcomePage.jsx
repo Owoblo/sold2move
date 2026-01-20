@@ -6,12 +6,11 @@ import PageWrapper from '@/components/layout/PageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  CreditCard, 
-  Search, 
-  Target, 
-  ArrowRight, 
+import {
+  CheckCircle,
+  Search,
+  Target,
+  ArrowRight,
   Sparkles,
   Users,
   MapPin,
@@ -63,16 +62,16 @@ const WelcomePage = () => {
             Your account is set up and ready to go. Let's take a quick tour to show you how to find and convert moving leads.
           </p>
           
-          {/* Credits Badge */}
+          {/* Free Trial Badge */}
           <div className="inline-flex items-center gap-2 bg-teal/10 border border-teal/20 rounded-full px-6 py-3 mb-8">
-            <CreditCard className="h-5 w-5 text-teal" />
+            <Sparkles className="h-5 w-5 text-teal" />
             <span className="text-teal font-semibold">
-              You have {profile?.credits_remaining || 100} free credits!
+              1 Month Free - Worth Over $500!
             </span>
           </div>
-          
+
           <p className="text-slate text-lg max-w-xl mx-auto">
-            Each property reveal costs 1-2 credits. That's enough to reveal 50-100 properties to get you started.
+            Full access to all features during your free trial. No credit card required.
           </p>
         </div>
 
@@ -154,12 +153,12 @@ const WelcomePage = () => {
         {/* Stats Section */}
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           <div className="text-center">
-            <div className="text-3xl font-bold text-teal mb-2">50-100</div>
-            <div className="text-slate">Properties you can reveal with your free credits</div>
+            <div className="text-3xl font-bold text-teal mb-2">$500+</div>
+            <div className="text-slate">Value of your free trial month</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-teal mb-2">1-2</div>
-            <div className="text-slate">Credits per property reveal</div>
+            <div className="text-3xl font-bold text-teal mb-2">Unlimited</div>
+            <div className="text-slate">Access to all features</div>
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-teal mb-2">24/7</div>

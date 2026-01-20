@@ -9,20 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
-import GoogleIcon from '@/components/icons/GoogleIcon';
 import LoadingButton from '@/components/ui/LoadingButton';
 import AuthErrorDisplay from '@/components/ui/AuthErrorDisplay';
 import { getSiteUrl } from '@/lib/customSupabaseClient';
 import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 import { useOffline } from '@/hooks/useOffline';
 import { debugAuthFlow, debugSupabaseError, debugNavigationFlow } from '@/utils/authDebugger';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const supabase = useSupabaseClient();
-  const { signInWithGoogle } = useAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -139,25 +135,6 @@ const LoginPage = () => {
     setTimeout(() => setIsRetrying(false), 1000);
   };
 
-  const handleMobileFallback = () => {
-    // For mobile users having OAuth issues, show a message to use email/password
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      toast({
-        title: "Mobile Sign-in Tip",
-        description: "If Google sign-in isn't working on your mobile device, please use the email and password form below for a more reliable experience.",
-        duration: 8000,
-      });
-    } else {
-      toast({
-        title: "Sign-in Tip",
-        description: "If Google sign-in isn't working, please use the email and password form below.",
-        duration: 5000,
-      });
-    }
-  };
-
   const handleGoBack = () => {
     setAuthError(null);
     navigate('/login', { replace: true });
@@ -199,7 +176,7 @@ const LoginPage = () => {
                           placeholder="name@company.com"
                           className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 focus:bg-white focus:border-teal"
                           {...field}
-                          disabled={isSubmitting || googleLoading}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormMessage />
@@ -222,7 +199,7 @@ const LoginPage = () => {
                             placeholder="••••••••"
                             className="bg-white/90 border-white/30 text-deep-navy placeholder:text-slate/60 pr-10 focus:bg-white focus:border-teal"
                             {...field}
-                            disabled={isSubmitting || googleLoading}
+                            disabled={isSubmitting}
                           />
                           <button
                             type="button"
@@ -242,34 +219,11 @@ const LoginPage = () => {
                     </FormItem>
                   )}
                 />
-                <LoadingButton type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting} disabled={googleLoading}>
+                <LoadingButton type="submit" className="w-full bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting}>
                   Sign In
                 </LoadingButton>
               </form>
             </Form>
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-lightest-navy/50" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-light-navy px-2 text-slate">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <LoadingButton 
-                variant="outline" 
-                className="w-full flex items-center justify-center gap-2" 
-                onClick={signInWithGoogle} 
-                isLoading={googleLoading} 
-                disabled={isSubmitting}
-              >
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </LoadingButton>
-              
-            </div>
             <div className="mt-6 text-center text-sm space-y-2">
               <p className="text-slate">
                 Don't have an account?{' '}

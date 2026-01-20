@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { onboardingSchema } from '@/lib/validationSchemas';
+import { onboardingSchemaSimple } from '@/lib/validationSchemas';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useProfile } from '@/hooks/useProfile';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
-import { Building, Mail, Phone, CheckCircle, Zap, TrendingUp, Target, ArrowRight, Sparkles, DollarSign, Home, Search } from 'lucide-react';
+import { Building, Mail, Phone, CheckCircle, Zap, TrendingUp, Target, ArrowRight, Sparkles, Home, Search } from 'lucide-react';
 import PageWrapper from '@/components/layout/PageWrapper';
 import LoadingButton from '@/components/ui/LoadingButton';
 import CongratulationsDialog from '@/components/ui/CongratulationsDialog';
@@ -27,7 +27,7 @@ const OnboardingPage = () => {
   const [showCongratulations, setShowCongratulations] = useState(false);
 
   const form = useForm({
-    resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(onboardingSchemaSimple),
     defaultValues: {
       companyName: '',
       phone: '',
@@ -237,9 +237,9 @@ const OnboardingPage = () => {
                           <Zap className="w-5 h-5 text-teal" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-teal mb-1">500 Free Credits to Get Started!</h4>
+                          <h4 className="font-semibold text-teal mb-1">1 Month Free - Worth Over $500!</h4>
                           <p className="text-sm text-slate">
-                            We'll give you 500 trial credits when you complete setup. That's enough to reveal 250-500 properties and start closing deals!
+                            Get full access to all features for your first month. No credit card required, no hidden fees - just start finding leads!
                           </p>
                         </div>
                       </div>
@@ -247,18 +247,18 @@ const OnboardingPage = () => {
                   </div>
                 )}
 
-                {/* Step 2: Credit System Explanation */}
+                {/* Step 2: Free Trial Features */}
                 {currentStep === 1 && (
                   <div className="space-y-6 py-4">
                     <div className="text-center">
                       <div className="mx-auto bg-gradient-to-br from-amber-400/20 to-amber-400/5 w-20 h-20 rounded-full flex items-center justify-center mb-6">
-                        <DollarSign className="w-10 h-10 text-amber-400" />
+                        <Sparkles className="w-10 h-10 text-amber-400" />
                       </div>
                       <h2 className="text-2xl font-bold font-heading text-lightest-slate mb-3">
-                        How Credits Work
+                        Your Free Month Includes
                       </h2>
                       <p className="text-slate max-w-md mx-auto">
-                        Credits unlock property details so you can reach out to potential customers
+                        Full access to all features - worth over $500
                       </p>
                     </div>
 
@@ -270,10 +270,7 @@ const OnboardingPage = () => {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-semibold text-lightest-slate mb-1">Just Listed Properties</h3>
-                            <div className="flex items-center gap-2">
-                              <span className="text-teal font-bold text-lg">1 Credit</span>
-                              <span className="text-slate text-sm">per reveal</span>
-                            </div>
+                            <span className="text-teal font-medium">Unlimited Access</span>
                           </div>
                         </div>
                         <p className="text-sm text-slate">
@@ -288,10 +285,7 @@ const OnboardingPage = () => {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-semibold text-lightest-slate mb-1">Recently Sold Properties</h3>
-                            <div className="flex items-center gap-2">
-                              <span className="text-amber-400 font-bold text-lg">2 Credits</span>
-                              <span className="text-slate text-sm">per reveal</span>
-                            </div>
+                            <span className="text-amber-400 font-medium">Unlimited Access</span>
                           </div>
                         </div>
                         <p className="text-sm text-slate">
@@ -302,28 +296,28 @@ const OnboardingPage = () => {
                       <div className="bg-gradient-to-r from-teal/10 to-purple-500/10 p-5 rounded-lg border border-teal/30">
                         <div className="flex items-center gap-3 mb-3">
                           <Search className="w-5 h-5 text-teal" />
-                          <h4 className="font-semibold text-lightest-slate">Example: How Far 500 Credits Go</h4>
+                          <h4 className="font-semibold text-lightest-slate">All Premium Features</h4>
                         </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate">500 Just Listed properties</span>
-                            <span className="text-teal font-medium">500 reveals</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate">250 Sold properties (best leads)</span>
-                            <span className="text-amber-400 font-medium">250 reveals</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate">Or mix and match!</span>
-                            <span className="text-purple-400 font-medium">Your choice</span>
-                          </div>
-                        </div>
+                        <ul className="space-y-2 text-sm text-slate">
+                          <li className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-teal" />
+                            Full property details and contact info
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-teal" />
+                            Email alerts for new listings
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-teal" />
+                            Advanced search filters
+                          </li>
+                        </ul>
                       </div>
                     </div>
 
                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
                       <div className="flex items-start gap-3">
-                        <Sparkles className="w-5 h-5 text-blue-400 mt-0.5" />
+                        <Zap className="w-5 h-5 text-blue-400 mt-0.5" />
                         <div>
                           <h4 className="font-semibold text-blue-400 mb-1">Pro Tip</h4>
                           <p className="text-sm text-slate">
@@ -461,7 +455,7 @@ const OnboardingPage = () => {
                     isLoading={isSubmitting}
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Complete Setup & Get 500 Credits
+                    Complete Setup & Start Free Month
                   </LoadingButton>
                 )}
               </div>
@@ -470,10 +464,9 @@ const OnboardingPage = () => {
         </Card>
       </div>
       
-      <CongratulationsDialog 
+      <CongratulationsDialog
         isOpen={showCongratulations}
         onClose={handleCongratulationsClose}
-        credits={100}
       />
     </PageWrapper>
   );
