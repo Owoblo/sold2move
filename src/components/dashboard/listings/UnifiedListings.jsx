@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { 
-  AlertCircle, 
-  Download, 
-  SortAsc, 
+import {
+  AlertCircle,
+  Download,
+  SortAsc,
   SortDesc,
   MapPin,
   Calendar,
@@ -18,8 +18,6 @@ import {
   Users,
   CheckCircle,
   Eye,
-  Lock,
-  Zap,
   Filter,
   Search
 } from 'lucide-react';
@@ -34,12 +32,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAnalytics } from '@/services/analytics.jsx';
-import { useJustListedEnhanced, useSoldListingsEnhanced, useRevealedListingsEnhanced, useRevealListingEnhanced } from '@/hooks/useListingsEnhanced';
+import { useJustListedEnhanced, useSoldListingsEnhanced } from '@/hooks/useListingsEnhanced';
 import AdvancedFilters from '@/components/dashboard/filters/AdvancedFilters';
 import DateFilter from '@/components/dashboard/filters/DateFilter';
 import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
-import CreditConfirmationDialog from '@/components/ui/CreditConfirmationDialog';
 
 const PAGE_SIZE = 20;
 
@@ -122,22 +119,6 @@ const UnifiedListings = () => {
     refetch: refetchSoldListings
   } = useSoldListingsEnhanced(filters, currentPage, PAGE_SIZE);
 
-  // Reveal functionality
-  const { data: revealedListings } = useRevealedListingsEnhanced(profile?.id);
-  const revealListingMutation = useRevealListingEnhanced();
-  const isRevealing = revealListingMutation.isLoading;
-  
-  // Local state to track immediately revealed listings
-  const [localRevealedListings, setLocalRevealedListings] = useState(new Set());
-  const [showCreditDialog, setShowCreditDialog] = useState(false);
-  const [pendingListingId, setPendingListingId] = useState(null);
-  
-  // Combine server and local revealed listings
-  const allRevealedListings = React.useMemo(() => {
-    const combined = new Set(revealedListings || []);
-    localRevealedListings.forEach(id => combined.add(id));
-    return combined;
-  }, [revealedListings, localRevealedListings]);
 
   // Get current data based on active tab
   const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
@@ -186,82 +167,11 @@ const UnifiedListings = () => {
 
   const navigateToProperty = (listingId) => {
     navigate(`/dashboard/listings/property/${listingId}`);
-  };
-
-  const handleRowClick = (listingId) => {
-    // Check if user has credits or unlimited access
-    if (profile?.unlimited || allRevealedListings.has(listingId)) {
-      navigateToProperty(listingId);
-      return;
-    }
-
-    // Check if user has sufficient credits
-    const creditCost = activeTab === 'just-listed' ? 1 : 2;
-    if (profile?.credits_remaining < creditCost) {
-      toast.error("Insufficient Credits", `You need ${creditCost} credit${creditCost > 1 ? 's' : ''} to view this property. Please purchase more credits.`);
-      navigate('/pricing');
-      return;
-    }
-
-    // If user has credits, show confirmation dialog
-    setPendingListingId(listingId);
-    setShowCreditDialog(true);
-  };
-
-  const handleCreditDialogConfirm = () => {
-    if (pendingListingId) {
-      handleReveal(pendingListingId, { stopPropagation: () => {} });
-    }
-    setShowCreditDialog(false);
-    setPendingListingId(null);
-  };
-
-  const handleCreditDialogCancel = () => {
-    setShowCreditDialog(false);
-    setPendingListingId(null);
-  };
-
-  const handleReveal = async (listingId, e) => {
-    e.stopPropagation();
-    if (profile?.unlimited || allRevealedListings.has(listingId)) {
-        navigateToProperty(listingId);
-        return;
-    }
-
-    const creditCost = activeTab === 'just-listed' ? 1 : 2;
-    
-    trackAction('listing_reveal_attempt', { 
-      listingId, 
+    trackAction('listing_view', {
+      listingId,
       page: currentPage,
-      totalListings: currentData?.data?.length || 0,
       type: activeTab
     });
-    
-    try {
-      await revealListingMutation.mutateAsync({
-        listingId,
-        userId: profile.id,
-        creditCost,
-      });
-      
-      // Immediately add to local revealed state for instant UI update
-      setLocalRevealedListings(prev => new Set([...prev, listingId]));
-      
-      trackAction('listing_reveal_success', {
-        listingId,
-        page: currentPage,
-        totalListings: currentData?.data?.length || 0,
-        type: activeTab
-      });
-      
-      // Navigate to property detail page after successful reveal
-      navigateToProperty(listingId);
-      
-    } catch (err) {
-      if (err.message.includes('Insufficient credits')) {
-        navigate('/pricing');
-      }
-    }
   };
 
   // Sort listings client-side
@@ -300,40 +210,20 @@ const UnifiedListings = () => {
     return sorted;
   }, [currentData?.data, sortBy, sortOrder]);
 
-  // Count revealed listings for export
-  const revealedListingsCount = React.useMemo(() => {
-    if (profile?.unlimited) {
-      return sortedListings.length;
-    }
-    return sortedListings.filter(listing => allRevealedListings?.has(listing.id)).length;
-  }, [sortedListings, allRevealedListings, profile?.unlimited]);
-
   const handleExport = () => {
     if (sortedListings.length === 0) {
       toast.error("Export Failed", "No listings to export with current filters.");
       return;
     }
-    
-    // Filter to only include revealed listings or unlimited access
-    const revealedListings = sortedListings.filter(listing => 
-      profile?.unlimited || allRevealedListings?.has(listing.id)
-    );
-    
-    if (revealedListings.length === 0) {
-      toast.error("Export Failed", "No revealed listings to export. Please reveal some listings first or upgrade to unlimited access.");
-      return;
-    }
-    
+
     trackAction('export', {
       type: activeTab,
-      count: revealedListings.length,
-      totalListings: sortedListings.length,
+      count: sortedListings.length,
       page: currentPage,
-      filters: filters,
-      hasUnlimited: profile?.unlimited
+      filters: filters
     });
-    
-    const dataToExport = revealedListings.map(({ addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
+
+    const dataToExport = sortedListings.map(({ addressStreet, addresscity, unformattedprice, beds, baths, area, statustext }) => ({
       Address: addressStreet,
       City: addresscity,
       Price: unformattedprice ? `$${unformattedprice.toLocaleString()}` : 'N/A',
@@ -342,8 +232,8 @@ const UnifiedListings = () => {
       'Sq. Ft.': area ? area.toLocaleString() : 'N/A',
       'Property Type': statustext || 'N/A',
     }));
-    exportToCSV(dataToExport, `${activeTab}-listings-revealed-${revealedListings.length}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
-    toast.success("Export Successful", `Your CSV file has been downloaded with ${revealedListings.length} revealed listings.`);
+    exportToCSV(dataToExport, `${activeTab}-listings-${sortedListings.length}-${profile?.city_name || 'export'}-${new Date().toLocaleDateString()}.csv`);
+    toast.success("Export Successful", `Your CSV file has been downloaded with ${sortedListings.length} listings.`);
   };
 
   const handleTabChange = (tab) => {
@@ -446,12 +336,12 @@ const UnifiedListings = () => {
           <div className="flex gap-2">
             <Button
               onClick={handleExport}
-              disabled={revealedListingsCount === 0}
+              disabled={sortedListings.length === 0}
               variant="outline"
               className="border-teal text-teal hover:bg-teal/10"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export ({revealedListingsCount})
+              Export ({sortedListings.length})
             </Button>
           </div>
         </div>
@@ -628,16 +518,12 @@ const UnifiedListings = () => {
                   <TableBody>
                     {sortedListings.map((listing, index) => (
                       <motion.tr
-                        key={listing.id} 
+                        key={listing.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className={`hover:bg-lightest-navy/5 transition-colors cursor-pointer ${
-                          !profile?.unlimited && !allRevealedListings?.has(listing.id) 
-                            ? 'hover:border-teal/20 border border-transparent' 
-                            : ''
-                        }`}
-                        onClick={() => handleRowClick(listing.id)}
+                        className="hover:bg-lightest-navy/5 transition-colors cursor-pointer"
+                        onClick={() => navigateToProperty(listing.id)}
                       >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
@@ -645,114 +531,61 @@ const UnifiedListings = () => {
                               <Home className="h-4 w-4 text-teal" />
                             </div>
                             <div>
-                              <div 
-                                className={`font-medium ${
-                                  profile?.unlimited || allRevealedListings?.has(listing.id) 
-                                    ? 'text-lightest-slate cursor-pointer hover:text-teal transition-colors' 
-                                    : 'text-slate'
-                                }`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (profile?.unlimited || allRevealedListings?.has(listing.id)) {
-                                    handleRowClick(listing.id);
-                                  }
-                                }}
-                              >
-                                {profile?.unlimited || allRevealedListings?.has(listing.id) 
-                                  ? listing.addressStreet 
-                                  : '***** ******* **'
-                                }
+                              <div className="font-medium text-lightest-slate cursor-pointer hover:text-teal transition-colors">
+                                {listing.addressStreet}
                               </div>
                               <div className="text-xs text-slate">
-                                {profile?.unlimited || allRevealedListings?.has(listing.id) 
-                                  ? `${listing.addresscity}, ${listing.addressstate}`
-                                  : 'Click Reveal to see address'
-                                }
+                                {listing.addresscity}, {listing.addressstate}
                               </div>
-                              {!profile?.unlimited && !allRevealedListings?.has(listing.id) && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-teal/10 border-teal/20 text-teal">
-                                    {activeTab === 'just-listed' ? '1 credit' : '2 credits'}
-                                  </Badge>
-                                  <span className="text-xs text-slate/60">• Click to view details</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-teal font-semibold text-lg">
-                            {profile?.unlimited || allRevealedListings?.has(listing.id)
-                              ? (listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A')
-                              : '*****'
-                            }
+                            {listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A'}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-lightest-slate">
-                            {profile?.unlimited || allRevealedListings?.has(listing.id)
-                              ? (listing.beds || 'N/A')
-                              : '***'
-                            }
+                            {listing.beds || 'N/A'}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-lightest-slate">
-                            {profile?.unlimited || allRevealedListings?.has(listing.id)
-                              ? (listing.baths || 'N/A')
-                              : '***'
-                            }
+                            {listing.baths || 'N/A'}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-lightest-slate">
-                            {profile?.unlimited || allRevealedListings?.has(listing.id)
-                              ? (listing.area ? `${listing.area.toLocaleString()}` : 'N/A')
-                              : '****'
-                            }
+                            {listing.area ? `${listing.area.toLocaleString()}` : 'N/A'}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 text-slate">
                             <Calendar className="h-4 w-4" />
-                              <span className="text-sm">
-                                {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
-                              </span>
+                            <span className="text-sm">
+                              {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-slate border-slate/30">
-                            {profile?.unlimited || allRevealedListings?.has(listing.id)
-                              ? (listing.statustext || 'N/A')
-                              : '****'
-                            }
+                            {listing.statustext || 'N/A'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {profile?.unlimited || allRevealedListings?.has(listing.id) ? (
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRowClick(listing.id);
-                              }}
-                              size="sm"
-                              variant="outline"
-                              className="border-teal text-teal hover:bg-teal/10"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Button>
-                          ) : (
-                            <Button
-                              onClick={(e) => handleReveal(listing.id, e)}
-                              disabled={isRevealing}
-                              size="sm"
-                              className="bg-teal text-deep-navy hover:bg-teal/90"
-                            >
-                              <Lock className="h-4 w-4 mr-2" />
-                              Reveal ({activeTab === 'just-listed' ? '1' : '2'})
-                            </Button>
-                          )}
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigateToProperty(listing.id);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="border-teal text-teal hover:bg-teal/10"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Button>
                         </TableCell>
                       </motion.tr>
                     ))}
@@ -776,16 +609,6 @@ const UnifiedListings = () => {
           )}
         </CardContent>
       </Card>
-      
-      {/* Credit Confirmation Dialog */}
-      <CreditConfirmationDialog
-        isOpen={showCreditDialog}
-        onClose={handleCreditDialogCancel}
-        onConfirm={handleCreditDialogConfirm}
-        creditCost={activeTab === 'just-listed' ? 1 : 2}
-        remainingCredits={profile?.credits_remaining || 0}
-        propertyType={activeTab === 'just-listed' ? 'just-listed property' : 'sold property'}
-      />
       </motion.div>
     </motion.div>
   );

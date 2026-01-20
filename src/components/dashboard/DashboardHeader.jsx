@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { useProfile } from '@/hooks/useProfile';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -15,8 +15,6 @@ import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import DashboardNotification from '@/components/dashboard/DashboardNotification';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import ThemeToggle from '@/components/ui/ThemeToggle';
-
-const CreditMeter = lazy(() => import('@/components/dashboard/CreditMeter'));
 
 const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
   const { profile, loading } = useProfile();
@@ -43,9 +41,6 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
-        <Suspense fallback={<SkeletonLoader className="h-8 w-28 rounded-full" />}>
-          <CreditMeter />
-        </Suspense>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 text-lightest-slate hover:bg-lightest-navy/10 hover:text-white">

@@ -1,19 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useToast } from '@/components/ui/use-toast';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-
-const LOW_CREDIT_THRESHOLD = 50;
 
 export const useProfile = () => {
   const { session } = useAuth();
   const supabase = useSupabaseClient();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const { toast } = useToast();
-  const [lowCreditNotified, setLowCreditNotified] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     // Only log in development to reduce console noise
@@ -62,29 +55,6 @@ export const useProfile = () => {
       }
       
       setProfile(data);
-
-      if (data && !data.unlimited && data.credits_remaining > 0 && data.credits_remaining <= LOW_CREDIT_THRESHOLD && !lowCreditNotified) {
-        const lastShown = localStorage.getItem('lowCreditToastLastShown');
-        const now = new Date().getTime();
-        if (!lastShown || now - parseInt(lastShown, 10) > 3600000) { // 1 hour cooldown
-            toast({
-              title: "Your credits are running low!",
-              description: `You have ${data.credits_remaining} credits left. Top up now to avoid interruptions.`,
-              duration: 10000,
-              action: (
-                <div className="flex gap-2">
-                  <Button asChild size="sm"><Link to="/pricing#top-up">Buy Credits</Link></Button>
-                  <Button asChild variant="outline" size="sm"><Link to="/pricing">Upgrade</Link></Button>
-                </div>
-              ),
-            });
-            localStorage.setItem('lowCreditToastLastShown', now.toString());
-            setLowCreditNotified(true);
-        }
-      } else if (data && data.credits_remaining > LOW_CREDIT_THRESHOLD && lowCreditNotified) {
-        setLowCreditNotified(false);
-      }
-
       setLoading(false);
     } else {
       if (process.env.NODE_ENV === 'development') {
@@ -93,7 +63,7 @@ export const useProfile = () => {
       setLoading(false);
       setProfile(null);
     }
-  }, [session?.user?.id, supabase, toast, lowCreditNotified]);
+  }, [session?.user?.id, supabase]);
 
   useEffect(() => {
     fetchProfile();

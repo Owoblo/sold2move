@@ -62,22 +62,6 @@ const PropertyDetailPage = () => {
   // Check if user is admin
   const isAdmin = user?.email === 'johnowolabi80@gmail.com';
 
-  // Credit validation effect
-  useEffect(() => {
-    if (profile && !isAdmin) {
-      // Check if user has unlimited access or if this is a revealed listing
-      // For now, we'll allow access if they have any credits (they should have paid to get here)
-      if (!profile.unlimited && profile.credits_remaining <= 0) {
-        navigate('/pricing', { 
-          state: { 
-            message: 'You need credits to view property details. Please purchase credits to continue.' 
-          } 
-        });
-        return;
-      }
-    }
-  }, [profile, isAdmin, navigate]);
-
   useEffect(() => {
     const getListing = async () => {
       try {

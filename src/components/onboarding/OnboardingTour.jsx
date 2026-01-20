@@ -95,10 +95,10 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
       position: 'center'
     },
     {
-      id: 'reveal',
-      title: 'Reveal Property Details',
-      description: 'Use credits to reveal full property information and contact details.',
-      icon: Zap,
+      id: 'property-details',
+      title: 'View Property Details',
+      description: 'Access full property information and homeowner contact details.',
+      icon: Home,
       content: (
         <div className="space-y-4">
           <div className="space-y-3">
@@ -107,19 +107,23 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
                 <span className="text-sm">🏠</span>
               </div>
               <div className="flex-1">
-                <p className="text-sm text-slate">Before reveal:</p>
-                <p className="text-sm font-medium text-lightest-slate">***** ******* **</p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-slate" />
-              <div className="flex-1">
-                <p className="text-sm text-slate">After reveal:</p>
                 <p className="text-sm font-medium text-teal">123 Main Street</p>
+                <p className="text-xs text-slate">Full address and property details</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
+              <div className="w-8 h-8 bg-slate/20 rounded flex items-center justify-center">
+                <span className="text-sm">📊</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-teal">Property Info</p>
+                <p className="text-xs text-slate">Price, beds, baths, square footage</p>
               </div>
             </div>
           </div>
-          <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-3">
-            <p className="text-sm text-amber-400">
-              <strong>Remember:</strong> You can reveal multiple properties at once with bulk operations!
+          <div className="bg-teal/5 border border-teal/20 rounded-lg p-3">
+            <p className="text-sm text-teal">
+              <strong>Full Access:</strong> View all property details during your free trial!
             </p>
           </div>
         </div>
