@@ -406,31 +406,47 @@ const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE'
  */
 export async function fetchAvailableCities(countryCode = null) {
   try {
-    // Query to get city/state combinations from listings
-    let query = supabase
-      .from('listings')
-      .select('lastcity, addressstate')
-      .not('lastcity', 'is', null)
-      .not('addressstate', 'is', null);
+    // Fetch in batches to avoid timeout - max 1000 per request
+    const BATCH_SIZE = 1000;
+    const MAX_BATCHES = 30; // Up to 30,000 listings
+    let allData = [];
+    let hasMore = true;
+    let batchCount = 0;
 
-    // Filter by country based on state/province codes
-    if (countryCode === 'CA') {
-      query = query.in('addressstate', CA_PROVINCES);
-    } else if (countryCode === 'US') {
-      // Exclude Canadian provinces to get US states
-      query = query.not('addressstate', 'in', `(${CA_PROVINCES.join(',')})`);
-    }
+    while (hasMore && batchCount < MAX_BATCHES) {
+      let query = supabase
+        .from('listings')
+        .select('lastcity, addressstate')
+        .not('lastcity', 'is', null)
+        .not('addressstate', 'is', null)
+        .range(batchCount * BATCH_SIZE, (batchCount + 1) * BATCH_SIZE - 1);
 
-    const { data, error } = await query;
+      // Filter by country based on state/province codes
+      if (countryCode === 'CA') {
+        query = query.in('addressstate', CA_PROVINCES);
+      } else if (countryCode === 'US') {
+        query = query.not('addressstate', 'in', `(${CA_PROVINCES.join(',')})`);
+      }
 
-    if (error) {
-      console.error('fetchAvailableCities error:', error);
-      throw error;
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('fetchAvailableCities batch error:', error);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        hasMore = data.length === BATCH_SIZE;
+      } else {
+        hasMore = false;
+      }
+      batchCount++;
     }
 
     // Deduplicate and count occurrences in JavaScript
     const cityMap = new Map();
-    (data || []).forEach(row => {
+    allData.forEach(row => {
       if (row.lastcity && row.addressstate) {
         const key = `${row.lastcity}-${row.addressstate}`;
         const existing = cityMap.get(key);

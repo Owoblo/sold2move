@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { MapPin, Globe, Save, RotateCcw, DollarSign, Users } from 'lucide-react';
+import React, { useState, useEffect, Component } from 'react';
+import { MapPin, Globe, Save, RotateCcw, DollarSign, Users, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,25 +12,51 @@ import toast from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
-// Error boundary for the component
-const ErrorFallback = ({ error, resetError }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2 text-red-400">
-        <Globe className="h-5 w-5" />
-        Service Areas - Error
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="text-center py-8">
-        <p className="text-slate mb-4">Something went wrong loading the service areas.</p>
-        <Button onClick={resetError} variant="outline">
-          Try Again
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
+// Proper React Error Boundary class component
+class MultiCityErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('MultiCitySettings error:', error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <AlertCircle className="h-5 w-5" />
+              Service Areas - Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-slate mb-4">Something went wrong loading the service areas.</p>
+              <Button onClick={this.handleReset} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 const MultiCitySettings = () => {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
@@ -149,14 +174,15 @@ const MultiCitySettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-400">
-            <Globe className="h-5 w-5" />
+            <AlertCircle className="h-5 w-5" />
             Service Areas - Error
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
             <p className="text-slate mb-4">{error}</p>
-            <Button onClick={() => setError(null)} variant="outline">
+            <Button onClick={() => setError(null)} variant="outline" className="gap-2">
+              <RefreshCw className="h-4 w-4" />
               Try Again
             </Button>
           </div>
@@ -166,11 +192,7 @@ const MultiCitySettings = () => {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-    >
+    <div className="animate-in fade-in duration-300">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -292,29 +314,17 @@ const MultiCitySettings = () => {
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 };
 
-// Wrap with error boundary
+// Wrap with proper error boundary
 const MultiCitySettingsWithErrorBoundary = () => {
-  const [hasError, setHasError] = useState(false);
-
-  const resetError = () => {
-    setHasError(false);
-  };
-
-  if (hasError) {
-    return <ErrorFallback error={null} resetError={resetError} />;
-  }
-
-  try {
-    return <MultiCitySettings />;
-  } catch (error) {
-    console.error('MultiCitySettings error:', error);
-    setHasError(true);
-    return <ErrorFallback error={error} resetError={resetError} />;
-  }
+  return (
+    <MultiCityErrorBoundary>
+      <MultiCitySettings />
+    </MultiCityErrorBoundary>
+  );
 };
 
 export default MultiCitySettingsWithErrorBoundary;

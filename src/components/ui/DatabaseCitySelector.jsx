@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, MapPin, Check, X, Search, Globe } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { ChevronDown, MapPin, Check, X, Search, Globe, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,7 @@ const DatabaseCitySelector = ({
   const dropdownRef = useRef(null);
 
   // Fetch cities dynamically from database
-  const { data: citiesData, isLoading: loading } = useAvailableCities(countryCode);
+  const { data: citiesData, isLoading: loading, error: fetchError } = useAvailableCities(countryCode);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -38,29 +37,33 @@ const DatabaseCitySelector = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Transform cities data to expected format
-  const cities = citiesData || [];
+  // Transform cities data to expected format - memoized
+  const cities = useMemo(() => citiesData || [], [citiesData]);
 
-  // Filter cities based on search term
-  const filteredCities = searchTerm
-    ? cities.filter(city =>
-        city.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        city.state.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : cities;
+  // Filter cities based on search term - memoized
+  const filteredCities = useMemo(() => {
+    if (!searchTerm) return cities;
+    const lowerSearch = searchTerm.toLowerCase();
+    return cities.filter(city =>
+      city.city.toLowerCase().includes(lowerSearch) ||
+      city.state.toLowerCase().includes(lowerSearch)
+    );
+  }, [cities, searchTerm]);
 
-  // Group cities by state
-  const groupedCities = cities.reduce((acc, city) => {
-    const stateKey = `${getStateName(city.state)} (${city.state})`;
-    if (!acc[stateKey]) {
-      acc[stateKey] = [];
-    }
-    acc[stateKey].push(city);
-    return acc;
-  }, {});
+  // Group cities by state - memoized
+  const groupedCities = useMemo(() => {
+    return cities.reduce((acc, city) => {
+      const stateKey = `${getStateName(city.state)} (${city.state})`;
+      if (!acc[stateKey]) {
+        acc[stateKey] = [];
+      }
+      acc[stateKey].push(city);
+      return acc;
+    }, {});
+  }, [cities]);
 
-  // Handle city selection/deselection
-  const handleCityToggle = (cityName, stateCode) => {
+  // Handle city selection/deselection - memoized
+  const handleCityToggle = useCallback((cityName, stateCode) => {
     const cityKey = `${cityName}, ${stateCode}`;
     const isSelected = selectedCities.includes(cityKey);
 
@@ -75,43 +78,49 @@ const DatabaseCitySelector = ({
     }
 
     onCitiesChange(newCities);
-  };
+  }, [selectedCities, maxSelections, onCitiesChange]);
 
-  // Remove a city from selection
-  const removeCity = (cityKey) => {
+  // Remove a city from selection - memoized
+  const removeCity = useCallback((cityKey) => {
     const newCities = selectedCities.filter(city => city !== cityKey);
     onCitiesChange(newCities);
-  };
+  }, [selectedCities, onCitiesChange]);
 
-  // Clear all selections
-  const clearAll = () => {
+  // Clear all selections - memoized
+  const clearAll = useCallback(() => {
     onCitiesChange([]);
-  };
+  }, [onCitiesChange]);
 
-  // Toggle group expansion
-  const handleGroupToggle = (groupKey) => {
-    const newExpanded = new Set(expandedGroups);
-    if (newExpanded.has(groupKey)) {
-      newExpanded.delete(groupKey);
-    } else {
-      newExpanded.add(groupKey);
-    }
-    setExpandedGroups(newExpanded);
-  };
+  // Toggle group expansion - memoized
+  const handleGroupToggle = useCallback((groupKey) => {
+    setExpandedGroups(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(groupKey)) {
+        newExpanded.delete(groupKey);
+      } else {
+        newExpanded.add(groupKey);
+      }
+      return newExpanded;
+    });
+  }, []);
 
-  // Check if city is selected
-  const isCitySelected = (cityName, stateCode) => {
+  // Check if city is selected - memoized
+  const isCitySelected = useCallback((cityName, stateCode) => {
     return selectedCities.includes(`${cityName}, ${stateCode}`);
-  };
+  }, [selectedCities]);
+
+  // Close dropdown and clear search
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    setSearchTerm('');
+  }, []);
 
   return (
     <div className={cn("relative", className)} ref={dropdownRef}>
       {/* Trigger Button */}
-      <motion.button
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-teal/50 transition-all duration-300 hover:bg-light-navy/30"
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+        className="group relative w-full flex items-center justify-between px-4 py-3 rounded-lg border border-slate/30 hover:border-teal/50 transition-all duration-200 hover:bg-light-navy/30 active:scale-[0.99]"
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
@@ -126,10 +135,20 @@ const DatabaseCitySelector = ({
           "h-4 w-4 text-slate transition-transform duration-200 flex-shrink-0",
           isOpen && "rotate-180"
         )} />
-      </motion.button>
+      </button>
+
+      {/* Error State */}
+      {fetchError && isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 p-4 bg-deep-navy border border-red-500/30 rounded-lg shadow-lg z-50">
+          <div className="flex items-center justify-center gap-2 text-red-400">
+            <AlertCircle className="h-4 w-4" />
+            <span>Failed to load cities. Please try again.</span>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
-      {loading && isOpen && (
+      {loading && isOpen && !fetchError && (
         <div className="absolute top-full left-0 right-0 mt-1 p-4 bg-deep-navy border border-slate/30 rounded-lg shadow-lg z-50">
           <div className="flex items-center justify-center gap-2 text-slate">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal"></div>
@@ -170,164 +189,47 @@ const DatabaseCitySelector = ({
         </div>
       )}
 
-      {/* Dropdown */}
-      <AnimatePresence>
-        {isOpen && !loading && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-light-navy border border-lightest-navy/20 rounded-lg shadow-xl z-50 max-h-80 overflow-hidden"
-          >
-            {/* Search Bar */}
-            {showSearch && (
-              <div className="p-3 border-b border-lightest-navy/20">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate" />
-                  <Input
-                    placeholder="Search cities..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-deep-navy border-slate/30 text-lightest-slate placeholder-slate focus:border-teal"
-                  />
-                </div>
+      {/* Dropdown - using CSS transitions instead of framer-motion for performance */}
+      {isOpen && !loading && !fetchError && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-light-navy border border-lightest-navy/20 rounded-lg shadow-xl z-50 max-h-80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="p-3 border-b border-lightest-navy/20">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate" />
+                <Input
+                  placeholder="Search cities..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-deep-navy border-slate/30 text-lightest-slate placeholder-slate focus:border-teal"
+                  autoFocus
+                />
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Cities List */}
-            <div className="max-h-64 overflow-y-auto">
-              {cities.length === 0 ? (
-                <div className="p-4 text-center text-slate">
-                  No cities available in the database
-                </div>
-              ) : searchTerm ? (
-                // Search Results
-                <div className="p-2">
-                  {filteredCities.length > 0 ? (
-                    filteredCities.map((city) => {
-                      const cityKey = `${city.city}, ${city.state}`;
-                      const isSelected = isCitySelected(city.city, city.state);
-
-                      return (
-                        <motion.button
-                          key={cityKey}
-                          onClick={() => handleCityToggle(city.city, city.state)}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
-                            isSelected && "bg-teal/10"
-                          )}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="flex items-center gap-2 flex-1">
-                            <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
-                            <div>
-                              <div className="text-lightest-slate font-medium">{city.city}</div>
-                              <div className="text-slate text-sm">{getStateName(city.state)} ({city.state})</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate">{city.count} listings</span>
-                            {isSelected && (
-                              <Check className="h-4 w-4 text-teal" />
-                            )}
-                          </div>
-                        </motion.button>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 text-center text-slate">
-                      No cities found matching "{searchTerm}"
-                    </div>
-                  )}
-                </div>
-              ) : showGrouped ? (
-                // Grouped by State
-                <div className="p-2">
-                  {Object.entries(groupedCities).sort(([a], [b]) => a.localeCompare(b)).map(([stateKey, stateCities]) => {
-                    const isExpanded = expandedGroups.has(stateKey);
-
-                    return (
-                      <div key={stateKey} className="border border-slate/20 rounded-lg overflow-hidden mb-2">
-                        <button
-                          onClick={() => handleGroupToggle(stateKey)}
-                          className="w-full flex items-center justify-between p-3 hover:bg-lightest-navy/20 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Globe className="h-4 w-4 text-teal" />
-                            <span className="text-lightest-slate font-medium">{stateKey}</span>
-                            <Badge variant="secondary" className="bg-slate/20 text-slate">
-                              {stateCities.length}
-                            </Badge>
-                          </div>
-                          <ChevronDown className={cn(
-                            "h-4 w-4 text-slate transition-transform duration-200",
-                            isExpanded && "rotate-180"
-                          )} />
-                        </button>
-
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="overflow-hidden"
-                            >
-                              {stateCities.map((city) => {
-                                const cityKey = `${city.city}, ${city.state}`;
-                                const isSelected = isCitySelected(city.city, city.state);
-
-                                return (
-                                  <motion.button
-                                    key={cityKey}
-                                    onClick={() => handleCityToggle(city.city, city.state)}
-                                    className={cn(
-                                      "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left border-t border-slate/10",
-                                      isSelected && "bg-teal/10"
-                                    )}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                  >
-                                    <div className="flex items-center gap-2 flex-1">
-                                      <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
-                                      <span className="text-lightest-slate">{city.city}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-slate">{city.count} listings</span>
-                                      {isSelected && (
-                                        <Check className="h-4 w-4 text-teal" />
-                                      )}
-                                    </div>
-                                  </motion.button>
-                                );
-                              })}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                // Flat List
-                <div className="p-2">
-                  {cities.map((city) => {
+          {/* Cities List */}
+          <div className="max-h-64 overflow-y-auto">
+            {cities.length === 0 ? (
+              <div className="p-4 text-center text-slate">
+                No cities available in the database
+              </div>
+            ) : searchTerm ? (
+              // Search Results
+              <div className="p-2">
+                {filteredCities.length > 0 ? (
+                  filteredCities.slice(0, 50).map((city) => {
                     const cityKey = `${city.city}, ${city.state}`;
                     const isSelected = isCitySelected(city.city, city.state);
 
                     return (
-                      <motion.button
+                      <button
                         key={cityKey}
                         onClick={() => handleCityToggle(city.city, city.state)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg",
+                          "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg active:scale-[0.99]",
                           isSelected && "bg-teal/10"
                         )}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-center gap-2 flex-1">
                           <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
@@ -342,30 +244,137 @@ const DatabaseCitySelector = ({
                             <Check className="h-4 w-4 text-teal" />
                           )}
                         </div>
-                      </motion.button>
+                      </button>
                     );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-3 border-t border-lightest-navy/20 bg-deep-navy/30">
-              <div className="flex items-center justify-between text-sm text-slate">
-                <span>{selectedCities.length} of {maxSelections} selected</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsOpen(false)}
-                  className="border-teal text-teal hover:bg-teal/10"
-                >
-                  Done
-                </Button>
+                  })
+                ) : (
+                  <div className="p-4 text-center text-slate">
+                    No cities found matching "{searchTerm}"
+                  </div>
+                )}
+                {filteredCities.length > 50 && (
+                  <div className="p-2 text-center text-slate text-sm">
+                    Showing first 50 results. Type more to narrow down.
+                  </div>
+                )}
               </div>
+            ) : showGrouped ? (
+              // Grouped by State
+              <div className="p-2">
+                {Object.entries(groupedCities).sort(([a], [b]) => a.localeCompare(b)).map(([stateKey, stateCities]) => {
+                  const isExpanded = expandedGroups.has(stateKey);
+
+                  return (
+                    <div key={stateKey} className="border border-slate/20 rounded-lg overflow-hidden mb-2">
+                      <button
+                        onClick={() => handleGroupToggle(stateKey)}
+                        className="w-full flex items-center justify-between p-3 hover:bg-lightest-navy/20 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Globe className="h-4 w-4 text-teal" />
+                          <span className="text-lightest-slate font-medium">{stateKey}</span>
+                          <Badge variant="secondary" className="bg-slate/20 text-slate">
+                            {stateCities.length}
+                          </Badge>
+                        </div>
+                        <ChevronDown className={cn(
+                          "h-4 w-4 text-slate transition-transform duration-200",
+                          isExpanded && "rotate-180"
+                        )} />
+                      </button>
+
+                      {/* Expanded cities - simple show/hide */}
+                      {isExpanded && (
+                        <div className="animate-in slide-in-from-top-1 duration-150">
+                          {stateCities.map((city) => {
+                            const cityKey = `${city.city}, ${city.state}`;
+                            const isSelected = isCitySelected(city.city, city.state);
+
+                            return (
+                              <button
+                                key={cityKey}
+                                onClick={() => handleCityToggle(city.city, city.state)}
+                                className={cn(
+                                  "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left border-t border-slate/10 active:scale-[0.99]",
+                                  isSelected && "bg-teal/10"
+                                )}
+                              >
+                                <div className="flex items-center gap-2 flex-1">
+                                  <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
+                                  <span className="text-lightest-slate">{city.city}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate">{city.count} listings</span>
+                                  {isSelected && (
+                                    <Check className="h-4 w-4 text-teal" />
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Flat List - limit to prevent performance issues
+              <div className="p-2">
+                {cities.slice(0, 100).map((city) => {
+                  const cityKey = `${city.city}, ${city.state}`;
+                  const isSelected = isCitySelected(city.city, city.state);
+
+                  return (
+                    <button
+                      key={cityKey}
+                      onClick={() => handleCityToggle(city.city, city.state)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg active:scale-[0.99]",
+                        isSelected && "bg-teal/10"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        <MapPin className="h-4 w-4 text-teal flex-shrink-0" />
+                        <div>
+                          <div className="text-lightest-slate font-medium">{city.city}</div>
+                          <div className="text-slate text-sm">{getStateName(city.state)} ({city.state})</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate">{city.count} listings</span>
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-teal" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                {cities.length > 100 && (
+                  <div className="p-2 text-center text-slate text-sm">
+                    Use search to find more cities
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-3 border-t border-lightest-navy/20 bg-deep-navy/30">
+            <div className="flex items-center justify-between text-sm text-slate">
+              <span>{selectedCities.length} of {maxSelections} selected</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClose}
+                className="border-teal text-teal hover:bg-teal/10"
+              >
+                Done
+              </Button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
