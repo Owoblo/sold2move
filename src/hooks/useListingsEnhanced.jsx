@@ -310,82 +310,26 @@ export const useRevealListingEnhanced = () => {
   });
 };
 
-// Hook for getting available filter options - fetches unique values from listings table
-export const useFilterOptions = () => {
-  const supabase = useSupabaseClient();
+// Default filter options - used to avoid expensive full table scans
+const DEFAULT_FILTER_OPTIONS = {
+  beds: [1, 2, 3, 4, 5, 6],
+  baths: [1, 2, 3, 4, 5],
+  propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale', 'Multi-family home for sale'],
+  priceRange: { min: 0, max: 10000000 },
+  areaRange: { min: 0, max: 10000 },
+};
 
+// Hook for getting available filter options - returns static defaults to prevent database timeouts
+export const useFilterOptions = () => {
   return useQuery({
     queryKey: ['filter-options-global'],
     queryFn: async () => {
-      try {
-        // Get unique beds values
-        const { data: bedsData, error: bedsError } = await supabase
-          .from('listings')
-          .select('beds')
-          .not('beds', 'is', null)
-          .order('beds', { ascending: true });
-
-        // Get unique baths values
-        const { data: bathsData, error: bathsError } = await supabase
-          .from('listings')
-          .select('baths')
-          .not('baths', 'is', null)
-          .order('baths', { ascending: true });
-
-        // Get unique property types
-        const { data: typesData, error: typesError } = await supabase
-          .from('listings')
-          .select('statustext')
-          .not('statustext', 'is', null);
-
-        // Get price range
-        const { data: priceData, error: priceError } = await supabase
-          .from('listings')
-          .select('unformattedprice')
-          .not('unformattedprice', 'is', null)
-          .order('unformattedprice', { ascending: true });
-
-        // Get area range
-        const { data: areaData, error: areaError } = await supabase
-          .from('listings')
-          .select('area')
-          .not('area', 'is', null)
-          .order('area', { ascending: true });
-
-        // Extract unique values
-        const beds = [...new Set(bedsData?.map(d => d.beds) || [])].filter(b => b > 0).sort((a, b) => a - b);
-        const baths = [...new Set(bathsData?.map(d => d.baths) || [])].filter(b => b > 0).sort((a, b) => a - b);
-        const propertyTypes = [...new Set(typesData?.map(d => d.statustext) || [])].filter(Boolean);
-        const prices = priceData?.map(d => d.unformattedprice).filter(p => p > 0) || [];
-        const areas = areaData?.map(d => d.area).filter(a => a > 0) || [];
-
-        return {
-          beds: beds.length > 0 ? beds : [1, 2, 3, 4, 5, 6],
-          baths: baths.length > 0 ? baths : [1, 2, 3, 4, 5],
-          propertyTypes: propertyTypes.length > 0 ? propertyTypes : ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale'],
-          priceRange: {
-            min: prices.length > 0 ? Math.min(...prices) : 0,
-            max: prices.length > 0 ? Math.max(...prices) : 10000000,
-          },
-          areaRange: {
-            min: areas.length > 0 ? Math.min(...areas) : 0,
-            max: areas.length > 0 ? Math.max(...areas) : 10000,
-          },
-        };
-      } catch (error) {
-        console.error('useFilterOptions: Error fetching filter options:', error);
-        // Return default values on error
-        return {
-          beds: [1, 2, 3, 4, 5, 6],
-          baths: [1, 2, 3, 4, 5],
-          propertyTypes: ['House for sale', 'Condo for sale', 'Townhouse for sale', 'Land for sale'],
-          priceRange: { min: 0, max: 10000000 },
-          areaRange: { min: 0, max: 10000 },
-        };
-      }
+      // Return static defaults immediately - no database queries needed
+      // These options cover the vast majority of real estate listings
+      return DEFAULT_FILTER_OPTIONS;
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes - filter options don't change often
-    cacheTime: 60 * 60 * 1000, // 1 hour
+    staleTime: Infinity, // Never refetch - these are static defaults
+    cacheTime: Infinity,
   });
 };
 

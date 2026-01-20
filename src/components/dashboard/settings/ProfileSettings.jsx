@@ -1,47 +1,50 @@
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { profileSchema } from '@/lib/validationSchemas';
+import { z } from 'zod';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useToast } from '@/components/ui/use-toast';
-import { Country, State, City } from 'country-state-city';
+import { Country, State } from 'country-state-city';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+
+// Simple schema for company profile only
+const companyProfileSchema = z.object({
+  company_name: z.string().min(1, 'Company name is required'),
+  phone: z.string().optional(),
+  business_email: z.string().email('Invalid email address'),
+  country_code: z.string().min(1, 'Country is required'),
+  state_code: z.string().min(1, 'Province/State is required'),
+});
 
 const ProfileSettings = () => {
   const { session, profile, loading: profileLoading, refreshProfile } = useProfile();
   const { toast } = useToast();
 
   const form = useForm({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(companyProfileSchema),
     defaultValues: {
       company_name: '',
       phone: '',
       business_email: '',
       country_code: '',
       state_code: '',
-      city_name: '',
-      service_cities: []
     },
   });
 
   const { isSubmitting, watch, setValue } = form;
   const countryCode = watch('country_code');
-  const stateCode = watch('state_code');
 
   const countries = Country.getAllCountries()
     .filter(c => ['US', 'CA'].includes(c.isoCode))
     .map(c => ({ label: c.name, value: c.isoCode }));
-  
+
   const states = State.getStatesOfCountry(countryCode).map(s => ({ label: s.name, value: s.isoCode }));
-  const cities = City.getCitiesOfState(countryCode, stateCode).map(c => ({ label: c.name, value: c.name }));
 
   useEffect(() => {
     if (profile) {
@@ -51,8 +54,6 @@ const ProfileSettings = () => {
         business_email: profile.business_email || session?.user?.email || '',
         country_code: profile.country_code || '',
         state_code: profile.state_code || '',
-        city_name: profile.city_name || '',
-        service_cities: profile.service_cities || []
       });
     }
   }, [profile, session, form]);
@@ -75,36 +76,29 @@ const ProfileSettings = () => {
     }
   };
 
-  const onSubmit = (values) => {
-    try {
-      handleSubmit(values);
-    } catch (errors) {
-    }
-  };
-
   if (profileLoading) {
-      return (
-          <Card>
-              <CardHeader>
-                  <SkeletonLoader className="h-8 w-1/3" />
-                  <SkeletonLoader className="h-4 w-2/3" />
-              </CardHeader>
-              <CardContent className="space-y-6">
-                  <SkeletonLoader className="h-10" />
-                  <SkeletonLoader className="h-10" />
-                  <SkeletonLoader className="h-10" />
-                  <SkeletonLoader className="h-10" />
-                  <SkeletonLoader className="h-10 mt-4" />
-              </CardContent>
-          </Card>
-      );
+    return (
+      <Card>
+        <CardHeader>
+          <SkeletonLoader className="h-8 w-1/3" />
+          <SkeletonLoader className="h-4 w-2/3" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <SkeletonLoader className="h-10" />
+          <SkeletonLoader className="h-10" />
+          <SkeletonLoader className="h-10" />
+          <SkeletonLoader className="h-10" />
+          <SkeletonLoader className="h-10 mt-4" />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl font-heading">Company Profile</CardTitle>
-        <CardDescription>Update your company information and primary service area.</CardDescription>
+        <CardDescription>Update your company information. Manage your service cities in the "Service Areas" tab.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -144,10 +138,10 @@ const ProfileSettings = () => {
                 </FormItem>
               )}
             />
-            
+
             <div className="md:col-span-2 border-t border-lightest-navy/20 pt-6 mt-2">
-               <p className="text-lg font-semibold text-lightest-slate mb-2">Service Area</p>
-               <p className="text-sm text-slate mb-4">Select the primary area you service. This will be used to filter your leads.</p>
+              <p className="text-lg font-semibold text-lightest-slate mb-2">Primary Location</p>
+              <p className="text-sm text-slate mb-4">Select your primary country and state/province.</p>
             </div>
 
             <FormField
@@ -157,7 +151,7 @@ const ProfileSettings = () => {
                 <FormItem>
                   <FormLabel>Country</FormLabel>
                   <FormControl>
-                    <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('state_code', ''); setValue('city_name', ''); }}>
+                    <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('state_code', ''); }}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Country..." />
                       </SelectTrigger>
@@ -181,7 +175,7 @@ const ProfileSettings = () => {
                 <FormItem>
                   <FormLabel>Province / State</FormLabel>
                   <FormControl>
-                    <Select value={field.value} onValueChange={(val) => { field.onChange(val); setValue('city_name', ''); }} disabled={!countryCode}>
+                    <Select value={field.value} onValueChange={field.onChange} disabled={!countryCode}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select province/state" />
                       </SelectTrigger>
@@ -198,58 +192,6 @@ const ProfileSettings = () => {
                 </FormItem>
               )}
             />
-            <div className="md:col-span-2">
-              <FormField
-                control={form.control}
-                name="city_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange} disabled={!stateCode}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select city" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60 overflow-y-auto">
-                          {cities.map((city) => (
-                            <SelectItem key={city.value} value={city.value}>
-                              {city.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="md:col-span-2 border-t border-lightest-navy/20 pt-6 mt-2">
-              <p className="text-lg font-semibold text-lightest-slate mb-2">Service Areas</p>
-              <p className="text-sm text-slate mb-4">Select multiple cities where you provide services. These are the actual cities from your property database.</p>
-            </div>
-
-            <div className="md:col-span-2">
-              <FormField
-                control={form.control}
-                name="service_cities"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Service Cities</FormLabel>
-                    <FormControl>
-                      <DatabaseCitySelector
-                        selectedCities={field.value}
-                        onCitiesChange={field.onChange}
-                        placeholder="Select cities where you provide services..."
-                        maxSelections={20}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="md:col-span-2 mt-4">
               <LoadingButton type="submit" className="w-full md:w-auto bg-teal text-deep-navy hover:bg-teal/90" isLoading={isSubmitting}>

@@ -8,6 +8,32 @@ export const useProfile = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
 
+  // Update profile function for settings pages
+  const updateProfile = useCallback(async (updates) => {
+    if (!session?.user?.id) {
+      throw new Error('No user session');
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', session.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+
+    // Update local state with new profile data
+    setProfile(data);
+    return data;
+  }, [session?.user?.id, supabase]);
+
   const fetchProfile = useCallback(async () => {
     // Only log in development to reduce console noise
     if (process.env.NODE_ENV === 'development') {
@@ -84,5 +110,5 @@ export const useProfile = () => {
 
   }, [supabase, fetchProfile]);
 
-  return { loading, profile, setProfile, refreshProfile: fetchProfile, session };
+  return { loading, profile, setProfile, refreshProfile: fetchProfile, updateProfile, session };
 };

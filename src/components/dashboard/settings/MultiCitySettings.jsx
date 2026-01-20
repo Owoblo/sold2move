@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Globe, Save, RotateCcw } from 'lucide-react';
+import { MapPin, Globe, Save, RotateCcw, DollarSign, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import MultiCitySelector from '@/components/ui/SimpleMultiCitySelector';
+import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { useAnalytics } from '@/services/analytics.jsx';
+import { useCalculatedPrice } from '@/hooks/useCalculatedPrice';
+import { formatPrice, formatPopulation } from '@/lib/pricingUtils';
 import toast from '@/lib/toast';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 // Error boundary for the component
 const ErrorFallback = ({ error, resetError }) => (
@@ -38,6 +41,16 @@ const MultiCitySettings = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState(null);
 
+  // Extract city names for price calculation (format: "City, StateCode" -> "City")
+  const cityNamesForPricing = selectedCities.map(c => c.split(', ')[0]);
+
+  // Get calculated prices based on selected cities
+  const {
+    loading: priceLoading,
+    prices,
+    totalPopulation,
+  } = useCalculatedPrice(cityNamesForPricing);
+
   // Reset error when component mounts
   useEffect(() => {
     setError(null);
@@ -48,6 +61,7 @@ const MultiCitySettings = () => {
     if (profile?.service_cities) {
       setSelectedCities(profile.service_cities);
     } else if (profile?.city_name) {
+      // Convert old format to new format if needed
       setSelectedCities([profile.city_name]);
     }
   }, [profile]);
@@ -81,14 +95,17 @@ const MultiCitySettings = () => {
     setIsSaving(true);
     setError(null);
     try {
+      // Extract city name from "City, StateCode" format for city_name field
+      const primaryCity = selectedCities[0].split(', ')[0];
+
       await updateProfile({
         service_cities: selectedCities,
-        city_name: selectedCities[0] // Set primary city as first selected
+        city_name: primaryCity // Set primary city as first selected (just the city name)
       });
 
-      trackAction('multi_city_saved', { 
+      trackAction('multi_city_saved', {
         cityCount: selectedCities.length,
-        cities: selectedCities 
+        cities: selectedCities
       });
 
       toast.success("Service areas updated", `You're now serving ${selectedCities.length} cities.`);
@@ -191,18 +208,46 @@ const MultiCitySettings = () => {
             </div>
           )}
 
+          {/* Calculated Price Preview */}
+          {selectedCities.length > 0 && !priceLoading && (
+            <div className="p-4 bg-gradient-to-r from-teal/10 to-deep-navy rounded-lg border border-teal/30">
+              <h4 className="text-sm font-medium text-lightest-slate mb-3 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-teal" />
+                Your Estimated Monthly Price
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-slate mb-1">Basic Plan</p>
+                  <p className="text-2xl font-bold text-lightest-slate">{formatPrice(prices.basic)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate mb-1">Movers Special</p>
+                  <p className="text-2xl font-bold text-teal">{formatPrice(prices.moversSpecial)}</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-teal/20 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-slate">
+                  <Users className="h-4 w-4" />
+                  Total Population: {formatPopulation(totalPopulation)}
+                </div>
+                <Link to="/dashboard/billing" className="text-teal text-sm hover:underline">
+                  View billing →
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Multi-City Selector */}
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-lightest-slate mb-2 block">
                 Select Cities
               </label>
-              <MultiCitySelector
+              <DatabaseCitySelector
                 selectedCities={selectedCities}
                 onCitiesChange={handleCitiesChange}
-                variant="settings"
                 placeholder="Choose your service areas..."
-                maxSelections={15}
+                maxSelections={20}
               />
             </div>
 
@@ -212,8 +257,8 @@ const MultiCitySettings = () => {
               <ul className="text-xs text-slate space-y-1">
                 <li>• Select the main city first - it will be your primary service area</li>
                 <li>• Include nearby suburbs and smaller cities in your region</li>
-                <li>• You can select up to 15 cities total</li>
-                <li>• Changes will apply to both "Just Listed" and "Sold" listings</li>
+                <li>• You can select up to 20 cities total</li>
+                <li>• Your subscription price is based on the total population of your selected cities</li>
               </ul>
             </div>
           </div>
