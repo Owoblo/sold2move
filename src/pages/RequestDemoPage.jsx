@@ -75,8 +75,8 @@ const RequestDemoPage = () => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="bg-light-navy p-2 rounded-lg border border-lightest-navy/20 shadow-2xl"
           >
-            <InlineWidget 
-              url="https://calendly.com/d/cn3q-5s2-p5s/sold2move-demo-call"
+            <InlineWidget
+              url="https://calendly.com/johnowolabi/30-minutes-discovery-call-sold2move"
               styles={{
                 height: '650px',
                 borderRadius: '0.5rem',
@@ -89,9 +89,6 @@ const RequestDemoPage = () => {
                 textColor: 'e2e8f0',
               }}
             />
-            <p className="text-xs text-center text-slate mt-2">
-              Note: Please replace the Calendly URL with your own scheduling link.
-            </p>
           </motion.div>
         </div>
       </div>
