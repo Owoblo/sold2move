@@ -152,25 +152,47 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  console.log('Homeowner lookup request received')
+
   try {
     // Initialize Supabase client with service role
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    console.log('SUPABASE_URL configured:', !!supabaseUrl)
+    console.log('SUPABASE_SERVICE_ROLE_KEY configured:', !!supabaseKey)
+
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      supabaseUrl ?? '',
+      supabaseKey ?? ''
     )
 
     // Get Batch Data API key
     const batchDataApiKey = Deno.env.get('BATCH_DATA_API_KEY')
+    console.log('BATCH_DATA_API_KEY configured:', !!batchDataApiKey)
+
     if (!batchDataApiKey) {
-      console.error('BATCH_DATA_API_KEY not configured')
+      console.error('BATCH_DATA_API_KEY not configured in environment')
       return new Response(
-        JSON.stringify({ error: 'Homeowner lookup service not configured' }),
+        JSON.stringify({ error: 'Homeowner lookup service not configured. Please add BATCH_DATA_API_KEY to Edge Function secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     // Parse request body
-    const { zpid, street, city, state, zip }: LookupRequest = await req.json()
+    let requestBody: LookupRequest
+    try {
+      requestBody = await req.json()
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { zpid, street, city, state, zip } = requestBody
+    console.log('Lookup request for:', { street, city, state, zip, zpid })
 
     // Validate required fields
     if (!street || !city || !state || !zip) {
@@ -284,17 +306,17 @@ serve(async (req) => {
       updated_at: new Date().toISOString()
     }
 
-    // Upsert to handle both insert and update cases
+    // Try to insert, if conflict update instead
+    console.log('Attempting to cache result...')
     const { error: insertError } = await supabaseClient
       .from('homeowner_lookups')
       .upsert(cacheRecord, {
-        onConflict: zpid ? 'zpid' : 'address_hash',
-        ignoreDuplicates: false
+        onConflict: 'address_hash'
       })
 
     if (insertError) {
-      console.error('Failed to cache homeowner lookup:', insertError)
-      // Don't fail the request, just log the error
+      console.error('Failed to cache homeowner lookup:', JSON.stringify(insertError))
+      // Don't fail the request, just log the error - caching is best effort
     } else {
       console.log('Homeowner data cached successfully')
     }
