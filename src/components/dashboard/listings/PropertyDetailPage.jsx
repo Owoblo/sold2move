@@ -3,15 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { fetchListingById } from '@/lib/queries';
-import { 
-  Loader2, 
-  AlertCircle, 
-  Bed, 
-  Bath, 
-  Ruler, 
-  MapPin, 
-  ArrowLeft, 
-  CalendarDays, 
+import {
+  Loader2,
+  AlertCircle,
+  Bed,
+  Bath,
+  Ruler,
+  MapPin,
+  ArrowLeft,
+  CalendarDays,
   Building,
   Home,
   Car,
@@ -36,8 +36,11 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  UserSearch
 } from 'lucide-react';
+import HomeownerInfoCard from './HomeownerInfoCard';
+import { useHomeownerLookup } from '@/hooks/useHomeownerLookup';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +61,16 @@ const PropertyDetailPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Homeowner lookup hook
+  const {
+    lookupFromListing,
+    loading: homeownerLoading,
+    data: homeownerData,
+    error: homeownerError,
+    reset: resetHomeowner,
+    hasData: hasHomeownerData
+  } = useHomeownerLookup();
 
   // Check if user is admin
   const isAdmin = user?.email === 'johnowolabi80@gmail.com';
@@ -695,6 +708,53 @@ const PropertyDetailPage = () => {
                   <CalendarDays className="h-4 w-4 mr-2" />
                   Schedule Tour
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Homeowner Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserSearch className="h-5 w-5 text-teal" />
+                  Homeowner Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!hasHomeownerData && !homeownerLoading && !homeownerError && (
+                  <>
+                    <p className="text-sm text-slate mb-3">
+                      Look up contact information for the property owner including phone numbers and email addresses.
+                    </p>
+                    <Button
+                      className="w-full bg-teal text-deep-navy hover:bg-teal/90"
+                      onClick={() => lookupFromListing(listing)}
+                      disabled={homeownerLoading}
+                    >
+                      {homeownerLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Looking up...
+                        </>
+                      ) : (
+                        <>
+                          <UserSearch className="h-4 w-4 mr-2" />
+                          Get Homeowner Info
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+                {(hasHomeownerData || homeownerLoading || homeownerError) && (
+                  <HomeownerInfoCard
+                    data={homeownerData}
+                    loading={homeownerLoading}
+                    error={homeownerError}
+                    onRetry={() => {
+                      resetHomeowner();
+                      lookupFromListing(listing);
+                    }}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>

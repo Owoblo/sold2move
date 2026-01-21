@@ -1,0 +1,145 @@
+import { useState, useCallback } from 'react';
+import { homeownerLookupService } from '@/services/homeownerLookup';
+
+/**
+ * React hook for homeowner lookup functionality
+ * Manages loading state, data, and error handling
+ */
+export function useHomeownerLookup() {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  /**
+   * Look up homeowner information for a listing
+   * @param {Object} listing - Listing object with address fields
+   */
+  const lookupFromListing = useCallback(async (listing) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await homeownerLookupService.lookupFromListing(listing);
+
+      if (result.error) {
+        setError(result.error);
+        setData(null);
+      } else if (result.data?.success) {
+        setData(result.data.data);
+        setError(null);
+      } else {
+        // API returned but no data found
+        setData(null);
+        setError(new Error(result.data?.message || 'No homeowner information found'));
+      }
+    } catch (err) {
+      setError(err);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Look up homeowner information using address components
+   * @param {Object} params - Address parameters
+   * @param {string} [params.zpid] - Zillow Property ID
+   * @param {string} params.street - Street address
+   * @param {string} params.city - City
+   * @param {string} params.state - State abbreviation
+   * @param {string} params.zip - ZIP code
+   */
+  const lookup = useCallback(async ({ zpid, street, city, state, zip }) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await homeownerLookupService.lookupProperty({
+        zpid,
+        street,
+        city,
+        state,
+        zip
+      });
+
+      if (result.error) {
+        setError(result.error);
+        setData(null);
+      } else if (result.data?.success) {
+        setData(result.data.data);
+        setError(null);
+      } else {
+        setData(null);
+        setError(new Error(result.data?.message || 'No homeowner information found'));
+      }
+    } catch (err) {
+      setError(err);
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Check if data is cached for a listing
+   * @param {string} zpid - Zillow Property ID
+   * @returns {Promise<boolean>}
+   */
+  const checkCache = useCallback(async (zpid) => {
+    try {
+      const result = await homeownerLookupService.checkCache(zpid);
+      if (result.cached && result.data) {
+        setData(result.data);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /**
+   * Reset the hook state
+   */
+  const reset = useCallback(() => {
+    setLoading(false);
+    setData(null);
+    setError(null);
+  }, []);
+
+  /**
+   * Check if we have valid homeowner data
+   */
+  const hasData = data && (data.firstName || data.lastName || data.emails?.length > 0 || data.phoneNumbers?.length > 0);
+
+  /**
+   * Get the full name of the homeowner
+   */
+  const fullName = data
+    ? [data.firstName, data.lastName].filter(Boolean).join(' ') || null
+    : null;
+
+  return {
+    // Actions
+    lookup,
+    lookupFromListing,
+    checkCache,
+    reset,
+
+    // State
+    loading,
+    data,
+    error,
+
+    // Computed
+    hasData,
+    fullName,
+
+    // Helper functions from service
+    formatPhoneNumber: homeownerLookupService.formatPhoneNumber,
+    getScoreColor: homeownerLookupService.getScoreColor,
+    getPhoneTypeBadge: homeownerLookupService.getPhoneTypeBadge
+  };
+}
+
+export default useHomeownerLookup;

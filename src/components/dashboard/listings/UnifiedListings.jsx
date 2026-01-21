@@ -21,6 +21,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
+import HomeownerLookupButton from './HomeownerLookupButton';
 import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile';
 import { Pagination } from '@/components/ui/pagination';
@@ -574,18 +575,24 @@ const UnifiedListings = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateToProperty(listing.id);
-                            }}
-                            size="sm"
-                            variant="outline"
-                            className="border-teal text-teal hover:bg-teal/10"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigateToProperty(listing.id);
+                              }}
+                              size="sm"
+                              variant="outline"
+                              className="border-teal text-teal hover:bg-teal/10"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                            <HomeownerLookupButton
+                              listing={listing}
+                              compact={true}
+                            />
+                          </div>
                         </TableCell>
                       </motion.tr>
                     ))}

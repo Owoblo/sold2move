@@ -69,6 +69,61 @@ export interface ListingReveal {
   created_at: string;
 }
 
+// Homeowner Lookup types
+export interface HomeownerPhoneNumber {
+  number: string;
+  type: string;
+  carrier: string;
+  score: string;
+  reachable: boolean;
+  dnc: boolean;
+  tested: boolean;
+  firstReportedDate?: string;
+  lastReportedDate?: string;
+}
+
+export interface HomeownerEmail {
+  email: string;
+  tested?: boolean;
+}
+
+export interface HomeownerData {
+  firstName: string | null;
+  lastName: string | null;
+  emails: HomeownerEmail[];
+  phoneNumbers: HomeownerPhoneNumber[];
+  isLitigator: boolean;
+  hasDncPhone: boolean;
+  fromCache: boolean;
+  cachedAt?: string;
+}
+
+export interface HomeownerLookupResponse {
+  success: boolean;
+  data: HomeownerData;
+  message?: string;
+}
+
+export interface HomeownerLookup {
+  id: string;
+  zpid?: string;
+  address_street: string;
+  address_city: string;
+  address_state: string;
+  address_zip: string;
+  address_hash: string;
+  homeowner_first_name?: string;
+  homeowner_last_name?: string;
+  emails: HomeownerEmail[];
+  phone_numbers: HomeownerPhoneNumber[];
+  is_litigator: boolean;
+  has_dnc_phone: boolean;
+  raw_response?: any;
+  lookup_successful: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // API Response types
 export interface ApiResponse<T> {
   data: T;
