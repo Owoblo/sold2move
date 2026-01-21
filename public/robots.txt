@@ -1,0 +1,55 @@
+# Sold2Move Robots.txt
+# Allow all search engines and AI crawlers
+
+User-agent: *
+Allow: /
+
+# Explicitly allow AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# Disallow private/authenticated areas
+Disallow: /dashboard/
+Disallow: /onboarding
+Disallow: /welcome
+Disallow: /auth/
+Disallow: /post-auth
+Disallow: /test-components
+Disallow: /test-billing
+
+# Sitemap location
+Sitemap: https://sold2move.com/sitemap.xml
+
+# LLMs.txt for AI assistants
+# See: https://llmstxt.org/
+# Location: https://sold2move.com/llms.txt

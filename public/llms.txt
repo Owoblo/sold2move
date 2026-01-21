@@ -1,0 +1,50 @@
+# Sold2Move
+
+> Real-time sold property listings and leads for moving companies in Canada and the USA.
+
+Sold2Move is a B2B SaaS platform that provides moving companies with real-time access to recently sold home listings. When a home sells, the new owners often need moving services - Sold2Move connects movers with these high-intent leads.
+
+## What We Offer
+
+- **Real-Time Sold Listings**: Access to recently sold properties across North America, including hard-to-get Canadian data
+- **Geo-Targeted Leads**: Filter listings by location to focus on your service areas
+- **Verified Data**: All listings are verified and timely
+- **Mailing Services**: Direct mail marketing tools to reach new homeowners
+- **Dashboard Analytics**: Track your leads and measure ROI
+
+## Target Audience
+
+Moving companies, relocation services, and related businesses looking to generate leads from people who have just purchased homes and likely need moving services.
+
+## Key Pages
+
+- [Home](https://sold2move.com/): Main landing page with product overview
+- [How It Works](https://sold2move.com/how-it-works): Detailed explanation of the platform
+- [Pricing](https://sold2move.com/pricing): Subscription plans and pricing
+- [FAQ](https://sold2move.com/faq): Frequently asked questions
+- [About](https://sold2move.com/about): Company information
+- [Contact](https://sold2move.com/contact): Get in touch
+- [Request Demo](https://sold2move.com/request-demo): Schedule a live demo
+
+## Regional Coverage
+
+- [Canada Sold Listings](https://sold2move.com/canada-sold-listings): Coverage across Canada
+- [Ontario Sold Listings](https://sold2move.com/ontario-sold-listings): Ontario-specific listings
+- [Toronto Sold Listings](https://sold2move.com/toronto-sold-listings): Greater Toronto Area
+- [Vancouver Sold Listings](https://sold2move.com/vancouver-sold-listings): Metro Vancouver
+- [USA Sold Listings](https://sold2move.com/usa-sold-listings): United States coverage
+
+## Resources
+
+- [How Moving Companies Can Use Sold Listings](https://sold2move.com/how-moving-companies-can-use-sold-listings-ontario): Guide for Ontario movers
+- [Sold House Listings Guide for Movers](https://sold2move.com/sold-house-listings-canada-guide-movers): Comprehensive Canadian guide
+- [Sample Mailers](https://sold2move.com/sample-mailers): Direct mail templates and examples
+
+## Legal
+
+- [Privacy Policy](https://sold2move.com/privacy-policy)
+- [Terms of Service](https://sold2move.com/terms)
+
+## Contact
+
+For demos or inquiries: [Request a Demo](https://sold2move.com/request-demo)
