@@ -68,7 +68,7 @@ const Hero = () => {
             size="lg"
             className="border-2 border-brand-primary/50 text-brand-primary hover:bg-brand-primary/10 px-8 py-4 rounded-full font-semibold text-lg backdrop-blur-sm transition-all duration-normal"
           >
-            <Link to="/request-demo">See Your ROI in 30 Days</Link>
+            <Link to="/request-demo">Book a Demo</Link>
           </Button>
         </motion.div>
 
