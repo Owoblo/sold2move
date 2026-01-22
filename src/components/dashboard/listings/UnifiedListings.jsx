@@ -43,25 +43,31 @@ import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 
 const PAGE_SIZE = 20;
 
-// Property type color mapping
+// Property type color mapping with glow effects
 const PROPERTY_TYPE_COLORS = {
-  'House for sale': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  'Condo for sale': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'Townhouse for sale': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  'Multi-family home for sale': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  'Land for sale': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  'Sold': 'bg-teal/20 text-teal border-teal/30',
-  'default': 'bg-slate/20 text-slate border-slate/30'
+  'House for sale': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_hsl(155_100%_50%/0.2)]',
+  'Condo for sale': 'bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-[0_0_8px_hsl(220_90%_60%/0.2)]',
+  'Townhouse for sale': 'bg-purple-500/20 text-purple-400 border-purple-500/30 shadow-[0_0_8px_hsl(270_100%_65%/0.2)]',
+  'Multi-family home for sale': 'bg-amber-500/20 text-amber-400 border-amber-500/30 shadow-[0_0_8px_hsl(45_100%_50%/0.2)]',
+  'Land for sale': 'bg-orange-500/20 text-orange-400 border-orange-500/30 shadow-[0_0_8px_hsl(30_100%_50%/0.2)]',
+  'Sold': 'bg-primary/20 text-primary border-primary/30 shadow-badge-new',
+  'default': 'bg-charcoal-600/20 text-slate border-charcoal-600/30'
 };
 
-// Property thumbnail component
-const PropertyThumbnail = ({ src, alt }) => {
+// Property thumbnail component - larger HD thumbnails
+const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
   const [error, setError] = useState(false);
+  const sizes = {
+    default: 'w-20 h-20',
+    small: 'w-14 h-14',
+    large: 'w-24 h-24',
+  };
+  const sizeClass = sizes[size] || sizes.default;
 
   if (!src || error) {
     return (
-      <div className="w-14 h-14 rounded-lg bg-deep-navy/60 flex items-center justify-center flex-shrink-0">
-        <Home className="w-5 h-5 text-slate" />
+      <div className={`${sizeClass} rounded-xl bg-charcoal-700/60 border border-white/[0.06] flex items-center justify-center flex-shrink-0`}>
+        <Home className="w-6 h-6 text-slate" />
       </div>
     );
   }
@@ -71,7 +77,7 @@ const PropertyThumbnail = ({ src, alt }) => {
       src={src}
       alt={alt || 'Property'}
       onError={() => setError(true)}
-      className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+      className={`${sizeClass} rounded-xl object-cover flex-shrink-0 border border-white/[0.06]`}
     />
   );
 };
@@ -404,7 +410,7 @@ const UnifiedListings = () => {
           <p className="text-sm text-slate mt-0.5">
             {activeTab === 'just-listed' ? 'New listing opportunities' : 'High-intent moving leads'}
             {filters.city_name.length > 0 && (
-              <span> in <span className="text-teal">{filters.city_name.length === 1 ? filters.city_name[0] : `${filters.city_name.length} cities`}</span></span>
+              <span> in <span className="text-primary">{filters.city_name.length === 1 ? filters.city_name[0] : `${filters.city_name.length} cities`}</span></span>
             )}
           </p>
         </div>
@@ -415,7 +421,7 @@ const UnifiedListings = () => {
             onClick={() => handleTabChange('just-listed')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'just-listed'
-                ? 'bg-teal text-deep-navy'
+                ? 'bg-primary text-primary-foreground'
                 : 'text-slate hover:text-lightest-slate'
             }`}
           >
@@ -430,7 +436,7 @@ const UnifiedListings = () => {
             onClick={() => handleTabChange('sold')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === 'sold'
-                ? 'bg-teal text-deep-navy'
+                ? 'bg-primary text-primary-foreground'
                 : 'text-slate hover:text-lightest-slate'
             }`}
           >
@@ -618,7 +624,7 @@ const UnifiedListings = () => {
             disabled={sortedListings.length === 0}
             variant="outline"
             size="sm"
-            className="border-teal/50 text-teal hover:bg-teal/10"
+            className="border-primary/50 text-primary hover:bg-primary/10"
           >
             <Download className="h-4 w-4 mr-1" />
             Export
@@ -631,15 +637,15 @@ const UnifiedListings = () => {
 
       {/* Bulk Actions Bar */}
       {selectedListings.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-teal rounded-xl shadow-2xl shadow-teal/20">
-          <span className="text-deep-navy font-medium">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-primary rounded-xl shadow-2xl shadow-primary/30 glow-lg">
+          <span className="text-primary-foreground font-semibold">
             {selectedListings.size} selected
           </span>
-          <div className="w-px h-6 bg-deep-navy/20" />
+          <div className="w-px h-6 bg-primary-foreground/20" />
           <Button
             onClick={() => handleExport(true)}
             size="sm"
-            className="bg-deep-navy/20 hover:bg-deep-navy/30 text-deep-navy"
+            className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground"
           >
             <Download className="h-4 w-4 mr-1" />
             Export Selected
@@ -647,14 +653,14 @@ const UnifiedListings = () => {
           <Button
             onClick={() => navigate('/dashboard/mailing')}
             size="sm"
-            className="bg-deep-navy/20 hover:bg-deep-navy/30 text-deep-navy"
+            className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground"
           >
             <Mail className="h-4 w-4 mr-1" />
             Add to Mailing
           </Button>
           <button
             onClick={() => setSelectedListings(new Set())}
-            className="text-deep-navy/70 hover:text-deep-navy p-1"
+            className="text-primary-foreground/70 hover:text-primary-foreground p-1"
           >
             <X className="h-5 w-5" />
           </button>
@@ -698,7 +704,7 @@ const UnifiedListings = () => {
                   : "No properties found in your service areas."}
               </p>
               {hasFilters && (
-                <Button onClick={clearFilters} variant="outline" className="border-teal/50 text-teal hover:bg-teal/10">
+                <Button onClick={clearFilters} variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
                   Clear Filters
                 </Button>
               )}
@@ -735,9 +741,9 @@ const UnifiedListings = () => {
                     return (
                       <TableRow
                         key={listing.id}
-                        className={`border-lightest-navy/10 hover:bg-lightest-navy/5 transition-colors cursor-pointer group ${
-                          isNew ? 'border-l-2 border-l-teal bg-teal/5' : ''
-                        } ${selectedListings.has(listing.id) ? 'bg-teal/10' : ''}`}
+                        className={`border-white/[0.04] hover:bg-charcoal-700/40 transition-all cursor-pointer group ${
+                          isNew ? 'border-l-2 border-l-primary bg-primary/5' : ''
+                        } ${selectedListings.has(listing.id) ? 'bg-primary/10' : ''}`}
                         onClick={() => navigateToProperty(listing.id)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
@@ -758,17 +764,17 @@ const UnifiedListings = () => {
                             <div className="flex items-start gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-lightest-slate group-hover:text-teal transition-colors truncate">
+                                  <span className="font-medium text-lightest-slate group-hover:text-primary transition-colors truncate">
                                     {listing.addressStreet}
                                   </span>
                                   {isNew && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-teal/20 text-teal text-xs rounded">
+                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-primary/20 text-primary text-xs font-semibold rounded-full shadow-badge-new">
                                       <Sparkles className="h-3 w-3" />
                                       New
                                     </span>
                                   )}
                                   {isHot && !isNew && (
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full shadow-badge-hot">
                                       <Flame className="h-3 w-3" />
                                       Hot
                                     </span>
@@ -784,7 +790,7 @@ const UnifiedListings = () => {
 
                         {visibleColumns.price && (
                           <TableCell>
-                            <span className="text-teal font-semibold">
+                            <span className="font-mono text-primary font-semibold tabular-nums">
                               {listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : '—'}
                             </span>
                           </TableCell>
@@ -792,7 +798,7 @@ const UnifiedListings = () => {
 
                         {visibleColumns.pricePerSqft && (
                           <TableCell>
-                            <span className="text-slate">
+                            <span className="font-mono text-slate tabular-nums">
                               {pricePerSqft ? `$${pricePerSqft}` : '—'}
                             </span>
                           </TableCell>
@@ -800,19 +806,19 @@ const UnifiedListings = () => {
 
                         {visibleColumns.beds && (
                           <TableCell>
-                            <span className="text-lightest-slate">{listing.beds || '—'}</span>
+                            <span className="font-mono text-lightest-slate tabular-nums">{listing.beds || '—'}</span>
                           </TableCell>
                         )}
 
                         {visibleColumns.baths && (
                           <TableCell>
-                            <span className="text-lightest-slate">{listing.baths || '—'}</span>
+                            <span className="font-mono text-lightest-slate tabular-nums">{listing.baths || '—'}</span>
                           </TableCell>
                         )}
 
                         {visibleColumns.sqft && (
                           <TableCell>
-                            <span className="text-lightest-slate">
+                            <span className="font-mono text-lightest-slate tabular-nums">
                               {listing.area ? listing.area.toLocaleString() : '—'}
                             </span>
                           </TableCell>
@@ -822,7 +828,7 @@ const UnifiedListings = () => {
                           <TableCell>
                             <div className="flex items-center gap-1.5 text-slate">
                               <Clock className="h-3.5 w-3.5" />
-                              <span className={`text-sm ${isNew ? 'text-teal font-medium' : ''}`}>
+                              <span className={`text-sm ${isNew ? 'text-primary font-medium' : ''}`}>
                                 {formatRelativeTime(listing.lastseenat)}
                               </span>
                             </div>
@@ -831,7 +837,7 @@ const UnifiedListings = () => {
 
                         {visibleColumns.type && (
                           <TableCell>
-                            <span className={`px-2 py-1 rounded text-xs font-medium border ${getPropertyTypeColor(listing.statustext)}`}>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getPropertyTypeColor(listing.statustext)}`}>
                               {listing.statustext?.replace(' for sale', '') || 'Unknown'}
                             </span>
                           </TableCell>

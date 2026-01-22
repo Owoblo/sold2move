@@ -18,7 +18,33 @@ module.exports = {
 		extend: {
 			colors: {
 				// ========================================
-				// LEGACY TOKENS (keep for compatibility)
+				// STEALTH PALETTE - Charcoal Scale
+				// ========================================
+				charcoal: {
+					950: 'hsl(var(--charcoal-950))',
+					900: 'hsl(var(--charcoal-900))',
+					800: 'hsl(var(--charcoal-800))',
+					700: 'hsl(var(--charcoal-700))',
+					600: 'hsl(var(--charcoal-600))',
+					500: 'hsl(var(--charcoal-500))',
+				},
+
+				// Electric Emerald (Vibrant Accent)
+				electric: {
+					500: 'hsl(var(--electric-500))',
+					400: 'hsl(var(--electric-400))',
+					600: 'hsl(var(--electric-600))',
+					300: 'hsl(var(--electric-300))',
+				},
+
+				// Violet (Secondary Accent)
+				violet: {
+					500: 'hsl(var(--violet-500))',
+					400: 'hsl(var(--violet-400))',
+				},
+
+				// ========================================
+				// LEGACY TOKENS (mapped to Stealth)
 				// ========================================
 				'deep-navy': 'hsl(var(--deep-navy))',
 				'light-navy': 'hsl(var(--light-navy))',
@@ -31,7 +57,7 @@ module.exports = {
 				'navy-accent': 'hsl(var(--navy-accent))',
 
 				// ========================================
-				// SEMANTIC TOKENS (new - preferred)
+				// SEMANTIC TOKENS
 				// ========================================
 				// Surface colors (backgrounds)
 				surface: {
@@ -54,10 +80,10 @@ module.exports = {
 				},
 				// State colors
 				state: {
-					success: '#10B981',
-					warning: '#F59E0B',
-					error: '#EF4444',
-					info: '#3B82F6',
+					success: '#00FF88',
+					warning: '#FFB800',
+					error: '#FF4444',
+					info: '#4488FF',
 				},
 
 				// ========================================
@@ -102,6 +128,10 @@ module.exports = {
 			// TYPOGRAPHY SCALE
 			// ========================================
 			fontSize: {
+				// Hero Stats (Aggressive)
+				'hero-stat': ['4rem', { lineHeight: '1', letterSpacing: '-0.03em', fontWeight: '900' }],
+				'hero-stat-lg': ['5rem', { lineHeight: '1', letterSpacing: '-0.03em', fontWeight: '900' }],
+				'hero-stat-sm': ['3rem', { lineHeight: '1', letterSpacing: '-0.02em', fontWeight: '800' }],
 				// Display (Hero text)
 				'display-2xl': ['4.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '800' }],
 				'display-xl': ['3.75rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
@@ -115,6 +145,10 @@ module.exports = {
 				'body-lg': ['1.125rem', { lineHeight: '1.6' }],
 				'body-md': ['1rem', { lineHeight: '1.6' }],
 				'body-sm': ['0.875rem', { lineHeight: '1.5' }],
+				// Data (Monospace metrics)
+				'data-lg': ['1.5rem', { lineHeight: '1.2', fontWeight: '600' }],
+				'data-md': ['1.125rem', { lineHeight: '1.3', fontWeight: '600' }],
+				'data-sm': ['0.875rem', { lineHeight: '1.4', fontWeight: '500' }],
 				// Caption/Label
 				'caption': ['0.75rem', { lineHeight: '1.4' }],
 				'label': ['0.875rem', { lineHeight: '1.4', fontWeight: '500' }],
@@ -134,25 +168,32 @@ module.exports = {
 			},
 
 			// ========================================
-			// SHADOWS
+			// SHADOWS (Enhanced Electric Glow)
 			// ========================================
 			boxShadow: {
-				// Brand glow shadows
-				'glow-sm': '0 0 10px hsl(var(--teal) / 0.1)',
-				'glow': '0 0 20px hsl(var(--teal) / 0.15)',
-				'glow-lg': '0 0 40px hsl(var(--teal) / 0.2)',
-				'glow-xl': '0 0 60px hsl(var(--teal) / 0.25)',
+				// Electric glow shadows
+				'glow-sm': '0 0 10px hsl(155 100% 50% / 0.15), 0 0 20px hsl(155 100% 50% / 0.05)',
+				'glow': '0 0 20px hsl(155 100% 50% / 0.25), 0 0 40px hsl(155 100% 50% / 0.1)',
+				'glow-lg': '0 0 40px hsl(155 100% 50% / 0.3), 0 0 80px hsl(155 100% 50% / 0.15)',
+				'glow-xl': '0 0 60px hsl(155 100% 50% / 0.4), 0 0 120px hsl(155 100% 50% / 0.2)',
+				// Badge glow shadows
+				'badge-new': '0 0 12px hsl(155 100% 50% / 0.5)',
+				'badge-hot': '0 0 12px hsl(45 100% 50% / 0.5)',
+				'badge-sold': '0 0 12px hsl(220 90% 60% / 0.5)',
 				// Card shadows
-				'card': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-				'card-hover': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+				'card': '0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.15)',
+				'card-hover': '0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.15)',
 				// Elevation shadows
-				'elevation-1': '0 1px 3px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.24)',
-				'elevation-2': '0 3px 6px rgb(0 0 0 / 0.15), 0 2px 4px rgb(0 0 0 / 0.12)',
-				'elevation-3': '0 10px 20px rgb(0 0 0 / 0.15), 0 3px 6px rgb(0 0 0 / 0.1)',
+				'elevation-1': '0 1px 3px rgb(0 0 0 / 0.2), 0 1px 2px rgb(0 0 0 / 0.3)',
+				'elevation-2': '0 3px 6px rgb(0 0 0 / 0.25), 0 2px 4px rgb(0 0 0 / 0.2)',
+				'elevation-3': '0 10px 20px rgb(0 0 0 / 0.25), 0 3px 6px rgb(0 0 0 / 0.15)',
+				// Luminous border shadow
+				'luminous': 'inset 0 1px 0 0 hsl(0 0% 100% / 0.05), 0 0 0 1px hsl(0 0% 0% / 0.1)',
+				'luminous-accent': 'inset 0 1px 0 0 hsl(155 100% 50% / 0.1), 0 0 20px hsl(155 100% 50% / 0.1)',
 			},
 
 			// ========================================
-			// GRADIENTS
+			// GRADIENTS (Stealth + Mesh)
 			// ========================================
 			backgroundImage: {
 				'brand-gradient': 'linear-gradient(to right, hsl(var(--navy-accent)), hsl(var(--teal)))',
@@ -160,6 +201,9 @@ module.exports = {
 				'brand-gradient-subtle': 'linear-gradient(to right, hsl(var(--navy-accent) / 0.2), hsl(var(--teal) / 0.2))',
 				'brand-gradient-vertical': 'linear-gradient(to bottom, hsl(var(--navy-accent)), hsl(var(--teal)))',
 				'surface-gradient': 'linear-gradient(to bottom right, hsl(var(--light-navy)), hsl(var(--deep-navy)))',
+				'stealth-gradient': 'linear-gradient(to bottom right, hsl(220 12% 10%), hsl(220 13% 6%))',
+				'mesh-gradient': 'radial-gradient(ellipse 80% 50% at 20% 40%, hsl(155 100% 50% / 0.08) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 80% 60%, hsl(270 100% 65% / 0.06) 0%, transparent 50%), radial-gradient(ellipse 50% 30% at 50% 90%, hsl(220 90% 60% / 0.05) 0%, transparent 50%)',
+				'mesh-gradient-subtle': 'radial-gradient(ellipse 60% 40% at 15% 30%, hsl(155 100% 50% / 0.04) 0%, transparent 50%), radial-gradient(ellipse 50% 35% at 85% 70%, hsl(270 100% 65% / 0.03) 0%, transparent 50%)',
 			},
 
 			// ========================================
@@ -211,8 +255,8 @@ module.exports = {
 					to: { transform: 'scale(1)', opacity: 1 },
 				},
 				'pulse-glow': {
-					'0%, 100%': { boxShadow: '0 0 20px hsl(var(--teal) / 0.15)' },
-					'50%': { boxShadow: '0 0 30px hsl(var(--teal) / 0.3)' },
+					'0%, 100%': { boxShadow: '0 0 20px hsl(155 100% 50% / 0.2)' },
+					'50%': { boxShadow: '0 0 40px hsl(155 100% 50% / 0.4)' },
 				},
 			},
 			animation: {

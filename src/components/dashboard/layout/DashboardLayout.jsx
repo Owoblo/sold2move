@@ -31,7 +31,7 @@ const DashboardLayout = ({ children }) => {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-deep-navy">
+    <div className="flex h-screen overflow-hidden bg-charcoal-900">
       {/* Sidebar */}
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 

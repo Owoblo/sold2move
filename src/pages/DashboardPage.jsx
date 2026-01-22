@@ -26,8 +26,8 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 
-// Mini sparkline component for trends
-const Sparkline = ({ data, color = '#14B8A6' }) => {
+// Mini sparkline component for trends (Electric Emerald)
+const Sparkline = ({ data, color = '#00FF88' }) => {
   if (!data || data.length < 2) return null;
 
   const max = Math.max(...data);
@@ -56,13 +56,18 @@ const Sparkline = ({ data, color = '#14B8A6' }) => {
   );
 };
 
-// Property thumbnail placeholder
-const PropertyThumbnail = ({ src, alt }) => {
+// Property thumbnail - larger for HD feel
+const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
   const [error, setError] = useState(false);
+  const sizes = {
+    default: 'w-14 h-14',
+    large: 'w-16 h-16',
+  };
+  const sizeClass = sizes[size] || sizes.default;
 
   if (!src || error) {
     return (
-      <div className="w-12 h-12 rounded-lg bg-deep-navy/80 flex items-center justify-center flex-shrink-0">
+      <div className={`${sizeClass} rounded-xl bg-charcoal-700/80 border border-white/[0.06] flex items-center justify-center flex-shrink-0`}>
         <MapPin className="w-5 h-5 text-slate" />
       </div>
     );
@@ -73,17 +78,17 @@ const PropertyThumbnail = ({ src, alt }) => {
       src={src}
       alt={alt}
       onError={() => setError(true)}
-      className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+      className={`${sizeClass} rounded-xl object-cover flex-shrink-0 border border-white/[0.06]`}
     />
   );
 };
 
-// Status tag component
+// Status tag component with glow effects
 const StatusTag = ({ type }) => {
   const styles = {
-    new: 'bg-teal/20 text-teal',
-    hot: 'bg-amber-500/20 text-amber-400',
-    sold: 'bg-blue-500/20 text-blue-400'
+    new: 'bg-primary/20 text-primary shadow-badge-new',
+    hot: 'bg-amber-500/20 text-amber-400 shadow-badge-hot',
+    sold: 'bg-blue-500/20 text-blue-400 shadow-badge-sold'
   };
 
   const labels = {
@@ -93,7 +98,7 @@ const StatusTag = ({ type }) => {
   };
 
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[type] || styles.new}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${styles[type] || styles.new}`}>
       {labels[type] || type}
     </span>
   );
@@ -534,11 +539,11 @@ const DashboardPage = () => {
   // No profile state
   if (!profile && !profileLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
+      <div className="flex flex-col items-center justify-center h-full gap-4 bg-mesh-gradient-subtle min-h-screen">
         <AlertTriangle className="h-12 w-12 text-red-500" />
         <h3 className="text-lg font-semibold text-lightest-slate">Profile Not Found</h3>
         <p className="text-slate text-center">Unable to load your profile. Please try refreshing the page.</p>
-        <Button onClick={() => window.location.reload()} className="bg-teal text-deep-navy hover:bg-teal/90">
+        <Button onClick={() => window.location.reload()} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh Page
         </Button>
@@ -549,13 +554,13 @@ const DashboardPage = () => {
   // Onboarding not complete
   if (!profile?.onboarding_complete) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <Truck className="h-16 w-16 text-teal" />
+      <div className="flex flex-col items-center justify-center h-full gap-4 bg-mesh-gradient-subtle min-h-screen">
+        <Truck className="h-16 w-16 text-primary" />
         <h3 className="text-2xl font-bold text-lightest-slate">Welcome to Sold2Move!</h3>
         <p className="text-slate text-center max-w-md">
           Complete your profile setup to start receiving moving leads in your service areas.
         </p>
-        <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
+        <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
           <Link to="/onboarding">Complete Setup</Link>
         </Button>
       </div>
@@ -563,7 +568,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-mesh-gradient-subtle">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -575,13 +580,13 @@ const DashboardPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-light-navy/80 border border-lightest-navy/20 rounded-lg">
+          <div className="px-4 py-2 bg-charcoal-800/80 border-luminous rounded-lg">
             <span className="text-sm text-slate">Credits: </span>
-            <span className="text-lg font-semibold text-lightest-slate">
+            <span className="text-lg font-mono font-semibold text-lightest-slate tabular-nums">
               {isUnlimited ? '∞' : creditsRemaining}
             </span>
           </div>
-          <Button asChild size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+          <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
             <Link to="/pricing#top-up">Buy Credits</Link>
           </Button>
         </div>
@@ -590,18 +595,18 @@ const DashboardPage = () => {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-4">
         {/* Hero Metric - Today's Leads (spans 4 cols, larger) */}
-        <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-teal/20 to-teal/5 border border-teal/30 rounded-2xl p-6 shadow-lg shadow-teal/5">
+        <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 rounded-2xl p-6 shadow-lg shadow-primary/10">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-teal font-medium mb-1">Today's Leads</p>
-              <p className="text-5xl font-bold text-lightest-slate">{totalTodaysLeads}</p>
+              <p className="text-sm text-primary font-medium mb-1">Today's Leads</p>
+              <p className="text-hero-stat text-lightest-slate tabular-nums">{totalTodaysLeads}</p>
               <p className="text-sm text-slate mt-2">New opportunities waiting</p>
             </div>
-            <div className="p-3 bg-teal/20 rounded-xl">
-              <Sparkles className="h-6 w-6 text-teal" />
+            <div className="p-3 bg-primary/20 rounded-xl shadow-glow-sm">
+              <Sparkles className="h-6 w-6 text-primary" />
             </div>
           </div>
-          <Button asChild className="w-full mt-4 bg-teal text-deep-navy hover:bg-teal/90">
+          <Button asChild className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm hover:shadow-glow">
             <Link to="/dashboard/listings/just-listed">
               View All Leads
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -610,52 +615,52 @@ const DashboardPage = () => {
         </div>
 
         {/* This Week */}
-        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <p className="text-xs text-slate mb-1">This Week</p>
           <div className="flex items-baseline gap-1">
-            <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.thisWeekLeads}</p>
+            <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.thisWeekLeads}</p>
             {monthlyStats.weekOverWeekChange !== 0 && (
-              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? 'text-teal' : 'text-red-400'}`}>
+              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? 'text-primary' : 'text-red-400'}`}>
                 {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}%
               </span>
             )}
           </div>
           <div className="mt-1">
-            <Sparkline data={weeklyTrend} color={monthlyStats.weekOverWeekChange >= 0 ? '#14B8A6' : '#f87171'} />
+            <Sparkline data={weeklyTrend} color={monthlyStats.weekOverWeekChange >= 0 ? '#00FF88' : '#f87171'} />
           </div>
         </div>
 
         {/* This Month */}
-        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <p className="text-xs text-slate mb-1">This Month</p>
-          <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.totalLeads}</p>
+          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.totalLeads}</p>
           <p className="text-xs text-slate mt-1">Total leads</p>
         </div>
 
-        {/* Revealed - Gold accent */}
-        <div className="col-span-6 md:col-span-2 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl p-4 shadow-sm">
+        {/* Revealed - Gold accent with glow */}
+        <div className="col-span-6 md:col-span-2 bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 rounded-xl p-4 shadow-badge-hot/30">
           <p className="text-xs text-amber-400 mb-1">Revealed</p>
-          <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.revealedCount}</p>
+          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.revealedCount}</p>
           <p className="text-xs text-slate mt-1">Unlocked</p>
         </div>
 
         {/* Credits */}
-        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <p className="text-xs text-slate mb-1">Credits Left</p>
-          <p className="text-2xl font-semibold text-lightest-slate">{isUnlimited ? '∞' : creditsRemaining}</p>
-          <Link to="/pricing#top-up" className="text-xs text-teal hover:underline mt-1 inline-block">
+          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{isUnlimited ? '∞' : creditsRemaining}</p>
+          <Link to="/pricing#top-up" className="text-xs text-primary hover:underline mt-1 inline-block">
             Buy more →
           </Link>
         </div>
 
         {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
-        <div className="col-span-12 lg:col-span-6 bg-light-navy/80 border border-lightest-navy/10 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-lightest-navy/10 flex items-center justify-between">
+        <div className="col-span-12 lg:col-span-6 bg-charcoal-800/80 border-luminous rounded-xl overflow-hidden hover-glow">
+          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-lightest-slate">Just Listed</h3>
               <p className="text-xs text-slate">New opportunities in your areas</p>
             </div>
-            <span className="text-2xl font-bold text-teal">{todaysLeads.justListedCount}</span>
+            <span className="text-2xl font-mono font-bold text-primary tabular-nums">{todaysLeads.justListedCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -667,7 +672,7 @@ const DashboardPage = () => {
                 {todaysLeads.justListed.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="group flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-all cursor-pointer relative"
+                    className="group flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all cursor-pointer relative"
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(lead.id)}
                     onMouseLeave={() => setHoveredLead(null)}
@@ -681,22 +686,22 @@ const DashboardPage = () => {
                       <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-teal">{formatPrice(lead.unformattedprice)}</p>
+                      <p className="font-mono text-sm font-semibold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === lead.id && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-deep-navy/90 rounded-lg p-1 shadow-lg">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-charcoal-900/95 border border-white/[0.1] rounded-lg p-1 shadow-xl">
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className="px-2 py-1 text-xs bg-teal/20 hover:bg-teal/30 text-teal rounded transition-colors flex items-center gap-1"
+                          className="px-2 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors flex items-center gap-1"
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className="px-2 py-1 text-xs bg-light-navy hover:bg-lightest-navy/20 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                          className="px-2 py-1 text-xs bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate rounded transition-colors flex items-center gap-1"
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -708,19 +713,19 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-deep-navy/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-charcoal-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="h-8 w-8 text-slate" />
                 </div>
                 <p className="text-slate font-medium">No new listings today</p>
                 <p className="text-xs text-slate mt-1 mb-4">Check neighboring areas for more opportunities</p>
-                <Button asChild variant="outline" size="sm" className="border-teal/30 text-teal hover:bg-teal/10">
+                <Button asChild variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10">
                   <Link to="/dashboard/settings">Expand Service Areas</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className="w-full text-teal hover:text-teal hover:bg-teal/10">
+            <Button asChild variant="ghost" className="w-full text-primary hover:text-primary hover:bg-primary/10">
               <Link to="/dashboard/listings/just-listed">
                 View all listings
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -730,13 +735,13 @@ const DashboardPage = () => {
         </div>
 
         {/* Just Sold Feed */}
-        <div className="col-span-12 lg:col-span-6 bg-light-navy/80 border border-lightest-navy/10 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-lightest-navy/10 flex items-center justify-between">
+        <div className="col-span-12 lg:col-span-6 bg-charcoal-800/80 border-luminous rounded-xl overflow-hidden hover-glow">
+          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-lightest-slate">Just Sold</h3>
               <p className="text-xs text-slate">Definite movers - act fast</p>
             </div>
-            <span className="text-2xl font-bold text-teal">{todaysLeads.soldCount}</span>
+            <span className="text-2xl font-mono font-bold text-primary tabular-nums">{todaysLeads.soldCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -748,7 +753,7 @@ const DashboardPage = () => {
                 {todaysLeads.sold.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="group flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-all cursor-pointer relative"
+                    className="group flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all cursor-pointer relative"
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(`sold-${lead.id}`)}
                     onMouseLeave={() => setHoveredLead(null)}
@@ -762,22 +767,22 @@ const DashboardPage = () => {
                       <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-teal">{formatPrice(lead.unformattedprice)}</p>
+                      <p className="font-mono text-sm font-semibold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === `sold-${lead.id}` && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-deep-navy/90 rounded-lg p-1 shadow-lg">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-charcoal-900/95 border border-white/[0.1] rounded-lg p-1 shadow-xl">
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className="px-2 py-1 text-xs bg-teal/20 hover:bg-teal/30 text-teal rounded transition-colors flex items-center gap-1"
+                          className="px-2 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors flex items-center gap-1"
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className="px-2 py-1 text-xs bg-light-navy hover:bg-lightest-navy/20 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                          className="px-2 py-1 text-xs bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate rounded transition-colors flex items-center gap-1"
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -789,19 +794,19 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-deep-navy/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-charcoal-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock className="h-8 w-8 text-slate" />
                 </div>
                 <p className="text-slate font-medium">No sales in your areas today</p>
                 <p className="text-xs text-slate mt-1 mb-4">Sold leads are high-intent movers</p>
-                <Button asChild variant="outline" size="sm" className="border-teal/30 text-teal hover:bg-teal/10">
+                <Button asChild variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10">
                   <Link to="/dashboard/listings/sold">View Past Sales</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className="w-full text-teal hover:text-teal hover:bg-teal/10">
+            <Button asChild variant="ghost" className="w-full text-primary hover:text-primary hover:bg-primary/10">
               <Link to="/dashboard/listings/sold">
                 View all sold
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -811,14 +816,14 @@ const DashboardPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-12 md:col-span-6 lg:col-span-3 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <h3 className="font-semibold text-lightest-slate mb-3">Quick Actions</h3>
           <div className="space-y-2">
             <button
               onClick={() => navigate('/dashboard/mailing')}
-              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
             >
-              <Mail className="h-5 w-5 text-teal" />
+              <Mail className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Send Mail</p>
                 <p className="text-xs text-slate">Direct mail campaign</p>
@@ -826,9 +831,9 @@ const DashboardPage = () => {
             </button>
             <button
               onClick={() => navigate('/dashboard/listings/just-listed')}
-              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
             >
-              <Download className="h-5 w-5 text-teal" />
+              <Download className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Export Leads</p>
                 <p className="text-xs text-slate">Download CSV</p>
@@ -836,9 +841,9 @@ const DashboardPage = () => {
             </button>
             <button
               onClick={() => navigate('/dashboard/settings')}
-              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
             >
-              <MapPin className="h-5 w-5 text-teal" />
+              <MapPin className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Service Areas</p>
                 <p className="text-xs text-slate">Manage cities</p>
@@ -848,10 +853,10 @@ const DashboardPage = () => {
         </div>
 
         {/* Service Areas */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-lightest-slate">Service Areas</h3>
-            <Link to="/dashboard/settings" className="text-xs text-teal hover:underline">Manage</Link>
+            <Link to="/dashboard/settings" className="text-xs text-primary hover:underline">Manage</Link>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -860,23 +865,23 @@ const DashboardPage = () => {
           ) : serviceAreaHealth.length > 0 ? (
             <div className="space-y-2">
               {serviceAreaHealth.slice(0, 4).map((area) => (
-                <div key={area.city} className="flex items-center justify-between p-2 bg-deep-navy/40 rounded-lg">
+                <div key={area.city} className="flex items-center justify-between p-2 bg-charcoal-900/60 border border-white/[0.04] rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${
-                      area.status === 'high' ? 'bg-teal' :
-                      area.status === 'moderate' ? 'bg-amber-400' :
+                      area.status === 'high' ? 'bg-primary shadow-badge-new' :
+                      area.status === 'moderate' ? 'bg-amber-400 shadow-badge-hot' :
                       'bg-slate'
                     }`} />
                     <span className="text-sm text-lightest-slate">{area.city}</span>
                   </div>
-                  <span className="text-sm font-semibold text-slate">{area.leadsThisWeek} leads</span>
+                  <span className="text-sm font-mono font-semibold text-slate tabular-nums">{area.leadsThisWeek} leads</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="py-6 text-center">
               <p className="text-sm text-slate mb-3">No service areas configured</p>
-              <Button asChild size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+              <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Link to="/dashboard/settings">Add Areas</Link>
               </Button>
             </div>
@@ -884,7 +889,7 @@ const DashboardPage = () => {
         </div>
 
         {/* High Value Leads */}
-        <div className="col-span-12 lg:col-span-5 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="col-span-12 lg:col-span-5 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <div className="flex items-center gap-2 mb-3">
             <Flame className="h-5 w-5 text-amber-400" />
             <h3 className="font-semibold text-lightest-slate">High-Value Leads</h3>
@@ -898,7 +903,7 @@ const DashboardPage = () => {
               {highValueLeads.slice(0, 4).map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center gap-3 p-2 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-2 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg cursor-pointer transition-all"
                   onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                 >
                   <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
@@ -906,7 +911,7 @@ const DashboardPage = () => {
                     <p className="text-sm text-lightest-slate truncate">{lead.lastcity}</p>
                     <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba</p>
                   </div>
-                  <span className="text-sm font-bold text-teal">{formatPrice(lead.unformattedprice)}</span>
+                  <span className="font-mono text-sm font-bold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</span>
                 </div>
               ))}
             </div>
@@ -918,19 +923,19 @@ const DashboardPage = () => {
 
       {/* Recently Revealed */}
       {revealedLeads.length > 0 && (
-        <div className="bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+        <div className="bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Eye className="h-5 w-5 text-amber-400" />
               <h3 className="font-semibold text-lightest-slate">Recently Revealed</h3>
             </div>
-            <Link to="/dashboard/account" className="text-xs text-teal hover:underline">View all</Link>
+            <Link to="/dashboard/account" className="text-xs text-primary hover:underline">View all</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {revealedLeads.slice(0, 4).map((lead) => (
               <div
                 key={lead.id}
-                className="flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg cursor-pointer transition-colors"
+                className="flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg cursor-pointer transition-all"
                 onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
               >
                 <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />

@@ -60,9 +60,9 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     },
   ];
 
-  const baseLinkClasses = "flex items-center p-2 rounded-md transition-colors duration-200";
-  const inactiveLinkClasses = "text-slate hover:bg-lightest-navy/10 hover:text-lightest-slate";
-  const activeLinkClasses = "bg-teal/10 text-teal font-semibold";
+  const baseLinkClasses = "flex items-center p-2 rounded-lg transition-all duration-200";
+  const inactiveLinkClasses = "text-slate hover:bg-charcoal-700/50 hover:text-lightest-slate";
+  const activeLinkClasses = "bg-primary/10 text-primary font-semibold shadow-badge-new/30";
 
   return (
     <>
@@ -74,7 +74,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         ></div>
       )}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen bg-light-navy border-r border-border transition-all duration-300 ${
+      <aside className={`fixed top-0 left-0 z-40 h-screen bg-charcoal-800 border-r border-white/[0.06] transition-all duration-300 ${
         isSidebarOpen
           ? 'w-64 translate-x-0'
           : 'w-16 -translate-x-48 lg:translate-x-0'
@@ -82,8 +82,8 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="p-2 bg-deep-navy rounded-md">
-                <Home className="h-6 w-6 text-teal" />
+              <div className="p-2 bg-charcoal-900 rounded-lg border border-white/[0.06]">
+                <Home className="h-6 w-6 text-primary" />
               </div>
               {isSidebarOpen && (
                 <span className="text-xl font-bold text-lightest-slate font-heading">Sold2Move</span>
@@ -92,7 +92,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
             {isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="p-1 rounded-md hover:bg-lightest-navy/10 transition-colors"
+                className="p-1 rounded-lg hover:bg-charcoal-700/50 transition-colors"
                 title="Collapse sidebar"
               >
                 <ChevronLeft className="h-4 w-4 text-slate" />

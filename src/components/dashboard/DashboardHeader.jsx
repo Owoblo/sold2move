@@ -27,13 +27,13 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
   };
 
   return (
-    <header className="bg-light-navy border-b border-lightest-navy/20 p-4 flex justify-between items-center">
+    <header className="bg-charcoal-800 border-b border-white/[0.06] p-4 flex justify-between items-center">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="sm"
           onClick={toggleSidebar}
-          className="text-lightest-slate hover:bg-lightest-navy/10"
+          className="text-lightest-slate hover:bg-charcoal-700/50"
         >
           {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </Button>
@@ -43,12 +43,12 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
         <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 text-lightest-slate hover:bg-lightest-navy/10 hover:text-white">
+            <Button variant="ghost" className="flex items-center gap-2 text-lightest-slate hover:bg-charcoal-700/50 hover:text-white">
               {loading ? (
                 <SkeletonLoader className="h-5 w-24" />
               ) : (
                 <>
-                  <div className="w-8 h-8 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold border border-primary/30">
                     {profile?.company_name?.charAt(0) || <User size={16} />}
                   </div>
                   <span className="hidden md:inline">{profile?.company_name || 'My Account'}</span>
@@ -57,25 +57,25 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-light-navy border-lightest-navy/20 text-lightest-slate w-56">
+          <DropdownMenuContent align="end" className="bg-charcoal-800 border-white/[0.08] text-lightest-slate w-56 shadow-xl">
             <DropdownMenuLabel>
               <p className="font-bold">{profile?.company_name}</p>
               <p className="text-xs text-slate font-normal">{profile?.business_email}</p>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-lightest-navy/20" />
+            <DropdownMenuSeparator className="bg-white/[0.06]" />
             <DropdownMenuItem asChild>
-              <Link to="/dashboard/settings" className="cursor-pointer">
+              <Link to="/dashboard/settings" className="cursor-pointer hover:bg-charcoal-700/50">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/dashboard/billing" className="cursor-pointer">
+              <Link to="/dashboard/billing" className="cursor-pointer hover:bg-charcoal-700/50">
                 <CreditCard className="mr-2 h-4 w-4" />
                 <span>Billing</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-lightest-navy/20" />
+            <DropdownMenuSeparator className="bg-white/[0.06]" />
             <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:bg-red-500/20 focus:text-red-400 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>

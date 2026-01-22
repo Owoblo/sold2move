@@ -1,12 +1,19 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
+const Card = React.forwardRef(({ className, variant = 'default', ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      // Standardized card styling with design system tokens
-      'rounded-lg border border-lightest-navy/20 bg-surface-secondary text-card-foreground shadow-card transition-shadow duration-normal',
+      // Stealth card styling with luminous borders
+      'rounded-lg bg-surface-secondary text-card-foreground transition-all duration-normal',
+      // Luminous border effect
+      'border border-white/[0.08] shadow-luminous',
+      // Hover glow effect
+      'hover:shadow-glow-sm hover:border-white/[0.12]',
+      // Variant styles
+      variant === 'elevated' && 'bg-charcoal-700 shadow-elevation-2',
+      variant === 'accent' && 'border-electric-500/30 shadow-luminous-accent',
       className
     )}
     {...props}
