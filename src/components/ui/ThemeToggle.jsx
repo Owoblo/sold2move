@@ -5,13 +5,18 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 export function ThemeToggle({ className = '', size = 'sm' }) {
   const { theme, toggleTheme } = useTheme();
+  const isLight = theme === 'light';
 
   return (
     <Button
       variant="ghost"
       size={size}
       onClick={toggleTheme}
-      className={`hover:bg-teal/10 hover:text-teal transition-colors ${className}`}
+      className={`transition-all duration-200 ${
+        isLight
+          ? 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
+          : 'hover:bg-teal/10 hover:text-teal'
+      } ${className}`}
       aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? (

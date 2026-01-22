@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const DashboardLayout = ({ children }) => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
+
   // Start with sidebar collapsed on mobile, open on desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -31,7 +35,9 @@ const DashboardLayout = ({ children }) => {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-charcoal-900">
+    <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${
+      isLight ? 'bg-slate-50' : 'bg-charcoal-900'
+    }`}>
       {/* Sidebar */}
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
@@ -43,7 +49,9 @@ const DashboardLayout = ({ children }) => {
         <DashboardHeader isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className={`flex-1 overflow-y-auto p-4 md:p-6 ${
+          isLight ? 'bg-slate-50' : ''
+        }`}>
           {children}
         </main>
       </div>

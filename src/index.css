@@ -238,43 +238,102 @@ html, body {
     --z-tooltip: 600;
   }
 
+  /* ================================================
+     LIGHT MODE - "PAPER & INK" GALLERY EDITION
+     Premium, airy, high-end interface
+     ================================================ */
   [data-theme='light'] {
-    --background: 0 0% 98%;
-    --foreground: 220 15% 10%;
+    /* --- Paper & Ink Foundation --- */
+    /* Cool grey base - reduces eye strain, feels premium */
+    --background: 210 40% 98%;              /* #F8FAFC - Off-white canvas */
+    --foreground: 222 47% 11%;              /* #0F172A - Deep ink black */
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 15% 10%;
+    /* Pure white cards float above the canvas */
+    --card: 0 0% 100%;                      /* #FFFFFF - Crisp white surfaces */
+    --card-foreground: 222 47% 11%;         /* #0F172A - Maximum readability */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 155 85% 40%;
-    --primary-foreground: 0 0% 100%;
+    /* --- British Racing Green / Deep Emerald --- */
+    /* Adapted for legibility on white - rich, sophisticated */
+    --primary: 155 80% 32%;                 /* #0F9D58 - Deep emerald */
+    --primary-foreground: 0 0% 100%;        /* White text on primary */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 220 15% 10%;
+    /* Secondary surfaces with subtle warmth */
+    --secondary: 210 40% 96%;               /* #F1F5F9 - Light grey */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted elements for hierarchy */
+    --muted: 210 40% 94%;                   /* #E2E8F0 - Softer grey */
+    --muted-foreground: 215 20% 45%;        /* #64748B - Readable grey */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 220 8.9% 10.8%;
+    /* Accent for hover states */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive - maintained visibility */
+    --destructive: 0 72% 51%;               /* #DC2626 - Clear red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 155 85% 40%;
+    /* --- Refined Borders & Inputs --- */
+    --border: 214 32% 91%;                  /* #E2E8F0 - Subtle borders */
+    --input: 214 32% 91%;
+    --ring: 155 80% 32%;                    /* Matches primary */
 
-    /* Legacy Light Mode Mapping */
-    --deep-navy: 210 40% 98%;
-    --light-navy: 0 0% 100%;
-    --lightest-navy: 214 32% 91%;
-    --slate: 215 16% 47%;
-    --light-slate: 215 25% 27%;
-    --lightest-slate: 220 15% 10%;
-    --white: 0 0% 0%;
+    /* --- Charcoal Scale for Light Mode --- */
+    /* These become light surfaces instead of dark */
+    --charcoal-950: 210 40% 98%;            /* Lightest - page bg */
+    --charcoal-900: 210 40% 98%;            /* Page background */
+    --charcoal-800: 0 0% 100%;              /* Card surfaces */
+    --charcoal-700: 210 40% 96%;            /* Elevated surfaces */
+    --charcoal-600: 214 32% 91%;            /* Borders */
+    --charcoal-500: 215 20% 65%;            /* Muted text */
+
+    /* --- Electric Green Adaptation for Light Mode --- */
+    /* Deeper, richer greens that pop against white */
+    --electric-500: 155 80% 32%;            /* #0F9D58 - Primary emerald */
+    --electric-400: 155 75% 38%;            /* #17B169 - Hover state */
+    --electric-600: 155 85% 26%;            /* #0A7B44 - Pressed state */
+    --electric-300: 155 65% 45%;            /* For subtle highlights */
+
+    /* --- Legacy Light Mode Mapping --- */
+    --deep-navy: 210 40% 98%;               /* #F8FAFC - Background */
+    --light-navy: 0 0% 100%;                /* #FFFFFF - Cards */
+    --lightest-navy: 214 32% 91%;           /* #E2E8F0 - Borders */
+    --slate: 215 20% 45%;                   /* #64748B - Secondary text */
+    --light-slate: 215 25% 35%;             /* #475569 - Tertiary text */
+    --lightest-slate: 222 47% 11%;          /* #0F172A - Primary text */
+    --white: 222 47% 11%;                   /* Inverted for light mode */
+
+    /* --- Soft Ambient Shadows (Apple-esque) --- */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+    --shadow-lg: 0 10px 30px -5px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    --shadow-xl: 0 20px 40px -10px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.03);
+    --shadow-2xl: 0 25px 60px -15px rgb(0 0 0 / 0.12);
+
+    /* --- Card Float Shadow (Bento Lighting) --- */
+    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04);
+    --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
+    --shadow-card-elevated: 0 8px 24px rgb(0 0 0 / 0.08), 0 16px 48px rgb(0 0 0 / 0.08);
+
+    /* --- Subtle Emerald Glow (for CTAs in light mode) --- */
+    --shadow-glow-sm: 0 0 0 1px hsl(155 80% 32% / 0.1), 0 2px 8px hsl(155 80% 32% / 0.08);
+    --shadow-glow: 0 0 0 2px hsl(155 80% 32% / 0.15), 0 4px 16px hsl(155 80% 32% / 0.12);
+    --shadow-glow-lg: 0 0 0 2px hsl(155 80% 32% / 0.2), 0 8px 32px hsl(155 80% 32% / 0.15);
+    --shadow-glow-xl: 0 0 0 3px hsl(155 80% 32% / 0.25), 0 12px 48px hsl(155 80% 32% / 0.2);
+
+    /* --- Badge Shadows (More subtle for light mode) --- */
+    --shadow-badge-new: 0 0 8px hsl(155 80% 32% / 0.3);
+    --shadow-badge-hot: 0 0 8px hsl(45 100% 45% / 0.4);
+    --shadow-badge-sold: 0 0 8px hsl(220 90% 50% / 0.3);
+
+    /* --- Glassmorphism for Sidebar --- */
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(0, 0, 0, 0.06);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -479,5 +538,161 @@ html, body {
 
   .hover-glow:hover {
     box-shadow: var(--shadow-glow-sm);
+  }
+
+  /* ================================================
+     LIGHT MODE SPECIFIC UTILITIES
+     Paper & Ink / Gallery Edition
+     ================================================ */
+
+  /* Soft Ambient Card Shadows (Light Mode Bento) */
+  .shadow-card-ambient {
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  .shadow-card-ambient:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Elevated Card (Hero Cards) */
+  .shadow-card-elevated {
+    box-shadow: var(--shadow-card-elevated);
+  }
+
+  /* Glassmorphism Panel */
+  .glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Light Mode Luminous Border Override */
+  [data-theme='light'] .border-luminous {
+    border: 1px solid hsl(214 32% 91%);
+    box-shadow: var(--shadow-card);
+  }
+
+  [data-theme='light'] .border-luminous-accent {
+    border: 1px solid hsl(155 80% 32% / 0.2);
+    box-shadow: var(--shadow-glow-sm);
+  }
+
+  [data-theme='light'] .border-luminous-strong {
+    border: 1px solid hsl(214 32% 85%);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Light Mode Mesh Gradient (Subtle warm tones) */
+  [data-theme='light'] .bg-mesh-gradient {
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 40%, hsl(155 60% 95% / 0.8) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 60%, hsl(210 60% 96% / 0.6) 0%, transparent 50%),
+      hsl(210 40% 98%);
+  }
+
+  [data-theme='light'] .bg-mesh-gradient-subtle {
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 30%, hsl(155 50% 96% / 0.5) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 35% at 85% 70%, hsl(210 50% 97% / 0.4) 0%, transparent 50%),
+      hsl(210 40% 98%);
+  }
+
+  [data-theme='light'] .bg-stealth-gradient {
+    background: linear-gradient(to bottom right, hsl(0 0% 100%), hsl(210 40% 98%));
+  }
+
+  /* Light Mode Glow Effects (Subtler) */
+  [data-theme='light'] .glow-sm {
+    box-shadow: var(--shadow-glow-sm);
+  }
+
+  [data-theme='light'] .glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  [data-theme='light'] .glow-lg {
+    box-shadow: var(--shadow-glow-lg);
+  }
+
+  [data-theme='light'] .glow-xl {
+    box-shadow: var(--shadow-glow-xl);
+  }
+
+  /* Light Mode Badge Glows */
+  [data-theme='light'] .badge-glow-new {
+    box-shadow: var(--shadow-badge-new);
+  }
+
+  [data-theme='light'] .badge-glow-hot {
+    box-shadow: var(--shadow-badge-hot);
+  }
+
+  [data-theme='light'] .badge-glow-sold {
+    box-shadow: var(--shadow-badge-sold);
+  }
+
+  /* Light Mode Hero Stat - Bold editorial look */
+  [data-theme='light'] .text-hero-stat {
+    color: hsl(222 47% 11%);
+    text-shadow: none;
+  }
+
+  /* Light Mode Custom Scrollbar */
+  [data-theme='light'] ::-webkit-scrollbar-thumb {
+    background-color: hsl(215 20% 65% / 0.4);
+  }
+
+  [data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(215 20% 50% / 0.6);
+  }
+
+  /* Light Mode Selection */
+  [data-theme='light'] ::selection {
+    background-color: hsl(155 80% 32% / 0.15);
+    color: hsl(155 80% 26%);
+  }
+
+  /* Light Mode Sidebar Glassmorphism */
+  [data-theme='light'] .sidebar-glass {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Light Mode Header Glassmorphism */
+  [data-theme='light'] .header-glass {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Dark Action Button (Badass anchor in light mode) */
+  .btn-dark-anchor {
+    background: hsl(222 47% 11%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+    transition: all 0.2s ease;
+  }
+
+  .btn-dark-anchor:hover {
+    background: hsl(222 47% 18%);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    transform: translateY(-1px);
+  }
+
+  /* Light Mode Input Focus */
+  [data-theme='light'] input:focus,
+  [data-theme='light'] textarea:focus,
+  [data-theme='light'] select:focus {
+    border-color: hsl(155 80% 32%);
+    box-shadow: 0 0 0 3px hsl(155 80% 32% / 0.1);
   }
 }

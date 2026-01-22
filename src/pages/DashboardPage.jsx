@@ -25,10 +25,15 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useTheme } from '@/contexts/ThemeContext';
 
-// Mini sparkline component for trends (Electric Emerald)
-const Sparkline = ({ data, color = '#00FF88' }) => {
+// Mini sparkline component for trends (Theme-aware)
+const Sparkline = ({ data, color, isLight = false }) => {
   if (!data || data.length < 2) return null;
+
+  // Use emerald for light mode, electric green for dark mode
+  const defaultColor = isLight ? '#0F9D58' : '#00FF88';
+  const strokeColor = color || defaultColor;
 
   const max = Math.max(...data);
   const min = Math.min(...data);
@@ -46,7 +51,7 @@ const Sparkline = ({ data, color = '#00FF88' }) => {
     <svg width={width} height={height} className="inline-block ml-2">
       <polyline
         fill="none"
-        stroke={color}
+        stroke={strokeColor}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -56,8 +61,8 @@ const Sparkline = ({ data, color = '#00FF88' }) => {
   );
 };
 
-// Property thumbnail - larger for HD feel
-const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
+// Property thumbnail - larger for HD feel (Theme-aware)
+const PropertyThumbnail = ({ src, alt, size = 'default', isLight = false }) => {
   const [error, setError] = useState(false);
   const sizes = {
     default: 'w-14 h-14',
@@ -67,8 +72,12 @@ const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
 
   if (!src || error) {
     return (
-      <div className={`${sizeClass} rounded-xl bg-charcoal-700/80 border border-white/[0.06] flex items-center justify-center flex-shrink-0`}>
-        <MapPin className="w-5 h-5 text-slate" />
+      <div className={`${sizeClass} rounded-xl flex items-center justify-center flex-shrink-0 ${
+        isLight
+          ? 'bg-slate-100 border border-slate-200'
+          : 'bg-charcoal-700/80 border border-white/[0.06]'
+      }`}>
+        <MapPin className={`w-5 h-5 ${isLight ? 'text-slate-400' : 'text-slate'}`} />
       </div>
     );
   }
@@ -78,18 +87,30 @@ const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
       src={src}
       alt={alt}
       onError={() => setError(true)}
-      className={`${sizeClass} rounded-xl object-cover flex-shrink-0 border border-white/[0.06]`}
+      className={`${sizeClass} rounded-xl object-cover flex-shrink-0 ${
+        isLight
+          ? 'border border-slate-200'
+          : 'border border-white/[0.06]'
+      }`}
     />
   );
 };
 
-// Status tag component with glow effects
-const StatusTag = ({ type }) => {
-  const styles = {
+// Status tag component with glow effects (Theme-aware)
+const StatusTag = ({ type, isLight = false }) => {
+  const darkStyles = {
     new: 'bg-primary/20 text-primary shadow-badge-new',
     hot: 'bg-amber-500/20 text-amber-400 shadow-badge-hot',
     sold: 'bg-blue-500/20 text-blue-400 shadow-badge-sold'
   };
+
+  const lightStyles = {
+    new: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+    hot: 'bg-amber-100 text-amber-700 border border-amber-200',
+    sold: 'bg-blue-100 text-blue-700 border border-blue-200'
+  };
+
+  const styles = isLight ? lightStyles : darkStyles;
 
   const labels = {
     new: 'New',
@@ -109,6 +130,8 @@ const DashboardPage = () => {
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const navigate = useNavigate();
   const { trackAction } = useAnalytics();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // State for dashboard data
   const [todaysLeads, setTodaysLeads] = useState({ justListed: [], sold: [], justListedCount: 0, soldCount: 0 });
@@ -539,11 +562,14 @@ const DashboardPage = () => {
   // No profile state
   if (!profile && !profileLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 bg-mesh-gradient-subtle min-h-screen">
+      <div className={`flex flex-col items-center justify-center h-full gap-4 min-h-screen ${isLight ? 'bg-slate-50' : 'bg-mesh-gradient-subtle'}`}>
         <AlertTriangle className="h-12 w-12 text-red-500" />
-        <h3 className="text-lg font-semibold text-lightest-slate">Profile Not Found</h3>
-        <p className="text-slate text-center">Unable to load your profile. Please try refreshing the page.</p>
-        <Button onClick={() => window.location.reload()} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Profile Not Found</h3>
+        <p className={`text-center ${isLight ? 'text-slate-500' : 'text-slate'}`}>Unable to load your profile. Please try refreshing the page.</p>
+        <Button onClick={() => window.location.reload()} className={isLight
+          ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg'
+          : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm'
+        }>
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh Page
         </Button>
@@ -554,13 +580,16 @@ const DashboardPage = () => {
   // Onboarding not complete
   if (!profile?.onboarding_complete) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 bg-mesh-gradient-subtle min-h-screen">
-        <Truck className="h-16 w-16 text-primary" />
-        <h3 className="text-2xl font-bold text-lightest-slate">Welcome to Sold2Move!</h3>
-        <p className="text-slate text-center max-w-md">
+      <div className={`flex flex-col items-center justify-center h-full gap-4 min-h-screen ${isLight ? 'bg-slate-50' : 'bg-mesh-gradient-subtle'}`}>
+        <Truck className={`h-16 w-16 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
+        <h3 className={`text-2xl font-bold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Welcome to Sold2Move!</h3>
+        <p className={`text-center max-w-md ${isLight ? 'text-slate-500' : 'text-slate'}`}>
           Complete your profile setup to start receiving moving leads in your service areas.
         </p>
-        <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
+        <Button asChild className={isLight
+          ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg'
+          : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm'
+        }>
           <Link to="/onboarding">Complete Setup</Link>
         </Button>
       </div>
@@ -568,25 +597,32 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-6 min-h-screen bg-mesh-gradient-subtle">
+    <div className={`space-y-6 min-h-screen ${isLight ? 'bg-slate-50' : 'bg-mesh-gradient-subtle'}`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-lightest-slate">
+          <h1 className={`text-2xl font-bold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>
             {profile?.company_name || 'Dashboard'}
           </h1>
-          <p className="text-slate text-sm mt-0.5">
+          <p className={`text-sm mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate'}`}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-charcoal-800/80 border-luminous rounded-lg">
-            <span className="text-sm text-slate">Credits: </span>
-            <span className="text-lg font-mono font-semibold text-lightest-slate tabular-nums">
+          <div className={`px-4 py-2 rounded-lg ${
+            isLight
+              ? 'bg-white border border-slate-200 shadow-sm'
+              : 'bg-charcoal-800/80 border-luminous'
+          }`}>
+            <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate'}`}>Credits: </span>
+            <span className={`text-lg font-mono font-semibold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>
               {isUnlimited ? '∞' : creditsRemaining}
             </span>
           </div>
-          <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm">
+          <Button asChild size="sm" className={isLight
+            ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
+            : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm'
+          }>
             <Link to="/pricing#top-up">Buy Credits</Link>
           </Button>
         </div>
@@ -595,18 +631,30 @@ const DashboardPage = () => {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-4">
         {/* Hero Metric - Today's Leads (spans 4 cols, larger) */}
-        <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 rounded-2xl p-6 shadow-lg shadow-primary/10">
+        <div className={`col-span-12 md:col-span-4 rounded-2xl p-6 ${
+          isLight
+            ? 'bg-gradient-to-br from-emerald-50 to-white border border-emerald-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)]'
+            : 'bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 shadow-lg shadow-primary/10'
+        }`}>
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-primary font-medium mb-1">Today's Leads</p>
-              <p className="text-hero-stat text-lightest-slate tabular-nums">{totalTodaysLeads}</p>
-              <p className="text-sm text-slate mt-2">New opportunities waiting</p>
+              <p className={`text-sm font-medium mb-1 ${isLight ? 'text-emerald-700' : 'text-primary'}`}>Today's Leads</p>
+              <p className={`text-hero-stat tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{totalTodaysLeads}</p>
+              <p className={`text-sm mt-2 ${isLight ? 'text-slate-500' : 'text-slate'}`}>New opportunities waiting</p>
             </div>
-            <div className="p-3 bg-primary/20 rounded-xl shadow-glow-sm">
-              <Sparkles className="h-6 w-6 text-primary" />
+            <div className={`p-3 rounded-xl ${
+              isLight
+                ? 'bg-emerald-100 border border-emerald-200'
+                : 'bg-primary/20 shadow-glow-sm'
+            }`}>
+              <Sparkles className={`h-6 w-6 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
             </div>
           </div>
-          <Button asChild className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm hover:shadow-glow">
+          <Button asChild className={`w-full mt-4 ${
+            isLight
+              ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm hover:shadow-glow'
+          }`}>
             <Link to="/dashboard/listings/just-listed">
               View All Leads
               <ArrowRight className="h-4 w-4 ml-2" />
@@ -615,52 +663,72 @@ const DashboardPage = () => {
         </div>
 
         {/* This Week */}
-        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
-          <p className="text-xs text-slate mb-1">This Week</p>
+        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>This Week</p>
           <div className="flex items-baseline gap-1">
-            <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.thisWeekLeads}</p>
+            <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.thisWeekLeads}</p>
             {monthlyStats.weekOverWeekChange !== 0 && (
-              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? 'text-primary' : 'text-red-400'}`}>
+              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? (isLight ? 'text-emerald-600' : 'text-primary') : 'text-red-500'}`}>
                 {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}%
               </span>
             )}
           </div>
           <div className="mt-1">
-            <Sparkline data={weeklyTrend} color={monthlyStats.weekOverWeekChange >= 0 ? '#00FF88' : '#f87171'} />
+            <Sparkline data={weeklyTrend} isLight={isLight} color={monthlyStats.weekOverWeekChange >= 0 ? (isLight ? '#0F9D58' : '#00FF88') : '#f87171'} />
           </div>
         </div>
 
         {/* This Month */}
-        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
-          <p className="text-xs text-slate mb-1">This Month</p>
-          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.totalLeads}</p>
-          <p className="text-xs text-slate mt-1">Total leads</p>
+        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>This Month</p>
+          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.totalLeads}</p>
+          <p className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Total leads</p>
         </div>
 
         {/* Revealed - Gold accent with glow */}
-        <div className="col-span-6 md:col-span-2 bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 rounded-xl p-4 shadow-badge-hot/30">
-          <p className="text-xs text-amber-400 mb-1">Revealed</p>
-          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{monthlyStats.revealedCount}</p>
-          <p className="text-xs text-slate mt-1">Unlocked</p>
+        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 ${
+          isLight
+            ? 'bg-gradient-to-br from-amber-50 to-white border border-amber-200/60 shadow-sm'
+            : 'bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 shadow-badge-hot/30'
+        }`}>
+          <p className={`text-xs mb-1 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Revealed</p>
+          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.revealedCount}</p>
+          <p className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Unlocked</p>
         </div>
 
         {/* Credits */}
-        <div className="col-span-6 md:col-span-2 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
-          <p className="text-xs text-slate mb-1">Credits Left</p>
-          <p className="text-2xl font-mono font-bold text-lightest-slate tabular-nums">{isUnlimited ? '∞' : creditsRemaining}</p>
-          <Link to="/pricing#top-up" className="text-xs text-primary hover:underline mt-1 inline-block">
+        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Credits Left</p>
+          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{isUnlimited ? '∞' : creditsRemaining}</p>
+          <Link to="/pricing#top-up" className={`text-xs hover:underline mt-1 inline-block ${isLight ? 'text-emerald-600' : 'text-primary'}`}>
             Buy more →
           </Link>
         </div>
 
         {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
-        <div className="col-span-12 lg:col-span-6 bg-charcoal-800/80 border-luminous rounded-xl overflow-hidden hover-glow">
-          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className={`col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <div className={`p-4 flex items-center justify-between ${isLight ? 'border-b border-slate-200' : 'border-b border-white/[0.06]'}`}>
             <div>
-              <h3 className="font-semibold text-lightest-slate">Just Listed</h3>
-              <p className="text-xs text-slate">New opportunities in your areas</p>
+              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Just Listed</h3>
+              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>New opportunities in your areas</p>
             </div>
-            <span className="text-2xl font-mono font-bold text-primary tabular-nums">{todaysLeads.justListedCount}</span>
+            <span className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{todaysLeads.justListedCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -672,36 +740,52 @@ const DashboardPage = () => {
                 {todaysLeads.justListed.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="group flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all cursor-pointer relative"
+                    className={`group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                        : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+                    }`}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(lead.id)}
                     onMouseLeave={() => setHoveredLead(null)}
                   >
-                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
-                        <StatusTag type={isHotLead(lead) ? 'hot' : 'new'} />
+                        <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
+                        <StatusTag type={isHotLead(lead) ? 'hot' : 'new'} isLight={isLight} />
                       </div>
-                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono text-sm font-semibold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</p>
+                      <p className={`font-mono text-sm font-semibold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === lead.id && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-charcoal-900/95 border border-white/[0.1] rounded-lg p-1 shadow-xl">
+                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl ${
+                        isLight
+                          ? 'bg-white border border-slate-200'
+                          : 'bg-charcoal-900/95 border border-white/[0.1]'
+                      }`}>
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className="px-2 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors flex items-center gap-1"
+                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            isLight
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                              : 'bg-primary/20 hover:bg-primary/30 text-primary'
+                          }`}
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className="px-2 py-1 text-xs bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            isLight
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              : 'bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate'
+                          }`}
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -713,19 +797,24 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-charcoal-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-8 w-8 text-slate" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  isLight ? 'bg-slate-100' : 'bg-charcoal-700/50'
+                }`}>
+                  <Search className={`h-8 w-8 ${isLight ? 'text-slate-400' : 'text-slate'}`} />
                 </div>
-                <p className="text-slate font-medium">No new listings today</p>
-                <p className="text-xs text-slate mt-1 mb-4">Check neighboring areas for more opportunities</p>
-                <Button asChild variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10">
+                <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate'}`}>No new listings today</p>
+                <p className={`text-xs mt-1 mb-4 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Check neighboring areas for more opportunities</p>
+                <Button asChild variant="outline" size="sm" className={isLight
+                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                  : 'border-primary/30 text-primary hover:bg-primary/10'
+                }>
                   <Link to="/dashboard/settings">Expand Service Areas</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className="w-full text-primary hover:text-primary hover:bg-primary/10">
+            <Button asChild variant="ghost" className={`w-full ${isLight ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-primary hover:text-primary hover:bg-primary/10'}`}>
               <Link to="/dashboard/listings/just-listed">
                 View all listings
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -735,13 +824,17 @@ const DashboardPage = () => {
         </div>
 
         {/* Just Sold Feed */}
-        <div className="col-span-12 lg:col-span-6 bg-charcoal-800/80 border-luminous rounded-xl overflow-hidden hover-glow">
-          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className={`col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <div className={`p-4 flex items-center justify-between ${isLight ? 'border-b border-slate-200' : 'border-b border-white/[0.06]'}`}>
             <div>
-              <h3 className="font-semibold text-lightest-slate">Just Sold</h3>
-              <p className="text-xs text-slate">Definite movers - act fast</p>
+              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Just Sold</h3>
+              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Definite movers - act fast</p>
             </div>
-            <span className="text-2xl font-mono font-bold text-primary tabular-nums">{todaysLeads.soldCount}</span>
+            <span className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{todaysLeads.soldCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -753,36 +846,52 @@ const DashboardPage = () => {
                 {todaysLeads.sold.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="group flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all cursor-pointer relative"
+                    className={`group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                        : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+                    }`}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(`sold-${lead.id}`)}
                     onMouseLeave={() => setHoveredLead(null)}
                   >
-                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
-                        <StatusTag type="sold" />
+                        <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
+                        <StatusTag type="sold" isLight={isLight} />
                       </div>
-                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-mono text-sm font-semibold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</p>
+                      <p className={`font-mono text-sm font-semibold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === `sold-${lead.id}` && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-charcoal-900/95 border border-white/[0.1] rounded-lg p-1 shadow-xl">
+                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl ${
+                        isLight
+                          ? 'bg-white border border-slate-200'
+                          : 'bg-charcoal-900/95 border border-white/[0.1]'
+                      }`}>
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className="px-2 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-primary rounded transition-colors flex items-center gap-1"
+                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            isLight
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                              : 'bg-primary/20 hover:bg-primary/30 text-primary'
+                          }`}
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className="px-2 py-1 text-xs bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            isLight
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              : 'bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate'
+                          }`}
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -794,19 +903,24 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className="w-16 h-16 bg-charcoal-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="h-8 w-8 text-slate" />
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  isLight ? 'bg-slate-100' : 'bg-charcoal-700/50'
+                }`}>
+                  <Clock className={`h-8 w-8 ${isLight ? 'text-slate-400' : 'text-slate'}`} />
                 </div>
-                <p className="text-slate font-medium">No sales in your areas today</p>
-                <p className="text-xs text-slate mt-1 mb-4">Sold leads are high-intent movers</p>
-                <Button asChild variant="outline" size="sm" className="border-primary/30 text-primary hover:bg-primary/10">
+                <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate'}`}>No sales in your areas today</p>
+                <p className={`text-xs mt-1 mb-4 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Sold leads are high-intent movers</p>
+                <Button asChild variant="outline" size="sm" className={isLight
+                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                  : 'border-primary/30 text-primary hover:bg-primary/10'
+                }>
                   <Link to="/dashboard/listings/sold">View Past Sales</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className="w-full text-primary hover:text-primary hover:bg-primary/10">
+            <Button asChild variant="ghost" className={`w-full ${isLight ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-primary hover:text-primary hover:bg-primary/10'}`}>
               <Link to="/dashboard/listings/sold">
                 View all sold
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -816,47 +930,67 @@ const DashboardPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
-          <h3 className="font-semibold text-lightest-slate mb-3">Quick Actions</h3>
+        <div className={`col-span-12 md:col-span-6 lg:col-span-3 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
+          <h3 className={`font-semibold mb-3 ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Quick Actions</h3>
           <div className="space-y-2">
             <button
               onClick={() => navigate('/dashboard/mailing')}
-              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
+              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+                isLight
+                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+              }`}
             >
-              <Mail className="h-5 w-5 text-primary" />
+              <Mail className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
               <div>
-                <p className="text-sm font-medium text-lightest-slate">Send Mail</p>
-                <p className="text-xs text-slate">Direct mail campaign</p>
+                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Send Mail</p>
+                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Direct mail campaign</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/listings/just-listed')}
-              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
+              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+                isLight
+                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+              }`}
             >
-              <Download className="h-5 w-5 text-primary" />
+              <Download className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
               <div>
-                <p className="text-sm font-medium text-lightest-slate">Export Leads</p>
-                <p className="text-xs text-slate">Download CSV</p>
+                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Export Leads</p>
+                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Download CSV</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/settings')}
-              className="w-full flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg transition-all text-left"
+              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+                isLight
+                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+              }`}
             >
-              <MapPin className="h-5 w-5 text-primary" />
+              <MapPin className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
               <div>
-                <p className="text-sm font-medium text-lightest-slate">Service Areas</p>
-                <p className="text-xs text-slate">Manage cities</p>
+                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Service Areas</p>
+                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Manage cities</p>
               </div>
             </button>
           </div>
         </div>
 
         {/* Service Areas */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
+        <div className={`col-span-12 md:col-span-6 lg:col-span-4 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-lightest-slate">Service Areas</h3>
-            <Link to="/dashboard/settings" className="text-xs text-primary hover:underline">Manage</Link>
+            <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Service Areas</h3>
+            <Link to="/dashboard/settings" className={`text-xs hover:underline ${isLight ? 'text-emerald-600' : 'text-primary'}`}>Manage</Link>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -865,23 +999,30 @@ const DashboardPage = () => {
           ) : serviceAreaHealth.length > 0 ? (
             <div className="space-y-2">
               {serviceAreaHealth.slice(0, 4).map((area) => (
-                <div key={area.city} className="flex items-center justify-between p-2 bg-charcoal-900/60 border border-white/[0.04] rounded-lg">
+                <div key={area.city} className={`flex items-center justify-between p-2 rounded-lg ${
+                  isLight
+                    ? 'bg-slate-50 border border-slate-200/60'
+                    : 'bg-charcoal-900/60 border border-white/[0.04]'
+                }`}>
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${
-                      area.status === 'high' ? 'bg-primary shadow-badge-new' :
-                      area.status === 'moderate' ? 'bg-amber-400 shadow-badge-hot' :
-                      'bg-slate'
+                      area.status === 'high' ? (isLight ? 'bg-emerald-500' : 'bg-primary shadow-badge-new') :
+                      area.status === 'moderate' ? (isLight ? 'bg-amber-500' : 'bg-amber-400 shadow-badge-hot') :
+                      (isLight ? 'bg-slate-400' : 'bg-slate')
                     }`} />
-                    <span className="text-sm text-lightest-slate">{area.city}</span>
+                    <span className={`text-sm ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{area.city}</span>
                   </div>
-                  <span className="text-sm font-mono font-semibold text-slate tabular-nums">{area.leadsThisWeek} leads</span>
+                  <span className={`text-sm font-mono font-semibold tabular-nums ${isLight ? 'text-slate-500' : 'text-slate'}`}>{area.leadsThisWeek} leads</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className="text-sm text-slate mb-3">No service areas configured</p>
-              <Button asChild size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <p className={`text-sm mb-3 ${isLight ? 'text-slate-500' : 'text-slate'}`}>No service areas configured</p>
+              <Button asChild size="sm" className={isLight
+                ? 'bg-slate-900 text-white hover:bg-slate-800'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }>
                 <Link to="/dashboard/settings">Add Areas</Link>
               </Button>
             </div>
@@ -889,10 +1030,14 @@ const DashboardPage = () => {
         </div>
 
         {/* High Value Leads */}
-        <div className="col-span-12 lg:col-span-5 bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
+        <div className={`col-span-12 lg:col-span-5 rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
           <div className="flex items-center gap-2 mb-3">
-            <Flame className="h-5 w-5 text-amber-400" />
-            <h3 className="font-semibold text-lightest-slate">High-Value Leads</h3>
+            <Flame className={`h-5 w-5 ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
+            <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>High-Value Leads</h3>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -903,46 +1048,58 @@ const DashboardPage = () => {
               {highValueLeads.slice(0, 4).map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center gap-3 p-2 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg cursor-pointer transition-all"
+                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                      : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+                  }`}
                   onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                 >
-                  <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                  <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-lightest-slate truncate">{lead.lastcity}</p>
-                    <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba</p>
+                    <p className={`text-sm truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
+                    <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba</p>
                   </div>
-                  <span className="font-mono text-sm font-bold text-primary tabular-nums">{formatPrice(lead.unformattedprice)}</span>
+                  <span className={`font-mono text-sm font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate text-center py-6">No high-value leads this week</p>
+            <p className={`text-sm text-center py-6 ${isLight ? 'text-slate-500' : 'text-slate'}`}>No high-value leads this week</p>
           )}
         </div>
       </div>
 
       {/* Recently Revealed */}
       {revealedLeads.length > 0 && (
-        <div className="bg-charcoal-800/80 border-luminous rounded-xl p-4 hover-glow">
+        <div className={`rounded-xl p-4 transition-all ${
+          isLight
+            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
+            : 'bg-charcoal-800/80 border-luminous hover-glow'
+        }`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Eye className="h-5 w-5 text-amber-400" />
-              <h3 className="font-semibold text-lightest-slate">Recently Revealed</h3>
+              <Eye className={`h-5 w-5 ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
+              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Recently Revealed</h3>
             </div>
-            <Link to="/dashboard/account" className="text-xs text-primary hover:underline">View all</Link>
+            <Link to="/dashboard/account" className={`text-xs hover:underline ${isLight ? 'text-emerald-600' : 'text-primary'}`}>View all</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {revealedLeads.slice(0, 4).map((lead) => (
               <div
                 key={lead.id}
-                className="flex items-center gap-3 p-3 bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08] rounded-lg cursor-pointer transition-all"
+                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                  isLight
+                    ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
+                    : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
+                }`}
                 onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
               >
-                <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-lightest-slate truncate">{lead.addressstreet}</p>
-                  <p className="text-xs text-slate">{lead.lastcity}</p>
-                  <p className="text-xs text-amber-400 mt-1">{formatDate(lead.revealed_at)}</p>
+                  <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.addressstreet}</p>
+                  <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.lastcity}</p>
+                  <p className={`text-xs mt-1 ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>{formatDate(lead.revealed_at)}</p>
                 </div>
               </div>
             ))}

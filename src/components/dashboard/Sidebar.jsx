@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const location = useLocation();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [expandedSections, setExpandedSections] = useState({
     listings: location.pathname.startsWith('/dashboard/listings')
   });
@@ -61,20 +64,33 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   ];
 
   const baseLinkClasses = "flex items-center p-2 rounded-lg transition-all duration-200";
-  const inactiveLinkClasses = "text-slate hover:bg-charcoal-700/50 hover:text-lightest-slate";
-  const activeLinkClasses = "bg-primary/10 text-primary font-semibold shadow-badge-new/30";
+
+  // Theme-aware link classes
+  const inactiveLinkClasses = isLight
+    ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    : "text-slate hover:bg-charcoal-700/50 hover:text-lightest-slate";
+
+  const activeLinkClasses = isLight
+    ? "bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200/50"
+    : "bg-primary/10 text-primary font-semibold shadow-badge-new/30";
 
   return (
     <>
       {/* Mobile overlay backdrop */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className={`fixed inset-0 z-30 lg:hidden ${
+            isLight ? 'bg-slate-900/20 backdrop-blur-sm' : 'bg-black/50'
+          }`}
           onClick={toggleSidebar}
         ></div>
       )}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen bg-charcoal-800 border-r border-white/[0.06] transition-all duration-300 ${
+      <aside className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
+        isLight
+          ? 'bg-white/92 backdrop-blur-xl border-r border-slate-200/60 shadow-[4px_0_24px_rgba(0,0,0,0.04)]'
+          : 'bg-charcoal-800 border-r border-white/[0.06]'
+      } ${
         isSidebarOpen
           ? 'w-64 translate-x-0'
           : 'w-16 -translate-x-48 lg:translate-x-0'
@@ -82,20 +98,26 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="p-2 bg-charcoal-900 rounded-lg border border-white/[0.06]">
-                <Home className="h-6 w-6 text-primary" />
+              <div className={`p-2 rounded-lg border ${
+                isLight
+                  ? 'bg-emerald-50 border-emerald-200/50'
+                  : 'bg-charcoal-900 border-white/[0.06]'
+              }`}>
+                <Home className={`h-6 w-6 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
               </div>
               {isSidebarOpen && (
-                <span className="text-xl font-bold text-lightest-slate font-heading">Sold2Move</span>
+                <span className={`text-xl font-bold font-heading ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Sold2Move</span>
               )}
             </Link>
             {isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="p-1 rounded-lg hover:bg-charcoal-700/50 transition-colors"
+                className={`p-1 rounded-lg transition-colors ${
+                  isLight ? 'hover:bg-slate-100' : 'hover:bg-charcoal-700/50'
+                }`}
                 title="Collapse sidebar"
               >
-                <ChevronLeft className="h-4 w-4 text-slate" />
+                <ChevronLeft className={`h-4 w-4 ${isLight ? 'text-slate-500' : 'text-slate'}`} />
               </button>
             )}
           </div>
@@ -103,7 +125,9 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
             {menuItems.map((group) => (
               <li key={group.title}>
                 {isSidebarOpen && (
-                  <h3 className="px-2 mb-2 text-xs font-semibold tracking-wider text-slate/50 uppercase">{group.title}</h3>
+                  <h3 className={`px-2 mb-2 text-xs font-semibold tracking-wider uppercase ${
+                    isLight ? 'text-slate-400' : 'text-slate/50'
+                  }`}>{group.title}</h3>
                 )}
                 <ul className="space-y-1">
                   {group.items.map((item) => (
@@ -185,10 +209,14 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       {!isSidebarOpen && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-4 left-4 z-50 p-2 bg-light-navy border border-border rounded-md hover:bg-lightest-navy/10 transition-colors hidden lg:block"
+          className={`fixed top-4 left-4 z-50 p-2 border rounded-lg transition-all hidden lg:block ${
+            isLight
+              ? 'bg-white border-slate-200 hover:bg-slate-50 shadow-sm hover:shadow'
+              : 'bg-light-navy border-border hover:bg-lightest-navy/10'
+          }`}
           title="Expand sidebar"
         >
-          <ChevronRight className="h-4 w-4 text-slate" />
+          <ChevronRight className={`h-4 w-4 ${isLight ? 'text-slate-600' : 'text-slate'}`} />
         </button>
       )}
     </>
