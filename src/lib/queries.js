@@ -50,6 +50,10 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       query = query.eq('status', status);
     }
 
+    // Exclude LOT (empty land) listings - they have no home to move from
+    // Use OR to include records where contenttype is null or not 'LOT'
+    query = query.or('contenttype.neq.LOT,contenttype.is.null');
+
     // Order by lastseenat (most recent first)
     query = query.order('lastseenat', { ascending: false });
 
