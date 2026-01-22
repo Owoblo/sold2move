@@ -108,8 +108,8 @@ function App() {
       <main className="flex-grow">
         <ErrorBoundary>
           <Suspense fallback={<SuspenseFallback />}>
-            <AnimatePresence mode="wait">
-              <Routes location={location} key={location.pathname}>
+            <AnimatePresence mode="sync">
+              <Routes location={location}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
