@@ -9,6 +9,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import CookieConsent from '@/components/CookieConsent';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { storeIntendedDestination } from '@/utils/authUtils';
 import { testAuthFlow } from '@/utils/authDebugger';
@@ -23,6 +24,7 @@ const ContactPage = lazy(() => import('@/pages/ContactPage'));
 const SampleMailersPage = lazy(() => import('@/pages/SampleMailersPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
+const DataUseAgreementPage = lazy(() => import('@/pages/DataUseAgreementPage'));
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const SignUpPage = lazy(() => import('@/pages/SignUpPage'));
 const SignUpSuccessPage = lazy(() => import('@/pages/SignUpSuccessPage'));
@@ -63,6 +65,7 @@ const TorontoSoldListings = lazy(() => import('@/pages/TorontoSoldListings'));
 const VancouverSoldListings = lazy(() => import('@/pages/VancouverSoldListings'));
 const RouteGuard = lazy(() => import('@/components/layout/RouteGuard'));
 const DashboardLayout = lazy(() => import('@/components/dashboard/layout/DashboardLayout'));
+const ChainLeads = lazy(() => import('@/components/dashboard/ChainLeads'));
 
 const SuspenseFallback = () => (
   <div className="flex justify-center items-center h-screen bg-deep-navy">
@@ -120,6 +123,7 @@ function App() {
                 <Route path="/request-demo" element={<RequestDemoPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/data-use-agreement" element={<DataUseAgreementPage />} />
 
                 {/* SEO Content Pages */}
                 <Route path="/how-moving-companies-can-use-sold-listings-ontario" element={<HowMovingCompaniesCanUseSoldListings />} />
@@ -193,6 +197,7 @@ function App() {
                           <Route path="/dashboard/assets" element={<MailingAssets />} />
                           <Route path="/dashboard/products" element={<Products />} />
                           <Route path="/dashboard/listings/*" element={<Listings />} />
+                          <Route path="/dashboard/chain-leads" element={<ChainLeads />} />
                           <Route path="/dashboard/mailing" element={<Mailing />} />
                           <Route path="/dashboard/resources" element={<Resources />} />
                           <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
@@ -208,6 +213,7 @@ function App() {
         </ErrorBoundary>
       </main>
       {!isDashboardRoute && <Footer />}
+      <CookieConsent />
       <ShadToaster />
 
       {/* Onboarding Components - Only show for authenticated users */}

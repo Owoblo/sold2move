@@ -655,10 +655,12 @@ const SignUpPage = () => {
                               I agree to the{' '}
                               <Link to="/terms" className="text-teal hover:underline">
                                 Terms of Service
-                              </Link>{' '}
-                              and{' '}
-                              <Link to="/privacy" className="text-teal hover:underline">
+                              </Link>,{' '}
+                              <Link to="/privacy-policy" className="text-teal hover:underline">
                                 Privacy Policy
+                              </Link>, and{' '}
+                              <Link to="/data-use-agreement" className="text-teal hover:underline">
+                                Data Use Agreement
                               </Link>
                             </FormLabel>
                             <FormMessage />
