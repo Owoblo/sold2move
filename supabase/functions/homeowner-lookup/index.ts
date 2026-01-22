@@ -279,10 +279,19 @@ serve(async (req) => {
 
     const apiData = await apiResponse.json()
     console.log('Batch Data API response received')
+    console.log('API Response meta:', JSON.stringify(apiData?.meta || {}))
+    console.log('API Response results keys:', Object.keys(apiData?.results || {}))
+    console.log('Persons found:', apiData?.results?.persons?.length || 0)
 
     // Check if we got a successful match
     const matchCount = apiData?.meta?.matchCount || 0
     const lookupSuccessful = matchCount > 0
+    console.log(`Match count: ${matchCount}, Lookup successful: ${lookupSuccessful}`)
+
+    // Log full response if no matches found for debugging
+    if (!lookupSuccessful) {
+      console.log('No matches found. Full API response:', JSON.stringify(apiData, null, 2))
+    }
 
     // Parse the response
     const parsedData = parseApiResponse(apiData)
