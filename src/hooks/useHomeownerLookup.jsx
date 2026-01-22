@@ -19,20 +19,34 @@ export function useHomeownerLookup() {
     setError(null);
 
     try {
+      console.log('🔍 Homeowner lookup starting for listing:', listing?.zpid || listing?.id);
       const result = await homeownerLookupService.lookupFromListing(listing);
 
+      console.log('📥 Homeowner lookup raw result:', JSON.stringify(result, null, 2));
+      console.log('📊 Result breakdown:', {
+        hasError: !!result.error,
+        hasData: !!result.data,
+        success: result.data?.success,
+        dataKeys: result.data?.data ? Object.keys(result.data.data) : [],
+        message: result.data?.message
+      });
+
       if (result.error) {
+        console.error('❌ Homeowner lookup error:', result.error);
         setError(result.error);
         setData(null);
       } else if (result.data?.success) {
+        console.log('✅ Homeowner lookup success! Data:', result.data.data);
         setData(result.data.data);
         setError(null);
       } else {
         // API returned but no data found
+        console.log('⚠️ Homeowner lookup returned but success=false:', result.data);
         setData(null);
         setError(new Error(result.data?.message || 'No homeowner information found'));
       }
     } catch (err) {
+      console.error('💥 Homeowner lookup exception:', err);
       setError(err);
       setData(null);
     } finally {

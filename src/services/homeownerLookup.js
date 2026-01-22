@@ -17,18 +17,23 @@ class HomeownerLookupService {
    */
   async lookupProperty({ zpid, street, city, state, zip }) {
     try {
+      console.log('🌐 Calling homeowner-lookup edge function with:', { zpid, street, city, state, zip });
+
       const { data, error } = await supabase.functions.invoke('homeowner-lookup', {
         body: { zpid, street, city, state, zip }
       });
 
+      console.log('📡 Edge function response:', { data, error });
+      console.log('📡 Edge function data stringified:', JSON.stringify(data, null, 2));
+
       if (error) {
-        console.error('Homeowner lookup error:', error);
+        console.error('❌ Homeowner lookup edge function error:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (err) {
-      console.error('Homeowner lookup exception:', err);
+      console.error('💥 Homeowner lookup exception:', err);
       return { data: null, error: err };
     }
   }
