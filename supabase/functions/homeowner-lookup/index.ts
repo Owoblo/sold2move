@@ -397,7 +397,8 @@ serve(async (req) => {
     const parsedData = parseApiResponse(apiData)
 
     // Check if we got a successful match - multiple ways to determine this
-    const matchCount = apiData?.meta?.matchCount || 0
+    // Note: matchCount is nested at results.meta.results.matchCount in Batch Data API response
+    const matchCount = apiData?.results?.meta?.results?.matchCount || apiData?.meta?.matchCount || 0
     const hasOwner = !!(apiData?.results?.owner || apiData?.owner)
     const hasPersons = (apiData?.results?.persons?.length || 0) > 0
     const hasParsedData = !!(parsedData.firstName || parsedData.lastName || parsedData.fullName || parsedData.phoneNumbers.length > 0 || parsedData.emails.length > 0)
@@ -405,6 +406,7 @@ serve(async (req) => {
     const lookupSuccessful = matchCount > 0 || hasOwner || hasPersons || hasParsedData
 
     console.log(`Match indicators: matchCount=${matchCount}, hasOwner=${hasOwner}, hasPersons=${hasPersons}, hasParsedData=${hasParsedData}`)
+    console.log(`Parsed data check: firstName=${parsedData.firstName}, lastName=${parsedData.lastName}, phones=${parsedData.phoneNumbers.length}, emails=${parsedData.emails.length}`)
     console.log(`Lookup successful: ${lookupSuccessful}`)
 
     // Log full response if no matches found for debugging
