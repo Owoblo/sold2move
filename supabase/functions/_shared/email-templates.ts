@@ -1,0 +1,619 @@
+/**
+ * Shared email templates for Sold2Move
+ * Brand colors:
+ * - Background: #0a192f (deep navy)
+ * - Card: #112240 (light navy)
+ * - Accent: #64ffda (teal)
+ * - Primary text: #ccd6f6 (light slate)
+ * - Secondary text: #8892b0 (slate)
+ * - Border: #233554 (navy border)
+ */
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface EmailTemplateOptions {
+  title: string;
+  preheader?: string;
+  content: string;
+  ctaButton?: {
+    text: string;
+    url: string;
+  };
+  footerText?: string;
+  showUnsubscribe?: boolean;
+  unsubscribeUrl?: string;
+}
+
+export interface PropertyListing {
+  id: string;
+  imgSrc?: string;
+  address: string;
+  price: string;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  type?: string;
+  detailUrl?: string;
+}
+
+export interface ReceiptData {
+  amount: string;
+  description: string;
+  credits?: number;
+  date: string;
+  planName?: string;
+}
+
+// ============================================================================
+// Base Template
+// ============================================================================
+
+/**
+ * Build the base email template with Sold2Move branding
+ */
+export function buildEmailTemplate(options: EmailTemplateOptions): string {
+  const {
+    title,
+    preheader = '',
+    content,
+    ctaButton,
+    footerText,
+    showUnsubscribe = false,
+    unsubscribeUrl,
+  } = options;
+
+  const ctaHtml = ctaButton
+    ? `
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${ctaButton.url}" style="display: inline-block; background-color: #64ffda; color: #0a192f; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+          ${ctaButton.text}
+        </a>
+      </div>
+    `
+    : '';
+
+  const footerHtml = footerText
+    ? `<p style="color: #8892b0; font-size: 12px; text-align: center; margin: 0;">${footerText}</p>`
+    : '';
+
+  const unsubscribeHtml = showUnsubscribe && unsubscribeUrl
+    ? `
+      <p style="color: #8892b0; font-size: 11px; text-align: center; margin-top: 16px;">
+        <a href="${unsubscribeUrl}" style="color: #8892b0; text-decoration: underline;">Unsubscribe</a> from these emails
+      </p>
+    `
+    : '';
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  ${preheader ? `<meta name="description" content="${preheader}">` : ''}
+  <!--[if !mso]><!-->
+  <style>
+    @media only screen and (max-width: 480px) {
+      .container { padding: 24px 16px !important; }
+      .property-card { width: 100% !important; }
+    }
+  </style>
+  <!--<![endif]-->
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a192f; margin: 0; padding: 40px 20px;">
+  ${preheader ? `<div style="display: none; max-height: 0; overflow: hidden;">${preheader}</div>` : ''}
+
+  <div class="container" style="max-width: 600px; margin: 0 auto; background-color: #112240; border-radius: 12px; padding: 40px; border: 1px solid #233554;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <h1 style="color: #64ffda; font-size: 28px; margin: 0;">Sold2Move</h1>
+    </div>
+
+    <!-- Title -->
+    <h2 style="color: #ccd6f6; font-size: 22px; margin-bottom: 24px; text-align: center;">
+      ${title}
+    </h2>
+
+    <!-- Content -->
+    <div style="color: #8892b0; font-size: 16px; line-height: 1.6;">
+      ${content}
+    </div>
+
+    <!-- CTA Button -->
+    ${ctaHtml}
+
+    <!-- Divider -->
+    <hr style="border: none; border-top: 1px solid #233554; margin: 32px 0;">
+
+    <!-- Footer -->
+    ${footerHtml}
+    ${unsubscribeHtml}
+
+    <p style="color: #8892b0; font-size: 11px; text-align: center; margin-top: 16px;">
+      &copy; ${new Date().getFullYear()} Sold2Move. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+// ============================================================================
+// Property Alert Templates
+// ============================================================================
+
+/**
+ * Build a single property card for email
+ */
+export function buildPropertyCard(listing: PropertyListing): string {
+  const imageHtml = listing.imgSrc
+    ? `<img src="${listing.imgSrc}" alt="Property" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px 8px 0 0;">`
+    : `<div style="width: 100%; height: 160px; background-color: #233554; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: center; color: #8892b0;">No Image</div>`;
+
+  const detailsHtml = [
+    listing.beds !== undefined ? `${listing.beds} bed` : null,
+    listing.baths !== undefined ? `${listing.baths} bath` : null,
+    listing.sqft !== undefined ? `${listing.sqft.toLocaleString()} sqft` : null,
+  ]
+    .filter(Boolean)
+    .join(' &bull; ');
+
+  return `
+    <div class="property-card" style="background-color: #0a192f; border-radius: 8px; overflow: hidden; margin-bottom: 16px; border: 1px solid #233554;">
+      ${imageHtml}
+      <div style="padding: 16px;">
+        <p style="color: #64ffda; font-size: 20px; font-weight: 600; margin: 0 0 8px 0;">${listing.price}</p>
+        <p style="color: #ccd6f6; font-size: 14px; margin: 0 0 8px 0;">${listing.address}</p>
+        ${detailsHtml ? `<p style="color: #8892b0; font-size: 13px; margin: 0 0 12px 0;">${detailsHtml}</p>` : ''}
+        ${listing.type ? `<span style="display: inline-block; background-color: #233554; color: #8892b0; padding: 4px 10px; border-radius: 4px; font-size: 12px;">${listing.type}</span>` : ''}
+        ${listing.detailUrl ? `<a href="${listing.detailUrl}" style="display: block; color: #64ffda; font-size: 14px; margin-top: 12px; text-decoration: none;">View Details &rarr;</a>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Build property alert digest email
+ */
+export function buildPropertyAlertEmail(
+  listings: PropertyListing[],
+  userPrefs: { priceRange?: string; serviceAreas?: string[] },
+  unsubscribeUrl?: string
+): string {
+  const listingCards = listings.map(buildPropertyCard).join('');
+
+  const prefsText = [
+    userPrefs.priceRange && userPrefs.priceRange !== 'all' ? `Price: ${userPrefs.priceRange}` : null,
+    userPrefs.serviceAreas?.length ? `Areas: ${userPrefs.serviceAreas.join(', ')}` : null,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      We found <strong style="color: #64ffda;">${listings.length} new listing${listings.length !== 1 ? 's' : ''}</strong> matching your criteria.
+    </p>
+    ${prefsText ? `<p style="text-align: center; font-size: 13px; color: #8892b0; margin-bottom: 24px;">${prefsText}</p>` : ''}
+
+    <div style="margin-top: 24px;">
+      ${listingCards}
+    </div>
+  `;
+
+  return buildEmailTemplate({
+    title: 'New Properties in Your Area',
+    preheader: `${listings.length} new listing${listings.length !== 1 ? 's' : ''} found matching your criteria`,
+    content,
+    ctaButton: {
+      text: 'View All Listings',
+      url: Deno.env.get('SITE_URL') || 'https://sold2move.com',
+    },
+    showUnsubscribe: true,
+    unsubscribeUrl,
+  });
+}
+
+// ============================================================================
+// Transaction/Receipt Templates
+// ============================================================================
+
+/**
+ * Build payment receipt email
+ */
+export function buildReceiptEmail(receipt: ReceiptData): string {
+  const content = `
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Date</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${receipt.date}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Description</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${receipt.description}</td>
+        </tr>
+        ${receipt.planName ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${receipt.planName}</td>
+        </tr>
+        ` : ''}
+        ${receipt.credits ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Credits Added</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0;">+${receipt.credits.toLocaleString()}</td>
+        </tr>
+        ` : ''}
+        <tr style="border-top: 1px solid #233554;">
+          <td style="color: #ccd6f6; padding: 16px 0 8px 0; font-weight: 600;">Total</td>
+          <td style="color: #64ffda; text-align: right; padding: 16px 0 8px 0; font-size: 20px; font-weight: 600;">${receipt.amount}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">Thank you for your purchase!</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Payment Confirmed',
+    preheader: `Your payment of ${receipt.amount} has been confirmed`,
+    content,
+    ctaButton: {
+      text: 'Go to Dashboard',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+    footerText: 'If you have any questions about this transaction, please contact support.',
+  });
+}
+
+// ============================================================================
+// Subscription Templates
+// ============================================================================
+
+/**
+ * Build subscription activated email
+ */
+export function buildSubscriptionActivatedEmail(planName: string, nextBillingDate: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your <strong style="color: #64ffda;">${planName}</strong> subscription is now active!
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Next Billing Date</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${nextBillingDate}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">You now have access to all ${planName} features. Start exploring sold listings in your area!</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Welcome to ' + planName + '!',
+    preheader: `Your ${planName} subscription is now active`,
+    content,
+    ctaButton: {
+      text: 'Start Exploring',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+  });
+}
+
+/**
+ * Build subscription cancelled email
+ */
+export function buildSubscriptionCancelledEmail(planName: string, accessUntil: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your <strong style="color: #ccd6f6;">${planName}</strong> subscription has been cancelled.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <p style="color: #8892b0; margin: 0 0 8px 0;">You'll continue to have access until</p>
+      <p style="color: #64ffda; font-size: 18px; font-weight: 600; margin: 0;">${accessUntil}</p>
+    </div>
+    <p style="text-align: center;">We're sorry to see you go. You can resubscribe anytime to regain access to all features.</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Subscription Cancelled',
+    preheader: `Your ${planName} subscription has been cancelled`,
+    content,
+    ctaButton: {
+      text: 'Resubscribe',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/pricing`,
+    },
+    footerText: 'If you cancelled by mistake or have questions, please contact support.',
+  });
+}
+
+/**
+ * Build renewal reminder email
+ */
+export function buildRenewalReminderEmail(planName: string, amount: string, renewalDate: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your <strong style="color: #64ffda;">${planName}</strong> subscription will renew soon.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Amount</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${amount}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Renewal Date</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0;">${renewalDate}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">No action needed. Your subscription will automatically renew.</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Subscription Renewal Reminder',
+    preheader: `Your ${planName} subscription renews on ${renewalDate}`,
+    content,
+    ctaButton: {
+      text: 'Manage Subscription',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/settings`,
+    },
+    footerText: 'To cancel or change your plan, visit your account settings.',
+  });
+}
+
+// ============================================================================
+// Account & Support Templates
+// ============================================================================
+
+/**
+ * Build welcome email
+ */
+export function buildWelcomeEmail(userName?: string): string {
+  const greeting = userName ? `Welcome, ${userName}!` : 'Welcome to Sold2Move!';
+
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your account has been verified and you're ready to start finding leads.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <h3 style="color: #ccd6f6; font-size: 16px; margin: 0 0 16px 0;">Here's what you can do:</h3>
+      <ul style="color: #8892b0; padding-left: 20px; margin: 0;">
+        <li style="margin-bottom: 12px;">Browse recently sold properties in your service areas</li>
+        <li style="margin-bottom: 12px;">Reveal homeowner contact information with credits</li>
+        <li style="margin-bottom: 12px;">Set up daily email alerts for new listings</li>
+        <li style="margin-bottom: 12px;">Track your lead generation progress</li>
+      </ul>
+    </div>
+    <p style="text-align: center;">You have <strong style="color: #64ffda;">100 free credits</strong> to get started!</p>
+  `;
+
+  return buildEmailTemplate({
+    title: greeting,
+    preheader: 'Your account is verified. Start finding leads today!',
+    content,
+    ctaButton: {
+      text: 'Go to Dashboard',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+  });
+}
+
+/**
+ * Build low credit warning email
+ */
+export function buildLowCreditEmail(creditsRemaining: number): string {
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="background-color: #0a192f; border-radius: 8px; padding: 32px; display: inline-block;">
+        <p style="color: #8892b0; margin: 0 0 8px 0;">Credits Remaining</p>
+        <p style="color: #f59e0b; font-size: 48px; font-weight: bold; margin: 0;">${creditsRemaining}</p>
+      </div>
+    </div>
+    <p style="text-align: center; margin-bottom: 24px;">
+      You're running low on credits. Top up now to continue revealing homeowner information without interruption.
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Low Credit Alert',
+    preheader: `You have ${creditsRemaining} credits remaining`,
+    content,
+    ctaButton: {
+      text: 'Buy More Credits',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/pricing`,
+    },
+  });
+}
+
+/**
+ * Build support ticket created email
+ */
+export function buildTicketCreatedEmail(ticketId: string | number, subject: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      We've received your support request and will get back to you shortly.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Ticket ID</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0;">#${ticketId}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Subject</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${subject}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">Our support team typically responds within 24 hours.</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Support Ticket Created',
+    preheader: `Your support ticket #${ticketId} has been received`,
+    content,
+    ctaButton: {
+      text: 'View Ticket',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/settings`,
+    },
+  });
+}
+
+/**
+ * Build support ticket response email
+ */
+export function buildTicketResponseEmail(ticketId: string | number, subject: string, response: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      We've responded to your support ticket.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <p style="color: #8892b0; margin: 0 0 8px 0;">Ticket #${ticketId}: ${subject}</p>
+      <hr style="border: none; border-top: 1px solid #233554; margin: 16px 0;">
+      <p style="color: #ccd6f6; white-space: pre-wrap; margin: 0;">${response}</p>
+    </div>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Support Ticket Update',
+    preheader: `New response on ticket #${ticketId}`,
+    content,
+    ctaButton: {
+      text: 'View Ticket',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/settings`,
+    },
+  });
+}
+
+// ============================================================================
+// Contact Form Templates
+// ============================================================================
+
+/**
+ * Build contact form confirmation email (to user)
+ */
+export function buildContactConfirmationEmail(name: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Hi ${name},
+    </p>
+    <p style="text-align: center; margin-bottom: 24px;">
+      Thank you for reaching out! We've received your message and will get back to you within 1-2 business days.
+    </p>
+    <p style="text-align: center;">
+      In the meantime, feel free to explore our platform or check out our FAQ.
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Thanks for Contacting Us',
+    preheader: 'We received your message and will respond soon',
+    content,
+    ctaButton: {
+      text: 'Visit Sold2Move',
+      url: Deno.env.get('SITE_URL') || 'https://sold2move.com',
+    },
+  });
+}
+
+/**
+ * Build contact form notification email (to admin)
+ */
+export function buildContactAdminEmail(formData: {
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
+  city?: string;
+  state?: string;
+  message: string;
+}): string {
+  const content = `
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0; vertical-align: top;">Name</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${formData.name}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0; vertical-align: top;">Email</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0;">
+            <a href="mailto:${formData.email}" style="color: #64ffda; text-decoration: none;">${formData.email}</a>
+          </td>
+        </tr>
+        ${formData.company ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0; vertical-align: top;">Company</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${formData.company}</td>
+        </tr>
+        ` : ''}
+        ${formData.phone ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0; vertical-align: top;">Phone</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${formData.phone}</td>
+        </tr>
+        ` : ''}
+        ${formData.city || formData.state ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0; vertical-align: top;">Location</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${[formData.city, formData.state].filter(Boolean).join(', ')}</td>
+        </tr>
+        ` : ''}
+      </table>
+      <hr style="border: none; border-top: 1px solid #233554; margin: 16px 0;">
+      <p style="color: #8892b0; margin: 0 0 8px 0;">Message:</p>
+      <p style="color: #ccd6f6; white-space: pre-wrap; margin: 0;">${formData.message}</p>
+    </div>
+  `;
+
+  return buildEmailTemplate({
+    title: 'New Contact Form Submission',
+    preheader: `New message from ${formData.name}`,
+    content,
+    ctaButton: {
+      text: 'Reply to ' + formData.name,
+      url: `mailto:${formData.email}`,
+    },
+  });
+}
+
+// ============================================================================
+// Password/Security Templates
+// ============================================================================
+
+/**
+ * Build password changed email
+ */
+export function buildPasswordChangedEmail(): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your password has been successfully changed.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <p style="color: #8892b0; margin: 0;">
+        If you didn't make this change, please contact support immediately or reset your password.
+      </p>
+    </div>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Password Changed',
+    preheader: 'Your Sold2Move password has been changed',
+    content,
+    ctaButton: {
+      text: 'Go to Dashboard',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+    footerText: 'If you did not request this change, please contact support@sold2move.com immediately.',
+  });
+}

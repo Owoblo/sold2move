@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin } from 'lucide-react';
 import LoadingButton from '@/components/ui/LoadingButton';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const ContactPage = () => {
   const { toast } = useToast();
@@ -29,21 +30,34 @@ const ContactPage = () => {
 
   const { isSubmitting } = form.formState;
 
-  const handleSubmit = (values) => {
-    console.log('Form Data:', values);
+  const handleSubmit = async (values) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('contact-form', {
+        body: values
+      });
 
-    // Simulate API call
-    return new Promise(resolve => {
-      setTimeout(() => {
+      if (error) {
+        throw new Error(error.message || 'Failed to send message');
+      }
+
+      if (data?.success) {
         toast({
-          title: '✅ Message Sent!',
-          description: "Thanks for reaching out. We'll get back to you shortly.",
+          title: 'Message Sent!',
+          description: data.message || "Thanks for reaching out. We'll get back to you shortly.",
           className: 'bg-teal text-deep-navy',
         });
         form.reset();
-        resolve();
-      }, 1500);
-    });
+      } else {
+        throw new Error(data?.error || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Contact form error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send your message. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { sendEmail } from '../_shared/email-sender.ts';
+import { buildWelcomeEmail } from '../_shared/email-templates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,6 +124,41 @@ Deno.serve(async (req) => {
 
     // Clean up used verification codes
     await supabase.rpc('cleanup_verification_codes');
+
+    // Get user's name from profile for personalized welcome email
+    let userName: string | undefined;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_name')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.company_name) {
+      userName = profile.company_name;
+    }
+
+    // Send welcome email
+    const welcomeHtml = buildWelcomeEmail(userName);
+    const emailResult = await sendEmail({
+      to: email,
+      subject: 'Welcome to Sold2Move!',
+      html: welcomeHtml
+    });
+
+    if (emailResult.success) {
+      console.log(`✅ Welcome email sent to ${email}`);
+      // Log the email
+      await supabase.from('email_logs').insert({
+        user_id: user.id,
+        email_type: 'welcome',
+        recipient_email: email,
+        subject: 'Welcome to Sold2Move!',
+        status: 'sent',
+        resend_message_id: emailResult.messageId
+      });
+    } else {
+      console.error(`⚠️ Failed to send welcome email to ${email}: ${emailResult.error}`);
+    }
 
     return new Response(JSON.stringify({
       success: true,

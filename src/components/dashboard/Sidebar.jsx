@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp } from 'lucide-react';
+import { Home, User, ShoppingCart, MessageSquare, CreditCard, Archive, Package, List, Mail, Book, Image, Video, Settings, ChevronLeft, ChevronRight, Building, TrendingUp, Link2 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
@@ -31,6 +31,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           submenu: [
             { name: 'Just Listed', icon: Building, path: '/dashboard/listings/just-listed' },
             { name: 'Sold', icon: TrendingUp, path: '/dashboard/listings/sold' },
+            { name: 'Chain Leads', icon: Link2, path: '/dashboard/chain-leads' },
           ]
         },
       ],

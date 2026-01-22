@@ -1,6 +1,12 @@
 import { corsHeaders } from './cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@^14';
+import { sendEmail } from '../_shared/email-sender.ts';
+import {
+  buildReceiptEmail,
+  buildSubscriptionActivatedEmail,
+  buildSubscriptionCancelledEmail,
+} from '../_shared/email-templates.ts';
 
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
@@ -78,6 +84,62 @@ Deno.serve(async (req) => {
 
           if (updateError) throw updateError;
           console.log(`Subscription ${subscription.id} for user ${supabaseUserId} updated to ${status} (${planName}).`);
+
+          // Get user email for notification
+          const userEmail = (customerData as Stripe.Customer).email;
+
+          // Send appropriate email based on event type
+          if (userEmail) {
+            const formattedPlanName = planName.charAt(0).toUpperCase() + planName.slice(1);
+            const formattedDate = nextBillingDate
+              ? new Date(nextBillingDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              : 'N/A';
+
+            if (event.type === 'customer.subscription.created') {
+              // Send subscription activated email
+              const html = buildSubscriptionActivatedEmail(formattedPlanName, formattedDate);
+              const emailResult = await sendEmail({
+                to: userEmail,
+                subject: `Welcome to ${formattedPlanName}!`,
+                html
+              });
+
+              if (emailResult.success) {
+                console.log(`✅ Subscription activated email sent to ${userEmail}`);
+                // Log the email
+                await supabaseAdmin.from('email_logs').insert({
+                  user_id: supabaseUserId,
+                  email_type: 'subscription_activated',
+                  recipient_email: userEmail,
+                  subject: `Welcome to ${formattedPlanName}!`,
+                  status: 'sent',
+                  resend_message_id: emailResult.messageId,
+                  metadata: { plan_name: planName, subscription_id: subscription.id }
+                });
+              }
+            } else if (event.type === 'customer.subscription.deleted') {
+              // Send subscription cancelled email
+              const html = buildSubscriptionCancelledEmail(formattedPlanName, formattedDate);
+              const emailResult = await sendEmail({
+                to: userEmail,
+                subject: 'Subscription Cancelled',
+                html
+              });
+
+              if (emailResult.success) {
+                console.log(`✅ Subscription cancelled email sent to ${userEmail}`);
+                await supabaseAdmin.from('email_logs').insert({
+                  user_id: supabaseUserId,
+                  email_type: 'subscription_cancelled',
+                  recipient_email: userEmail,
+                  subject: 'Subscription Cancelled',
+                  status: 'sent',
+                  resend_message_id: emailResult.messageId,
+                  metadata: { plan_name: planName, subscription_id: subscription.id }
+                });
+              }
+            }
+          }
         }
         break;
 
@@ -109,6 +171,48 @@ Deno.serve(async (req) => {
 
               if (updateCreditsError) throw updateCreditsError;
               console.log(`User ${userId} topped up ${creditsAmount} credits. New total: ${newCredits}`);
+
+              // Send payment confirmation email
+              if (session.customer_email || session.customer_details?.email) {
+                const userEmail = session.customer_email || session.customer_details?.email;
+                const amountPaid = session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}` : 'N/A';
+                const purchaseDate = new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+
+                const html = buildReceiptEmail({
+                  amount: amountPaid,
+                  description: `Credit Pack - ${creditsAmount} Credits`,
+                  credits: creditsAmount,
+                  date: purchaseDate
+                });
+
+                const emailResult = await sendEmail({
+                  to: userEmail!,
+                  subject: 'Payment Confirmed - Credits Added',
+                  html
+                });
+
+                if (emailResult.success) {
+                  console.log(`✅ Payment confirmation email sent to ${userEmail}`);
+                  await supabaseAdmin.from('email_logs').insert({
+                    user_id: userId,
+                    email_type: 'payment_confirmation',
+                    recipient_email: userEmail,
+                    subject: 'Payment Confirmed - Credits Added',
+                    status: 'sent',
+                    resend_message_id: emailResult.messageId,
+                    metadata: {
+                      amount: amountPaid,
+                      credits_purchased: creditsAmount,
+                      new_total: newCredits,
+                      session_id: session.id
+                    }
+                  });
+                }
+              }
             }
           }
         }
