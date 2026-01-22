@@ -63,7 +63,11 @@ const DatabaseCitySelector = ({
   }, [cities]);
 
   // Handle city selection/deselection - memoized
-  const handleCityToggle = useCallback((cityName, stateCode) => {
+  const handleCityToggle = useCallback((e, cityName, stateCode) => {
+    // Prevent event bubbling to parent elements
+    e.stopPropagation();
+    e.preventDefault();
+
     const cityKey = `${cityName}, ${stateCode}`;
     const isSelected = selectedCities.includes(cityKey);
 
@@ -81,18 +85,24 @@ const DatabaseCitySelector = ({
   }, [selectedCities, maxSelections, onCitiesChange]);
 
   // Remove a city from selection - memoized
-  const removeCity = useCallback((cityKey) => {
+  const removeCity = useCallback((e, cityKey) => {
+    e.stopPropagation();
+    e.preventDefault();
     const newCities = selectedCities.filter(city => city !== cityKey);
     onCitiesChange(newCities);
   }, [selectedCities, onCitiesChange]);
 
   // Clear all selections - memoized
-  const clearAll = useCallback(() => {
+  const clearAll = useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
     onCitiesChange([]);
   }, [onCitiesChange]);
 
   // Toggle group expansion - memoized
-  const handleGroupToggle = useCallback((groupKey) => {
+  const handleGroupToggle = useCallback((e, groupKey) => {
+    e.stopPropagation();
+    e.preventDefault();
     setExpandedGroups(prev => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(groupKey)) {
@@ -169,7 +179,7 @@ const DatabaseCitySelector = ({
               <MapPin className="h-3 w-3 mr-1" />
               {city}
               <button
-                onClick={() => removeCity(city)}
+                onClick={(e) => removeCity(e, city)}
                 className="ml-2 hover:text-red-400 transition-colors"
               >
                 <X className="h-3 w-3" />
@@ -225,7 +235,7 @@ const DatabaseCitySelector = ({
                     return (
                       <button
                         key={cityKey}
-                        onClick={() => handleCityToggle(city.city, city.state)}
+                        onClick={(e) => handleCityToggle(e, city.city, city.state)}
                         className={cn(
                           "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg active:scale-[0.99]",
                           isSelected && "bg-teal/10"
@@ -267,7 +277,7 @@ const DatabaseCitySelector = ({
                   return (
                     <div key={stateKey} className="border border-slate/20 rounded-lg overflow-hidden mb-2">
                       <button
-                        onClick={() => handleGroupToggle(stateKey)}
+                        onClick={(e) => handleGroupToggle(e, stateKey)}
                         className="w-full flex items-center justify-between p-3 hover:bg-lightest-navy/20 transition-colors"
                       >
                         <div className="flex items-center gap-3">
@@ -293,7 +303,7 @@ const DatabaseCitySelector = ({
                             return (
                               <button
                                 key={cityKey}
-                                onClick={() => handleCityToggle(city.city, city.state)}
+                                onClick={(e) => handleCityToggle(e, city.city, city.state)}
                                 className={cn(
                                   "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left border-t border-slate/10 active:scale-[0.99]",
                                   isSelected && "bg-teal/10"
@@ -328,7 +338,7 @@ const DatabaseCitySelector = ({
                   return (
                     <button
                       key={cityKey}
-                      onClick={() => handleCityToggle(city.city, city.state)}
+                      onClick={(e) => handleCityToggle(e, city.city, city.state)}
                       className={cn(
                         "w-full flex items-center gap-3 p-3 hover:bg-lightest-navy/20 transition-colors text-left rounded-lg active:scale-[0.99]",
                         isSelected && "bg-teal/10"
