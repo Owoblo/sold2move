@@ -42,17 +42,13 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
     // Start building the query - fetching from unified 'listings' table
     let query = supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at', { count: 'exact' })
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,contenttype', { count: 'exact' })
       .range(from, to);
 
     // Filter by status if provided
     if (status) {
       query = query.eq('status', status);
     }
-
-    // Exclude LOT (empty land) listings - they have no home to move from
-    // Use OR to include records where contenttype is null or not 'LOT'
-    query = query.or('contenttype.neq.LOT,contenttype.is.null');
 
     // Order by lastseenat (most recent first)
     query = query.order('lastseenat', { ascending: false });
@@ -148,8 +144,12 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       });
     }
 
+    // Filter out LOT (empty land) listings - they have no home to move from
+    // This is done in JS to avoid .or() query builder conflicts
+    const filteredData = (data || []).filter(r => r.contenttype !== 'LOT');
+
     // Map database column names to expected property names
-    const mappedData = (data || []).map((r) => ({
+    const mappedData = filteredData.map((r) => ({
       id: r.zpid, // Use zpid as id since there's no separate id column
       zpid: r.zpid,
       imgSrc: r.imgsrc,
