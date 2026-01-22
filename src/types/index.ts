@@ -47,7 +47,11 @@ export interface Listing {
   detailUrl?: string;
   zpid?: string;
   run_id?: string; // Updated from lastRunId
-  // Removed lastPage as it's not used in new table structure
+  // Furniture scanning fields (AI-detected)
+  is_furnished?: boolean | null;
+  furniture_confidence?: number | null;
+  furniture_scan_date?: string | null;
+  furniture_items_detected?: string[] | null;
 }
 
 export interface ListingFilters {
@@ -60,6 +64,7 @@ export interface ListingFilters {
   propertyType?: string;
   minSqft?: number;
   maxSqft?: number;
+  furnitureStatus?: 'all' | 'furnished' | 'empty' | null;
 }
 
 export interface ListingReveal {
@@ -228,6 +233,68 @@ export interface UseRevealListingReturn {
   mutateAsync: (params: { listingId: string; userId: string }) => Promise<{ listingId: string; userId: string }>;
   isLoading: boolean;
   error: Error | null;
+}
+
+// Ownership Chain types (buyer-seller chain detection)
+export interface OwnershipChain {
+  id: string;
+  sold_listing_id?: string;
+  sold_address: string;
+  sold_city?: string;
+  sold_state?: string;
+  sold_zip?: string;
+  sale_date?: string;
+  sale_price?: number;
+  buyer_name: string;
+  buyer_name_normalized?: string;
+  buyer_mailing_address?: string;
+  owned_property_address: string;
+  owned_property_city?: string;
+  owned_property_state?: string;
+  owned_property_zip?: string;
+  owned_property_id?: string;
+  confidence_score: number;
+  match_signals: ChainMatchSignals;
+  chain_status: ChainStatus;
+  detected_at: string;
+  expires_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChainMatchSignals {
+  exactNameMatch?: boolean;
+  fuzzyNameMatch?: boolean;
+  partialNameMatch?: boolean;
+  mailingMismatch?: boolean;
+  sameState?: boolean;
+  recentSale?: boolean;
+}
+
+export type ChainStatus = 'detected' | 'contacted' | 'listed' | 'sold' | 'expired' | 'invalid';
+
+export interface ChainReveal {
+  id: string;
+  chain_id: string;
+  user_id: string;
+  credit_cost: number;
+  created_at: string;
+}
+
+export interface ChainDetectionRequest {
+  soldListingId?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  limit?: number;
+}
+
+export interface ChainDetectionResponse {
+  success: boolean;
+  chainsDetected: number;
+  chains: OwnershipChain[];
+  message?: string;
 }
 
 // Error types

@@ -42,7 +42,7 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
     // Start building the query - fetching from unified 'listings' table
     let query = supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,contenttype', { count: 'exact' })
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,contenttype,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected', { count: 'exact' })
       .range(from, to);
 
     // Filter by status if provided
@@ -130,6 +130,15 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
                    .filter('ai_analysis->has_furniture', 'eq', true);
     }
 
+    // Furniture Status Filter - filter by furnished/empty status
+    if (filters.furnitureStatus && filters.furnitureStatus !== 'all') {
+      if (filters.furnitureStatus === 'furnished') {
+        query = query.eq('is_furnished', true);
+      } else if (filters.furnitureStatus === 'empty') {
+        query = query.eq('is_furnished', false);
+      }
+    }
+
     const { data, error, count } = await query;
 
     if (error) {
@@ -168,7 +177,12 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       status: r.status,
       lastseenat: r.lastseenat,
       created_at: r.first_seen_at, // Map first_seen_at to created_at
-      updated_at: r.last_updated_at // Map last_updated_at to updated_at
+      updated_at: r.last_updated_at, // Map last_updated_at to updated_at
+      // Furniture scanning fields
+      is_furnished: r.is_furnished,
+      furniture_confidence: r.furniture_confidence,
+      furniture_scan_date: r.furniture_scan_date,
+      furniture_items_detected: r.furniture_items_detected
     }));
 
     return { data: mappedData, count: count || 0 };
@@ -318,7 +332,7 @@ export async function fetchListingById(listingId) {
     // single() throws PGRST116 when no rows returned, maybeSingle() returns null
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at')
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected')
       .eq('zpid', listingId)
       .maybeSingle();
 
@@ -357,7 +371,12 @@ export async function fetchListingById(listingId) {
       status: data.status,
       lastseenat: data.lastseenat,
       created_at: data.first_seen_at, // Map first_seen_at to created_at
-      updated_at: data.last_updated_at // Map last_updated_at to updated_at
+      updated_at: data.last_updated_at, // Map last_updated_at to updated_at
+      // Furniture scanning fields
+      is_furnished: data.is_furnished,
+      furniture_confidence: data.furniture_confidence,
+      furniture_scan_date: data.furniture_scan_date,
+      furniture_items_detected: data.furniture_items_detected
     };
   } catch (error) {
     throw error;

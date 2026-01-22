@@ -43,6 +43,11 @@ const badgeVariants = cva(
           "border-amber-500/30 bg-amber-500/20 text-amber-400",
         "land":
           "border-orange-500/30 bg-orange-500/20 text-orange-400",
+        // Furniture status badges
+        "furnished":
+          "border-violet-500/30 bg-violet-500/20 text-violet-400 shadow-[0_0_12px_hsl(270_100%_65%/0.4)]",
+        "empty":
+          "border-slate-500/30 bg-slate-500/20 text-slate-400",
       },
     },
     defaultVariants: {

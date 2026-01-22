@@ -37,7 +37,9 @@ import {
   XCircle,
   AlertTriangle,
   ExternalLink,
-  UserSearch
+  UserSearch,
+  Sofa,
+  Package
 } from 'lucide-react';
 import HomeownerInfoCard from './HomeownerInfoCard';
 import { useHomeownerLookup } from '@/hooks/useHomeownerLookup';
@@ -643,6 +645,83 @@ const PropertyDetailPage = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Furniture Status - Only show if listing has been scanned */}
+            {listing.is_furnished !== null && listing.is_furnished !== undefined && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sofa className="h-5 w-5" />
+                    Furniture Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate">Status:</span>
+                      <Badge
+                        variant={listing.is_furnished ? 'furnished' : 'empty'}
+                        className="flex items-center gap-1"
+                      >
+                        {listing.is_furnished ? (
+                          <>
+                            <Sofa className="h-3 w-3" />
+                            Furnished
+                          </>
+                        ) : (
+                          <>
+                            <Package className="h-3 w-3" />
+                            Empty
+                          </>
+                        )}
+                      </Badge>
+                    </div>
+
+                    {/* Confidence Score */}
+                    {listing.furniture_confidence && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate">AI Confidence:</span>
+                        <span className="text-lightest-slate font-medium">
+                          {Math.round(listing.furniture_confidence * 100)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Scan Date */}
+                    {listing.furniture_scan_date && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate">Scanned:</span>
+                        <span className="text-lightest-slate font-medium">
+                          {new Date(listing.furniture_scan_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Detected Items */}
+                    {listing.furniture_items_detected && listing.furniture_items_detected.length > 0 && (
+                      <div className="space-y-2">
+                        <span className="text-slate text-sm">Detected Items:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {listing.furniture_items_detected.map((item, index) => (
+                            <Badge key={index} variant="outline" className="text-xs capitalize bg-charcoal-700/50">
+                              {item}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empty property note */}
+                    {listing.is_furnished === false && (
+                      <p className="text-xs text-slate italic border-t border-white/[0.08] pt-3 mt-3">
+                        Empty properties are great leads - these homeowners need furniture moved!
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Location Features */}
             <Card>

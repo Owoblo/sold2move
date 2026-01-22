@@ -8,6 +8,9 @@ export const hasActiveFilters = (filters, profile) => {
     // Skip dateRange if it's 'all' (default value)
     if (key === 'dateRange' && value === 'all') return false;
 
+    // Skip furnitureStatus if it's 'all' (default value)
+    if (key === 'furnitureStatus' && value === 'all') return false;
+
     // Check if value is meaningful (not null, undefined, empty string, or 'all')
     return value !== null &&
            value !== undefined &&
@@ -21,6 +24,7 @@ export const getFilterCount = (filters, profile) => {
   return Object.entries(filters).filter(([key, value]) => {
     if (key === 'city_name') return false;
     if (key === 'dateRange' && value === 'all') return false;
+    if (key === 'furnitureStatus' && value === 'all') return false;
     return value !== null &&
            value !== undefined &&
            value !== '' &&
@@ -54,6 +58,7 @@ export const clearAllFilters = (profile, preserveCities = true) => {
     minSqft: null,
     maxSqft: null,
     dateRange: 'all',
+    furnitureStatus: 'all',
   };
 };
 
@@ -94,6 +99,10 @@ export const getFilterDisplayText = (filters, profile) => {
     } else {
       activeFilters.push(`Date: Last ${filters.dateRange} days`);
     }
+  }
+
+  if (filters.furnitureStatus && filters.furnitureStatus !== 'all') {
+    activeFilters.push(`Furniture: ${filters.furnitureStatus === 'furnished' ? 'Furnished' : 'Empty'}`);
   }
 
   return activeFilters;

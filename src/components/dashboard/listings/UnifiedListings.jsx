@@ -22,7 +22,9 @@ import {
   Sparkles,
   LayoutGrid,
   List,
-  Settings2
+  Settings2,
+  Sofa,
+  Package
 } from 'lucide-react';
 import HomeownerLookupButton from './HomeownerLookupButton';
 import { Helmet } from 'react-helmet-async';
@@ -40,6 +42,7 @@ import { useAnalytics } from '@/services/analytics.jsx';
 import { useJustListedEnhanced, useSoldListingsEnhanced } from '@/hooks/useListingsEnhanced';
 import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
+import { isFurnitureFilterAvailable, FURNITURE_STATUS_OPTIONS } from '@/constants/furnitureFilter';
 
 const PAGE_SIZE = 20;
 
@@ -164,6 +167,7 @@ const UnifiedListings = () => {
     minSqft: null,
     maxSqft: null,
     dateRange: 'all',
+    furnitureStatus: 'all',
   });
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -367,6 +371,7 @@ const UnifiedListings = () => {
       minSqft: null,
       maxSqft: null,
       dateRange: 'all',
+      furnitureStatus: 'all',
     });
     setCurrentPage(1);
   };
@@ -533,6 +538,28 @@ const UnifiedListings = () => {
               <SelectItem value="4">4+</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Furniture Status - Only show for LA-area cities */}
+          {isFurnitureFilterAvailable(filters.city_name) && (
+            <Select
+              value={filters.furnitureStatus || 'all'}
+              onValueChange={(v) => handleFilterChange('furnitureStatus', v)}
+            >
+              <SelectTrigger className="w-[150px] h-10 bg-light-navy/80 border-lightest-navy/20">
+                <div className="flex items-center gap-2">
+                  <Sofa className="h-4 w-4" />
+                  <SelectValue placeholder="Furniture" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {FURNITURE_STATUS_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Price Range */}
           <Select
@@ -778,6 +805,26 @@ const UnifiedListings = () => {
                                     <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-semibold rounded-full shadow-badge-hot">
                                       <Flame className="h-3 w-3" />
                                       Hot
+                                    </span>
+                                  )}
+                                  {listing.is_furnished === true && (
+                                    <span
+                                      className="flex items-center gap-1 px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs font-semibold rounded-full shadow-[0_0_12px_hsl(270_100%_65%/0.4)] cursor-help"
+                                      title={listing.furniture_items_detected?.length > 0
+                                        ? `Detected: ${listing.furniture_items_detected.join(', ')}`
+                                        : 'Furnished property'}
+                                    >
+                                      <Sofa className="h-3 w-3" />
+                                      Furnished
+                                    </span>
+                                  )}
+                                  {listing.is_furnished === false && (
+                                    <span
+                                      className="flex items-center gap-1 px-2 py-0.5 bg-slate-500/20 text-slate-400 text-xs font-semibold rounded-full cursor-help"
+                                      title="Empty/unfurnished property - great lead for movers!"
+                                    >
+                                      <Package className="h-3 w-3" />
+                                      Empty
                                     </span>
                                   )}
                                 </div>
