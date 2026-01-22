@@ -31,28 +31,34 @@ const PostAuthPage = () => {
 
     if (!session?.user || profile || profileLoading || isCreatingProfile) {
       console.log('🔍 Profile creation skipped:', {
-        reason: !session?.user ? 'no session' : 
-                profile ? 'profile exists' : 
-                profileLoading ? 'profile loading' : 
+        reason: !session?.user ? 'no session' :
+                profile ? 'profile exists' :
+                profileLoading ? 'profile loading' :
                 'already creating'
       });
       return;
     }
 
-    debugUserState(session.user, 'Creating Profile For');
-    
-    // First, verify the user exists in auth.users
-    console.log('🔍 Verifying user exists in auth.users...');
-    const { data: authUser, error: authError } = await supabase.auth.getUser();
-    if (authError || !authUser.user) {
-      console.error('❌ User not found in auth.users:', authError);
-      throw new Error('User authentication failed');
-    }
-    console.log('✅ User verified in auth.users:', authUser.user.id);
-    
     setIsCreatingProfile(true);
 
     try {
+      debugUserState(session.user, 'Creating Profile For');
+
+      // First, verify the user exists in auth.users
+      console.log('🔍 Verifying user exists in auth.users...');
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+      if (authError || !authUser.user) {
+        console.error('❌ User not found in auth.users:', authError);
+        // Don't throw - handle gracefully and redirect to login
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "Session expired. Please log in again.",
+        });
+        navigate('/login', { replace: true });
+        return;
+      }
+      console.log('✅ User verified in auth.users:', authUser.user.id);
       // First, check if profile already exists
       console.log('🔍 Checking if profile already exists...');
       const { data: existingProfile, error: checkError } = await supabase
@@ -197,27 +203,26 @@ const PostAuthPage = () => {
   }, [session, profile, profileLoading, isCreatingProfile]);
 
   useEffect(() => {
+    // Redirect immediately if profile exists - no need to stay on this page
     if (!profileLoading && profile) {
       debugProfileState(profile, 'Profile Loaded');
-      if (profile.onboarding_complete) {
-        // Check for intended destination first, then location state, then default
-        const intendedDestination = getAndClearIntendedDestination();
-        const from = intendedDestination || location.state?.from?.pathname || getDefaultAuthenticatedPath();
-        
-        debugNavigationFlow('PostAuthPage', from, 'Onboarding Complete');
-        
-        // Add a small delay to ensure the profile state is fully updated
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 100);
-      } else {
-        debugNavigationFlow('PostAuthPage', '/welcome', 'Onboarding Required');
-        setTimeout(() => {
-          navigate('/welcome', { replace: true });
-        }, 100);
-      }
+
+      const destination = profile.onboarding_complete
+        ? (getAndClearIntendedDestination() || location.state?.from?.pathname || getDefaultAuthenticatedPath())
+        : '/welcome';
+
+      debugNavigationFlow('PostAuthPage', destination, profile.onboarding_complete ? 'Onboarding Complete' : 'Onboarding Required');
+
+      // Navigate immediately - delay can cause issues
+      navigate(destination, { replace: true });
     }
-  }, [profile, profileLoading, navigate, location.state]);
+
+    // If no session at all, redirect to login
+    if (!profileLoading && !profile && !session) {
+      console.log('🔍 PostAuthPage: No session, redirecting to login');
+      navigate('/login', { replace: true });
+    }
+  }, [profile, profileLoading, session, navigate, location.state]);
 
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
