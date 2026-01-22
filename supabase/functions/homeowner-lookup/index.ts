@@ -40,6 +40,7 @@ interface Email {
 interface HomeownerData {
   firstName: string | null
   lastName: string | null
+  fullName: string | null
   emails: Email[]
   phoneNumbers: PhoneNumber[]
   isLitigator: boolean
@@ -58,87 +59,196 @@ function generateAddressHash(street: string, city: string, state: string, zip: s
 
 /**
  * Parse the Batch Data API response into our simplified format
+ * Handles both skip-trace format (results.persons) and property lookup format (owner)
  */
 function parseApiResponse(response: any): {
   firstName: string | null
   lastName: string | null
+  fullName: string | null
   emails: Email[]
   phoneNumbers: PhoneNumber[]
   isLitigator: boolean
   hasDncPhone: boolean
 } {
+  let firstName: string | null = null
+  let lastName: string | null = null
+  let fullName: string | null = null
+  const emails: Email[] = []
+  const phoneNumbers: PhoneNumber[] = []
+  let isLitigator = false
+  let hasDncPhone = false
+
+  // Try skip-trace format first (results.persons)
   const persons = response?.results?.persons || []
 
-  if (persons.length === 0) {
-    return {
-      firstName: null,
-      lastName: null,
-      emails: [],
-      phoneNumbers: [],
-      isLitigator: false,
-      hasDncPhone: false
+  if (persons.length > 0) {
+    console.log('Parsing skip-trace format response')
+    const person = persons[0]
+
+    // Parse name from skip-trace format
+    firstName = person?.name?.first || null
+    lastName = person?.name?.last || null
+
+    // Parse emails
+    if (person?.emails && Array.isArray(person.emails)) {
+      person.emails.forEach((email: any) => {
+        if (typeof email === 'string') {
+          emails.push({ email, tested: false })
+        } else if (email?.email) {
+          emails.push({ email: email.email, tested: email.tested || false })
+        }
+      })
+    }
+    if (person?.enrichedEmails && Array.isArray(person.enrichedEmails)) {
+      person.enrichedEmails.forEach((email: any) => {
+        if (email?.email && !emails.some(e => e.email === email.email)) {
+          emails.push({ email: email.email, tested: email.tested || false })
+        }
+      })
+    }
+
+    // Parse phone numbers
+    if (person?.phoneNumbers && Array.isArray(person.phoneNumbers)) {
+      person.phoneNumbers.forEach((phone: any) => {
+        if (phone?.number) {
+          phoneNumbers.push({
+            number: phone.number,
+            type: phone.type || 'Unknown',
+            carrier: phone.carrier || 'Unknown',
+            score: phone.score || '0',
+            reachable: phone.reachable || false,
+            dnc: phone.dnc || false,
+            tested: phone.tested || false,
+            firstReportedDate: phone.firstReportedDate,
+            lastReportedDate: phone.lastReportedDate
+          })
+        }
+      })
+    }
+
+    isLitigator = person?.litigator || person?.dnc?.tcpa || false
+    hasDncPhone = phoneNumbers.some(p => p.dnc)
+  }
+
+  // Try property lookup format (owner object)
+  const owner = response?.results?.owner || response?.owner
+  if (owner) {
+    console.log('Parsing property lookup format response')
+
+    // Get owner name
+    fullName = owner?.fullName || null
+
+    // Get first/last from names array if available
+    if (owner?.names && Array.isArray(owner.names) && owner.names.length > 0) {
+      const primaryName = owner.names[0]
+      firstName = firstName || primaryName?.first || null
+      lastName = lastName || primaryName?.last || null
+      fullName = fullName || primaryName?.full || null
+    }
+
+    // Check for contact info in owner object (phoneNumbers per Batch Data schema)
+    if (owner?.phoneNumbers && Array.isArray(owner.phoneNumbers)) {
+      console.log(`Found ${owner.phoneNumbers.length} phone numbers in owner object`)
+      owner.phoneNumbers.forEach((phone: any) => {
+        if (phone?.number && !phoneNumbers.some(p => p.number === phone.number)) {
+          phoneNumbers.push({
+            number: phone.number,
+            type: phone.type || 'Unknown',
+            carrier: phone.carrier || 'Unknown',
+            score: phone.score || '0',
+            reachable: phone.reachable || false,
+            dnc: phone.dnc || false,
+            tested: phone.tested || false,
+            firstReportedDate: phone.firstReportedDate,
+            lastReportedDate: phone.lastReportedDate
+          })
+        }
+      })
+    }
+
+    // Check for emails in owner object
+    if (owner?.emails && Array.isArray(owner.emails)) {
+      console.log(`Found ${owner.emails.length} emails in owner object`)
+      owner.emails.forEach((email: any) => {
+        const emailStr = typeof email === 'string' ? email : email?.email
+        if (emailStr && !emails.some(e => e.email === emailStr)) {
+          emails.push({ email: emailStr, tested: false })
+        }
+      })
+    }
+
+    // Check for enriched emails
+    if (owner?.enrichedEmails && Array.isArray(owner.enrichedEmails)) {
+      console.log(`Found ${owner.enrichedEmails.length} enriched emails`)
+      owner.enrichedEmails.forEach((email: any) => {
+        if (email?.email && !emails.some(e => e.email === email.email)) {
+          emails.push({ email: email.email, tested: email.tested || false })
+        }
+      })
+    }
+
+    // Check for litigator/TCPA flags
+    if (owner?.litigator) {
+      isLitigator = true
+    }
+    if (owner?.dnc?.tcpa) {
+      isLitigator = true
     }
   }
 
-  // Use the first person (primary owner)
-  const person = persons[0]
+  // Also check top-level results for contact enrichment data
+  const contactEnrichment = response?.results?.contactEnrichment || response?.contactEnrichment
+  if (contactEnrichment) {
+    console.log('Found contact enrichment data')
 
-  // Parse name
-  const firstName = person?.name?.first || null
-  const lastName = person?.name?.last || null
+    if (contactEnrichment?.phoneNumbers && Array.isArray(contactEnrichment.phoneNumbers)) {
+      contactEnrichment.phoneNumbers.forEach((phone: any) => {
+        if (phone?.number && !phoneNumbers.some(p => p.number === phone.number)) {
+          phoneNumbers.push({
+            number: phone.number,
+            type: phone.type || 'Unknown',
+            carrier: phone.carrier || 'Unknown',
+            score: phone.score || '0',
+            reachable: phone.reachable || false,
+            dnc: phone.dnc || false,
+            tested: phone.tested || false,
+            firstReportedDate: phone.firstReportedDate,
+            lastReportedDate: phone.lastReportedDate
+          })
+        }
+      })
+    }
 
-  // Parse emails
-  const emails: Email[] = []
-  if (person?.emails && Array.isArray(person.emails)) {
-    person.emails.forEach((email: any) => {
-      if (typeof email === 'string') {
-        emails.push({ email, tested: false })
-      } else if (email?.email) {
-        emails.push({ email: email.email, tested: email.tested || false })
-      }
-    })
-  }
-  // Also check enrichedEmails if available
-  if (person?.enrichedEmails && Array.isArray(person.enrichedEmails)) {
-    person.enrichedEmails.forEach((email: any) => {
-      if (email?.email && !emails.some(e => e.email === email.email)) {
-        emails.push({ email: email.email, tested: email.tested || false })
-      }
-    })
-  }
+    if (contactEnrichment?.emails && Array.isArray(contactEnrichment.emails)) {
+      contactEnrichment.emails.forEach((email: any) => {
+        const emailStr = typeof email === 'string' ? email : email?.email
+        if (emailStr && !emails.some(e => e.email === emailStr)) {
+          emails.push({ email: emailStr, tested: false })
+        }
+      })
+    }
 
-  // Parse phone numbers
-  const phoneNumbers: PhoneNumber[] = []
-  if (person?.phoneNumbers && Array.isArray(person.phoneNumbers)) {
-    person.phoneNumbers.forEach((phone: any) => {
-      if (phone?.number) {
-        phoneNumbers.push({
-          number: phone.number,
-          type: phone.type || 'Unknown',
-          carrier: phone.carrier || 'Unknown',
-          score: phone.score || '0',
-          reachable: phone.reachable || false,
-          dnc: phone.dnc || false,
-          tested: phone.tested || false,
-          firstReportedDate: phone.firstReportedDate,
-          lastReportedDate: phone.lastReportedDate
-        })
-      }
-    })
+    if (contactEnrichment?.enrichedEmails && Array.isArray(contactEnrichment.enrichedEmails)) {
+      contactEnrichment.enrichedEmails.forEach((email: any) => {
+        if (email?.email && !emails.some(e => e.email === email.email)) {
+          emails.push({ email: email.email, tested: email.tested || false })
+        }
+      })
+    }
   }
 
   // Sort phone numbers by score (highest first)
   phoneNumbers.sort((a, b) => parseInt(b.score) - parseInt(a.score))
 
-  // Check for litigator flag
-  const isLitigator = person?.litigator || person?.dnc?.tcpa || false
+  // Update hasDncPhone
+  hasDncPhone = phoneNumbers.some(p => p.dnc)
 
-  // Check if any phone is on DNC list
-  const hasDncPhone = phoneNumbers.some(p => p.dnc)
+  console.log(`Parsed: firstName=${firstName}, lastName=${lastName}, fullName=${fullName}, phones=${phoneNumbers.length}, emails=${emails.length}`)
 
   return {
     firstName,
     lastName,
+    fullName,
     emails,
     phoneNumbers,
     isLitigator,
@@ -283,18 +393,24 @@ serve(async (req) => {
     console.log('API Response results keys:', Object.keys(apiData?.results || {}))
     console.log('Persons found:', apiData?.results?.persons?.length || 0)
 
-    // Check if we got a successful match
+    // Parse the response first
+    const parsedData = parseApiResponse(apiData)
+
+    // Check if we got a successful match - multiple ways to determine this
     const matchCount = apiData?.meta?.matchCount || 0
-    const lookupSuccessful = matchCount > 0
-    console.log(`Match count: ${matchCount}, Lookup successful: ${lookupSuccessful}`)
+    const hasOwner = !!(apiData?.results?.owner || apiData?.owner)
+    const hasPersons = (apiData?.results?.persons?.length || 0) > 0
+    const hasParsedData = !!(parsedData.firstName || parsedData.lastName || parsedData.fullName || parsedData.phoneNumbers.length > 0 || parsedData.emails.length > 0)
+
+    const lookupSuccessful = matchCount > 0 || hasOwner || hasPersons || hasParsedData
+
+    console.log(`Match indicators: matchCount=${matchCount}, hasOwner=${hasOwner}, hasPersons=${hasPersons}, hasParsedData=${hasParsedData}`)
+    console.log(`Lookup successful: ${lookupSuccessful}`)
 
     // Log full response if no matches found for debugging
     if (!lookupSuccessful) {
       console.log('No matches found. Full API response:', JSON.stringify(apiData, null, 2))
     }
-
-    // Parse the response
-    const parsedData = parseApiResponse(apiData)
 
     // Store in cache
     const cacheRecord = {
