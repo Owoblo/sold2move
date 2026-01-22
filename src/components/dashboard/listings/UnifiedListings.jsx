@@ -54,7 +54,7 @@ const PROPERTY_TYPE_COLORS = {
   'default': 'bg-charcoal-600/20 text-slate border-charcoal-600/30'
 };
 
-// Property thumbnail component - larger HD thumbnails
+// Property thumbnail component - larger HD thumbnails with premium styling
 const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
   const [error, setError] = useState(false);
   const sizes = {
@@ -63,11 +63,12 @@ const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
     large: 'w-24 h-24',
   };
   const sizeClass = sizes[size] || sizes.default;
+  const baseClasses = `${sizeClass} rounded-xl flex-shrink-0 border border-white/[0.08] shadow-lg shadow-black/20 transition-all duration-200 group-hover:shadow-xl group-hover:shadow-black/30 group-hover:border-white/[0.12] group-hover:scale-[1.02]`;
 
   if (!src || error) {
     return (
-      <div className={`${sizeClass} rounded-xl bg-charcoal-700/60 border border-white/[0.06] flex items-center justify-center flex-shrink-0`}>
-        <Home className="w-6 h-6 text-slate" />
+      <div className={`${baseClasses} bg-gradient-to-br from-charcoal-700/80 to-charcoal-800/80 flex items-center justify-center`}>
+        <Home className="w-6 h-6 text-slate/60" />
       </div>
     );
   }
@@ -77,7 +78,7 @@ const PropertyThumbnail = ({ src, alt, size = 'default' }) => {
       src={src}
       alt={alt || 'Property'}
       onError={() => setError(true)}
-      className={`${sizeClass} rounded-xl object-cover flex-shrink-0 border border-white/[0.06]`}
+      className={`${baseClasses} object-cover`}
     />
   );
 };
@@ -128,15 +129,15 @@ const UnifiedListings = () => {
   const filterBarRef = useRef(null);
   const filterBarOffsetRef = useRef(0);
 
-  // Column visibility state
+  // Column visibility state - removed sq ft columns by default
   const [visibleColumns, setVisibleColumns] = useState({
     thumbnail: true,
     address: true,
     price: true,
-    pricePerSqft: true,
+    pricePerSqft: false,  // Hidden by default
     beds: true,
     baths: true,
-    sqft: true,
+    sqft: false,  // Hidden by default
     date: true,
     type: true,
     actions: true

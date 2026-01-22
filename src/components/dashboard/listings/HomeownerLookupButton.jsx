@@ -76,7 +76,7 @@ const HomeownerLookupButton = ({
           size="sm"
           onClick={handleLookup}
           disabled={loading}
-          className={`h-8 w-8 p-0 border-teal/50 text-teal hover:bg-teal/10 ${className}`}
+          className={`h-8 w-8 p-0 border-primary/50 text-primary hover:bg-primary/10 hover:shadow-glow-sm transition-all ${className}`}
           title="Get Homeowner Info"
         >
           {loading ? (
@@ -90,7 +90,7 @@ const HomeownerLookupButton = ({
           <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-teal" />
+                <User className="h-5 w-5 text-primary" />
                 Homeowner Lookup
               </DialogTitle>
               <DialogDescription className="text-slate">
@@ -118,7 +118,7 @@ const HomeownerLookupButton = ({
         variant={variant}
         onClick={handleLookup}
         disabled={loading}
-        className={`border-teal text-teal hover:bg-teal/10 ${className}`}
+        className={`border-primary text-primary hover:bg-primary/10 hover:shadow-glow-sm transition-all ${className}`}
       >
         {loading ? (
           <>
