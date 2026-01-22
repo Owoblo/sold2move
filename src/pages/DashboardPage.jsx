@@ -8,7 +8,14 @@ import {
   ArrowRight,
   Target,
   Truck,
-  RefreshCw
+  RefreshCw,
+  TrendingUp,
+  Eye,
+  Sparkles,
+  Flame,
+  Clock,
+  Search,
+  ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfile } from '@/hooks/useProfile';
@@ -18,6 +25,79 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
+
+// Mini sparkline component for trends
+const Sparkline = ({ data, color = '#14B8A6' }) => {
+  if (!data || data.length < 2) return null;
+
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const width = 60;
+  const height = 20;
+
+  const points = data.map((value, index) => {
+    const x = (index / (data.length - 1)) * width;
+    const y = height - ((value - min) / range) * height;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg width={width} height={height} className="inline-block ml-2">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  );
+};
+
+// Property thumbnail placeholder
+const PropertyThumbnail = ({ src, alt }) => {
+  const [error, setError] = useState(false);
+
+  if (!src || error) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-deep-navy/80 flex items-center justify-center flex-shrink-0">
+        <MapPin className="w-5 h-5 text-slate" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setError(true)}
+      className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+    />
+  );
+};
+
+// Status tag component
+const StatusTag = ({ type }) => {
+  const styles = {
+    new: 'bg-teal/20 text-teal',
+    hot: 'bg-amber-500/20 text-amber-400',
+    sold: 'bg-blue-500/20 text-blue-400'
+  };
+
+  const labels = {
+    new: 'New',
+    hot: 'Hot',
+    sold: 'Sold'
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[type] || styles.new}`}>
+      {labels[type] || type}
+    </span>
+  );
+};
 
 const DashboardPage = () => {
   const { toast } = useToast();
@@ -29,6 +109,7 @@ const DashboardPage = () => {
   const [todaysLeads, setTodaysLeads] = useState({ justListed: [], sold: [], justListedCount: 0, soldCount: 0 });
   const [highValueLeads, setHighValueLeads] = useState([]);
   const [revealedLeads, setRevealedLeads] = useState([]);
+  const [weeklyTrend, setWeeklyTrend] = useState([]);
   const [monthlyStats, setMonthlyStats] = useState({
     totalLeads: 0,
     revealedCount: 0,
@@ -39,6 +120,7 @@ const DashboardPage = () => {
   const [serviceAreaHealth, setServiceAreaHealth] = useState([]);
   const [loading, setLoading] = useState(true);
   const [revealingId, setRevealingId] = useState(null);
+  const [hoveredLead, setHoveredLead] = useState(null);
 
   // Get city names from profile
   const getCityNames = useCallback(() => {
@@ -64,25 +146,25 @@ const DashboardPage = () => {
     const todayISO = today.toISOString();
 
     try {
-      // Fetch today's just listed from unified listings table
+      // Fetch today's just listed from unified listings table - include imgsrc
       const { data: justListedData, count: justListedCount } = await supabase
         .from('listings')
-        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
         .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', todayISO)
         .order('lastseenat', { ascending: false })
-        .limit(5);
+        .limit(6);
 
       // Fetch today's sold from unified listings table
       const { data: soldData, count: soldCount } = await supabase
         .from('listings')
-        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
         .eq('status', 'sold')
         .in('lastcity', cityNames)
         .gte('lastseenat', todayISO)
         .order('lastseenat', { ascending: false })
-        .limit(5);
+        .limit(6);
 
       // Map zpid to id for consistency
       const mappedJustListed = (justListedData || []).map(item => ({ ...item, id: item.zpid }));
@@ -106,14 +188,13 @@ const DashboardPage = () => {
     const cityNames = getCityNames();
     if (cityNames.length === 0) return;
 
-    // Get leads from the last 7 days, sorted by price
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     try {
       const { data } = await supabase
         .from('listings')
-        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc')
         .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', weekAgo.toISOString())
@@ -121,7 +202,6 @@ const DashboardPage = () => {
         .order('unformattedprice', { ascending: false })
         .limit(5);
 
-      // Map zpid to id for consistency
       const mappedData = (data || []).map(item => ({ ...item, id: item.zpid }));
       setHighValueLeads(mappedData);
     } catch (error) {
@@ -134,7 +214,6 @@ const DashboardPage = () => {
     if (!profile) return;
 
     try {
-      // Get user's revealed listings with joined listing data
       const { data: reveals } = await supabase
         .from('listing_reveals')
         .select('listing_id, created_at')
@@ -147,12 +226,11 @@ const DashboardPage = () => {
         return;
       }
 
-      // Get the listing details from unified listings table
       const listingIds = reveals.map(r => r.listing_id);
 
       const { data: listingsData } = await supabase
         .from('listings')
-        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity, status')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity, status, imgsrc')
         .in('zpid', listingIds);
 
       if (!listingsData) {
@@ -160,7 +238,6 @@ const DashboardPage = () => {
         return;
       }
 
-      // Merge reveal dates with listing data
       const enrichedListings = listingsData.map(listing => {
         const reveal = reveals.find(r => r.listing_id === listing.zpid);
         return {
@@ -172,6 +249,7 @@ const DashboardPage = () => {
           baths: listing.baths,
           lastcity: listing.lastcity,
           type: listing.status,
+          imgsrc: listing.imgsrc,
           revealed_at: reveal?.created_at
         };
       }).sort((a, b) => new Date(b.revealed_at) - new Date(a.revealed_at));
@@ -182,7 +260,7 @@ const DashboardPage = () => {
     }
   }, [profile]);
 
-  // Fetch monthly stats and lead velocity
+  // Fetch monthly stats and lead velocity with daily breakdown for sparkline
   const fetchMonthlyStats = useCallback(async () => {
     if (!profile) return;
 
@@ -197,7 +275,28 @@ const DashboardPage = () => {
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     try {
-      // This month's total leads (just_listed)
+      // Fetch daily counts for the past 7 days for sparkline
+      const dailyCounts = [];
+      for (let i = 6; i >= 0; i--) {
+        const dayStart = new Date(now);
+        dayStart.setDate(dayStart.getDate() - i);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const { count } = await supabase
+          .from('listings')
+          .select('zpid', { count: 'exact', head: true })
+          .in('status', ['just_listed', 'sold'])
+          .in('lastcity', cityNames)
+          .gte('lastseenat', dayStart.toISOString())
+          .lt('lastseenat', dayEnd.toISOString());
+
+        dailyCounts.push(count || 0);
+      }
+      setWeeklyTrend(dailyCounts);
+
+      // This month's total leads
       const { count: monthlyJustListed } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -205,7 +304,6 @@ const DashboardPage = () => {
         .in('lastcity', cityNames)
         .gte('lastseenat', monthStart.toISOString());
 
-      // This month's sold
       const { count: monthlySold } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -213,7 +311,7 @@ const DashboardPage = () => {
         .in('lastcity', cityNames)
         .gte('lastseenat', monthStart.toISOString());
 
-      // This week's just_listed
+      // This week's leads
       const { count: thisWeekJustListed } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -221,7 +319,6 @@ const DashboardPage = () => {
         .in('lastcity', cityNames)
         .gte('lastseenat', weekStart.toISOString());
 
-      // This week's sold
       const { count: thisWeekSold } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -229,7 +326,7 @@ const DashboardPage = () => {
         .in('lastcity', cityNames)
         .gte('lastseenat', weekStart.toISOString());
 
-      // Last week's just_listed (for comparison)
+      // Last week's leads
       const { count: lastWeekJustListed } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -238,7 +335,6 @@ const DashboardPage = () => {
         .gte('lastseenat', twoWeeksAgo.toISOString())
         .lt('lastseenat', weekStart.toISOString());
 
-      // Last week's sold
       const { count: lastWeekSold } = await supabase
         .from('listings')
         .select('zpid', { count: 'exact', head: true })
@@ -303,7 +399,6 @@ const DashboardPage = () => {
 
           const totalLeads = (justListedCount || 0) + (soldCount || 0);
 
-          // Determine health status
           let status = 'low';
           if (totalLeads >= 20) status = 'high';
           else if (totalLeads >= 10) status = 'moderate';
@@ -325,11 +420,12 @@ const DashboardPage = () => {
   }, [profile, getCityNames]);
 
   // Handle reveal
-  const handleReveal = async (listingId, listingType = 'just_listed') => {
+  const handleReveal = async (e, listingId) => {
+    e.stopPropagation();
     setRevealingId(listingId);
 
     try {
-      trackAction('listing_reveal_attempt', { listingId, listingType });
+      trackAction('listing_reveal_attempt', { listingId });
 
       const numericListingId = Number(listingId);
       if (isNaN(numericListingId)) {
@@ -345,7 +441,6 @@ const DashboardPage = () => {
           description: data.already_revealed ? "You've already revealed this address." : "1 credit has been deducted."
         });
 
-        // Refresh the revealed leads
         fetchRevealedLeads();
 
         if (!data.already_revealed && !data.unlimited) {
@@ -394,12 +489,16 @@ const DashboardPage = () => {
   // Format helpers
   const formatPrice = (price) => {
     if (!price) return 'N/A';
+    const num = Number(price);
+    if (num >= 1000000) {
+      return `$${(num / 1000000).toFixed(1)}M`;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(Number(price));
+    }).format(num);
   };
 
   const formatDate = (dateString) => {
@@ -412,6 +511,11 @@ const DashboardPage = () => {
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Determine if a lead is "hot" (high value)
+  const isHotLead = (lead) => {
+    return lead.unformattedprice && lead.unformattedprice > 800000;
   };
 
   const creditsRemaining = profile?.credits_remaining ?? 0;
@@ -459,22 +563,22 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header - Clean and minimal */}
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-lightest-slate">
+          <h1 className="text-2xl font-semibold text-lightest-slate">
             {profile?.company_name || 'Dashboard'}
           </h1>
-          <p className="text-slate text-sm mt-1">
+          <p className="text-slate text-sm mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-4 py-2 bg-light-navy rounded-lg">
-            <span className="text-sm text-slate">Credits:</span>
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-2 bg-light-navy/80 border border-lightest-navy/20 rounded-lg">
+            <span className="text-sm text-slate">Credits: </span>
             <span className="text-lg font-semibold text-lightest-slate">
-              {isUnlimited ? 'Unlimited' : creditsRemaining}
+              {isUnlimited ? '∞' : creditsRemaining}
             </span>
           </div>
           <Button asChild size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
@@ -483,304 +587,362 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Key Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-light-navy rounded-xl p-5">
-          <p className="text-sm text-slate mb-1">Today's Leads</p>
-          <p className="text-3xl font-semibold text-lightest-slate">{totalTodaysLeads}</p>
-          <p className="text-xs text-teal mt-1">New opportunities</p>
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-12 gap-4">
+        {/* Hero Metric - Today's Leads (spans 4 cols, larger) */}
+        <div className="col-span-12 md:col-span-4 bg-gradient-to-br from-teal/20 to-teal/5 border border-teal/30 rounded-2xl p-6 shadow-lg shadow-teal/5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm text-teal font-medium mb-1">Today's Leads</p>
+              <p className="text-5xl font-bold text-lightest-slate">{totalTodaysLeads}</p>
+              <p className="text-sm text-slate mt-2">New opportunities waiting</p>
+            </div>
+            <div className="p-3 bg-teal/20 rounded-xl">
+              <Sparkles className="h-6 w-6 text-teal" />
+            </div>
+          </div>
+          <Button asChild className="w-full mt-4 bg-teal text-deep-navy hover:bg-teal/90">
+            <Link to="/dashboard/listings/just-listed">
+              View All Leads
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Link>
+          </Button>
         </div>
-        <div className="bg-light-navy rounded-xl p-5">
-          <p className="text-sm text-slate mb-1">This Week</p>
-          <p className="text-3xl font-semibold text-lightest-slate">{monthlyStats.thisWeekLeads}</p>
-          {monthlyStats.weekOverWeekChange !== 0 && (
-            <p className={`text-xs mt-1 ${monthlyStats.weekOverWeekChange > 0 ? 'text-teal' : 'text-red-400'}`}>
-              {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}% vs last week
-            </p>
-          )}
+
+        {/* This Week */}
+        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-slate mb-1">This Week</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.thisWeekLeads}</p>
+            {monthlyStats.weekOverWeekChange !== 0 && (
+              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? 'text-teal' : 'text-red-400'}`}>
+                {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}%
+              </span>
+            )}
+          </div>
+          <div className="mt-1">
+            <Sparkline data={weeklyTrend} color={monthlyStats.weekOverWeekChange >= 0 ? '#14B8A6' : '#f87171'} />
+          </div>
         </div>
-        <div className="bg-light-navy rounded-xl p-5">
-          <p className="text-sm text-slate mb-1">This Month</p>
-          <p className="text-3xl font-semibold text-lightest-slate">{monthlyStats.totalLeads}</p>
+
+        {/* This Month */}
+        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-slate mb-1">This Month</p>
+          <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.totalLeads}</p>
           <p className="text-xs text-slate mt-1">Total leads</p>
         </div>
-        <div className="bg-light-navy rounded-xl p-5">
-          <p className="text-sm text-slate mb-1">Revealed</p>
-          <p className="text-3xl font-semibold text-lightest-slate">{monthlyStats.revealedCount}</p>
-          <p className="text-xs text-slate mt-1">Addresses unlocked</p>
-        </div>
-      </div>
 
-      {/* Today's Leads - Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Just Listed */}
-        <Card className="bg-light-navy border-0">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg text-lightest-slate">Just Listed</CardTitle>
-                <p className="text-sm text-slate">New listings in your areas</p>
-              </div>
-              <span className="text-2xl font-semibold text-lightest-slate">{todaysLeads.justListedCount}</span>
+        {/* Revealed - Gold accent */}
+        <div className="col-span-6 md:col-span-2 bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-amber-400 mb-1">Revealed</p>
+          <p className="text-2xl font-semibold text-lightest-slate">{monthlyStats.revealedCount}</p>
+          <p className="text-xs text-slate mt-1">Unlocked</p>
+        </div>
+
+        {/* Credits */}
+        <div className="col-span-6 md:col-span-2 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <p className="text-xs text-slate mb-1">Credits Left</p>
+          <p className="text-2xl font-semibold text-lightest-slate">{isUnlimited ? '∞' : creditsRemaining}</p>
+          <Link to="/pricing#top-up" className="text-xs text-teal hover:underline mt-1 inline-block">
+            Buy more →
+          </Link>
+        </div>
+
+        {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
+        <div className="col-span-12 lg:col-span-6 bg-light-navy/80 border border-lightest-navy/10 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-lightest-navy/10 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lightest-slate">Just Listed</h3>
+              <p className="text-xs text-slate">New opportunities in your areas</p>
             </div>
-          </CardHeader>
-          <CardContent>
+            <span className="text-2xl font-bold text-teal">{todaysLeads.justListedCount}</span>
+          </div>
+          <div className="p-3">
             {loading ? (
               <div className="space-y-3">
-                {[1,2,3].map(i => <SkeletonLoader key={i} className="h-14" />)}
+                {[1,2,3,4].map(i => <SkeletonLoader key={i} className="h-16" />)}
               </div>
             ) : todaysLeads.justListed.length > 0 ? (
               <div className="space-y-2">
-                {todaysLeads.justListed.slice(0, 4).map((lead) => (
+                {todaysLeads.justListed.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg hover:bg-deep-navy transition-colors cursor-pointer"
+                    className="group flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-all cursor-pointer relative"
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
+                    onMouseEnter={() => setHoveredLead(lead.id)}
+                    onMouseLeave={() => setHoveredLead(null)}
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
-                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba</p>
-                    </div>
-                    <span className="text-sm font-semibold text-teal ml-4">{formatPrice(lead.unformattedprice)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate text-sm text-center py-8">No new listings today</p>
-            )}
-            <Button asChild variant="ghost" className="w-full mt-4 text-teal hover:text-teal hover:bg-teal/10">
-              <Link to="/dashboard/listings/just-listed">
-                View all listings
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Just Sold */}
-        <Card className="bg-light-navy border-0">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg text-lightest-slate">Just Sold</CardTitle>
-                <p className="text-sm text-slate">Ready to move soon</p>
-              </div>
-              <span className="text-2xl font-semibold text-lightest-slate">{todaysLeads.soldCount}</span>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <SkeletonLoader key={i} className="h-14" />)}
-              </div>
-            ) : todaysLeads.sold.length > 0 ? (
-              <div className="space-y-2">
-                {todaysLeads.sold.slice(0, 4).map((lead) => (
-                  <div
-                    key={lead.id}
-                    className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg hover:bg-deep-navy transition-colors cursor-pointer"
-                    onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
-                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba</p>
-                    </div>
-                    <span className="text-sm font-semibold text-teal ml-4">{formatPrice(lead.unformattedprice)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate text-sm text-center py-8">No sales today</p>
-            )}
-            <Button asChild variant="ghost" className="w-full mt-4 text-teal hover:text-teal hover:bg-teal/10">
-              <Link to="/dashboard/listings/sold">
-                View all sold
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <button
-          onClick={() => navigate('/dashboard/mailing')}
-          className="flex flex-col items-center gap-3 p-5 bg-light-navy rounded-xl hover:bg-lightest-navy/10 transition-colors text-center"
-        >
-          <Mail className="h-6 w-6 text-teal" />
-          <div>
-            <p className="text-sm font-medium text-lightest-slate">Send Mail</p>
-            <p className="text-xs text-slate">Direct mail campaign</p>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/listings/just-listed')}
-          className="flex flex-col items-center gap-3 p-5 bg-light-navy rounded-xl hover:bg-lightest-navy/10 transition-colors text-center"
-        >
-          <Download className="h-6 w-6 text-teal" />
-          <div>
-            <p className="text-sm font-medium text-lightest-slate">Export Leads</p>
-            <p className="text-xs text-slate">Download CSV</p>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/listings/sold')}
-          className="flex flex-col items-center gap-3 p-5 bg-light-navy rounded-xl hover:bg-lightest-navy/10 transition-colors text-center"
-        >
-          <Target className="h-6 w-6 text-teal" />
-          <div>
-            <p className="text-sm font-medium text-lightest-slate">Sold Leads</p>
-            <p className="text-xs text-slate">Definite movers</p>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/dashboard/settings')}
-          className="flex flex-col items-center gap-3 p-5 bg-light-navy rounded-xl hover:bg-lightest-navy/10 transition-colors text-center"
-        >
-          <MapPin className="h-6 w-6 text-teal" />
-          <div>
-            <p className="text-sm font-medium text-lightest-slate">Service Areas</p>
-            <p className="text-xs text-slate">Manage cities</p>
-          </div>
-        </button>
-      </div>
-
-      {/* High Value Leads & Service Areas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* High-Value Leads */}
-        <Card className="bg-light-navy border-0">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-lightest-slate">High-Value Leads</CardTitle>
-            <p className="text-sm text-slate">Bigger homes, bigger moving jobs</p>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <SkeletonLoader key={i} className="h-14" />)}
-              </div>
-            ) : highValueLeads.length > 0 ? (
-              <div className="space-y-2">
-                {highValueLeads.map((lead) => (
-                  <div
-                    key={lead.id}
-                    className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg hover:bg-deep-navy transition-colors cursor-pointer"
-                    onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
-                      <p className="text-xs text-slate">
-                        {lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-teal ml-4">{formatPrice(lead.unformattedprice)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-slate text-sm text-center py-8">No high-value leads this week</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Service Area Health */}
-        <Card className="bg-light-navy border-0">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg text-lightest-slate">Service Areas</CardTitle>
-                <p className="text-sm text-slate">Lead activity (past 7 days)</p>
-              </div>
-              <Button asChild variant="ghost" size="sm" className="text-teal hover:text-teal hover:bg-teal/10">
-                <Link to="/dashboard/settings">Manage</Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => <SkeletonLoader key={i} className="h-14" />)}
-              </div>
-            ) : serviceAreaHealth.length > 0 ? (
-              <div className="space-y-2">
-                {serviceAreaHealth.map((area) => (
-                  <div key={area.city} className="flex items-center justify-between p-3 bg-deep-navy/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        area.status === 'high' ? 'bg-teal' :
-                        area.status === 'moderate' ? 'bg-yellow-500' :
-                        'bg-slate'
-                      }`} />
-                      <div>
-                        <p className="text-sm font-medium text-lightest-slate">{area.city}</p>
-                        <p className="text-xs text-slate">{area.justListed} listed • {area.sold} sold</p>
+                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
+                        <StatusTag type={isHotLead(lead) ? 'hot' : 'new'} />
                       </div>
+                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
-                    <span className="text-sm font-semibold text-lightest-slate">{area.leadsThisWeek}</span>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-teal">{formatPrice(lead.unformattedprice)}</p>
+                    </div>
+                    {/* Hover actions */}
+                    {hoveredLead === lead.id && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-deep-navy/90 rounded-lg p-1 shadow-lg">
+                        <button
+                          onClick={(e) => handleReveal(e, lead.id)}
+                          disabled={revealingId === lead.id}
+                          className="px-2 py-1 text-xs bg-teal/20 hover:bg-teal/30 text-teal rounded transition-colors flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Reveal
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
+                          className="px-2 py-1 text-xs bg-light-navy hover:bg-lightest-navy/20 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Mail
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-slate text-sm">No service areas configured</p>
-                <Button asChild className="mt-4 bg-teal text-deep-navy hover:bg-teal/90">
-                  <Link to="/dashboard/settings">Add Service Areas</Link>
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-deep-navy/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-slate" />
+                </div>
+                <p className="text-slate font-medium">No new listings today</p>
+                <p className="text-xs text-slate mt-1 mb-4">Check neighboring areas for more opportunities</p>
+                <Button asChild variant="outline" size="sm" className="border-teal/30 text-teal hover:bg-teal/10">
+                  <Link to="/dashboard/settings">Expand Service Areas</Link>
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <div className="p-3 pt-0">
+            <Button asChild variant="ghost" className="w-full text-teal hover:text-teal hover:bg-teal/10">
+              <Link to="/dashboard/listings/just-listed">
+                View all listings
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </div>
+        </div>
 
-      {/* Revealed Leads */}
-      {revealedLeads.length > 0 && (
-        <Card className="bg-light-navy border-0">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg text-lightest-slate">Recently Revealed</CardTitle>
-                <p className="text-sm text-slate">Addresses you've unlocked</p>
-              </div>
-              <Button asChild variant="ghost" size="sm" className="text-teal hover:text-teal hover:bg-teal/10">
-                <Link to="/dashboard/account">View all</Link>
-              </Button>
+        {/* Just Sold Feed */}
+        <div className="col-span-12 lg:col-span-6 bg-light-navy/80 border border-lightest-navy/10 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-lightest-navy/10 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lightest-slate">Just Sold</h3>
+              <p className="text-xs text-slate">Definite movers - act fast</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {revealedLeads.slice(0, 6).map((lead) => (
-                <div
-                  key={lead.id}
-                  className="p-4 bg-deep-navy/50 rounded-lg hover:bg-deep-navy transition-colors cursor-pointer"
-                  onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-                >
-                  <p className="text-sm font-medium text-lightest-slate truncate">{lead.addressstreet}</p>
-                  <p className="text-xs text-slate mt-1">{lead.lastcity} • {formatPrice(lead.unformattedprice)}</p>
-                  <p className="text-xs text-teal mt-2">Revealed {formatDate(lead.revealed_at)}</p>
+            <span className="text-2xl font-bold text-teal">{todaysLeads.soldCount}</span>
+          </div>
+          <div className="p-3">
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2,3,4].map(i => <SkeletonLoader key={i} className="h-16" />)}
+              </div>
+            ) : todaysLeads.sold.length > 0 ? (
+              <div className="space-y-2">
+                {todaysLeads.sold.slice(0, 5).map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="group flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-all cursor-pointer relative"
+                    onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
+                    onMouseEnter={() => setHoveredLead(`sold-${lead.id}`)}
+                    onMouseLeave={() => setHoveredLead(null)}
+                  >
+                    <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-lightest-slate truncate">{lead.lastcity}</p>
+                        <StatusTag type="sold" />
+                      </div>
+                      <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-teal">{formatPrice(lead.unformattedprice)}</p>
+                    </div>
+                    {/* Hover actions */}
+                    {hoveredLead === `sold-${lead.id}` && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 bg-deep-navy/90 rounded-lg p-1 shadow-lg">
+                        <button
+                          onClick={(e) => handleReveal(e, lead.id)}
+                          disabled={revealingId === lead.id}
+                          className="px-2 py-1 text-xs bg-teal/20 hover:bg-teal/30 text-teal rounded transition-colors flex items-center gap-1"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Reveal
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
+                          className="px-2 py-1 text-xs bg-light-navy hover:bg-lightest-navy/20 text-lightest-slate rounded transition-colors flex items-center gap-1"
+                        >
+                          <Mail className="h-3 w-3" />
+                          Mail
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center">
+                <div className="w-16 h-16 bg-deep-navy/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="h-8 w-8 text-slate" />
+                </div>
+                <p className="text-slate font-medium">No sales in your areas today</p>
+                <p className="text-xs text-slate mt-1 mb-4">Sold leads are high-intent movers</p>
+                <Button asChild variant="outline" size="sm" className="border-teal/30 text-teal hover:bg-teal/10">
+                  <Link to="/dashboard/listings/sold">View Past Sales</Link>
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="p-3 pt-0">
+            <Button asChild variant="ghost" className="w-full text-teal hover:text-teal hover:bg-teal/10">
+              <Link to="/dashboard/listings/sold">
+                View all sold
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-3 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <h3 className="font-semibold text-lightest-slate mb-3">Quick Actions</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => navigate('/dashboard/mailing')}
+              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+            >
+              <Mail className="h-5 w-5 text-teal" />
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Send Mail</p>
+                <p className="text-xs text-slate">Direct mail campaign</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/listings/just-listed')}
+              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+            >
+              <Download className="h-5 w-5 text-teal" />
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Export Leads</p>
+                <p className="text-xs text-slate">Download CSV</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/settings')}
+              className="w-full flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg transition-colors text-left"
+            >
+              <MapPin className="h-5 w-5 text-teal" />
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Service Areas</p>
+                <p className="text-xs text-slate">Manage cities</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Service Areas */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-4 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-lightest-slate">Service Areas</h3>
+            <Link to="/dashboard/settings" className="text-xs text-teal hover:underline">Manage</Link>
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <SkeletonLoader key={i} className="h-12" />)}
+            </div>
+          ) : serviceAreaHealth.length > 0 ? (
+            <div className="space-y-2">
+              {serviceAreaHealth.slice(0, 4).map((area) => (
+                <div key={area.city} className="flex items-center justify-between p-2 bg-deep-navy/40 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      area.status === 'high' ? 'bg-teal' :
+                      area.status === 'moderate' ? 'bg-amber-400' :
+                      'bg-slate'
+                    }`} />
+                    <span className="text-sm text-lightest-slate">{area.city}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-slate">{area.leadsThisWeek} leads</span>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-slate mb-3">No service areas configured</p>
+              <Button asChild size="sm" className="bg-teal text-deep-navy hover:bg-teal/90">
+                <Link to="/dashboard/settings">Add Areas</Link>
+              </Button>
+            </div>
+          )}
+        </div>
 
-      {/* Empty State for New Users */}
-      {!loading && revealedLeads.length === 0 && totalTodaysLeads === 0 && (
-        <Card className="bg-light-navy border-0">
-          <CardContent className="py-12 text-center">
-            <Truck className="h-12 w-12 text-teal mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-lightest-slate mb-2">Welcome to your dashboard</h3>
-            <p className="text-slate max-w-md mx-auto mb-6">
-              Start exploring leads in your service areas. Browse listings, reveal contact info, and reach out to homeowners who need moving services.
-            </p>
-            <Button asChild className="bg-teal text-deep-navy hover:bg-teal/90">
-              <Link to="/dashboard/listings/just-listed">
-                Browse Leads
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* High Value Leads */}
+        <div className="col-span-12 lg:col-span-5 bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="h-5 w-5 text-amber-400" />
+            <h3 className="font-semibold text-lightest-slate">High-Value Leads</h3>
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <SkeletonLoader key={i} className="h-12" />)}
+            </div>
+          ) : highValueLeads.length > 0 ? (
+            <div className="space-y-2">
+              {highValueLeads.slice(0, 4).map((lead) => (
+                <div
+                  key={lead.id}
+                  className="flex items-center gap-3 p-2 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg cursor-pointer transition-colors"
+                  onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
+                >
+                  <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-lightest-slate truncate">{lead.lastcity}</p>
+                    <p className="text-xs text-slate">{lead.beds}bd • {lead.baths}ba</p>
+                  </div>
+                  <span className="text-sm font-bold text-teal">{formatPrice(lead.unformattedprice)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate text-center py-6">No high-value leads this week</p>
+          )}
+        </div>
+      </div>
+
+      {/* Recently Revealed */}
+      {revealedLeads.length > 0 && (
+        <div className="bg-light-navy/80 border border-lightest-navy/10 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-amber-400" />
+              <h3 className="font-semibold text-lightest-slate">Recently Revealed</h3>
+            </div>
+            <Link to="/dashboard/account" className="text-xs text-teal hover:underline">View all</Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {revealedLeads.slice(0, 4).map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center gap-3 p-3 bg-deep-navy/40 hover:bg-deep-navy/70 rounded-lg cursor-pointer transition-colors"
+                onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
+              >
+                <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-lightest-slate truncate">{lead.addressstreet}</p>
+                  <p className="text-xs text-slate">{lead.lastcity}</p>
+                  <p className="text-xs text-amber-400 mt-1">{formatDate(lead.revealed_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
