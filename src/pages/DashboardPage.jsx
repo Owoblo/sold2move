@@ -26,6 +26,7 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
 
 // Mini sparkline component for trends (Theme-aware)
 const Sparkline = ({ data, color, isLight = false }) => {
@@ -663,16 +664,17 @@ const DashboardPage = () => {
         </div>
 
         {/* This Week */}
-        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-6 md:col-span-2 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>This Week</p>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <p className={cn("text-xs mb-1", isLight ? "text-slate-500" : "text-slate")}>This Week</p>
           <div className="flex items-baseline gap-1">
-            <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.thisWeekLeads}</p>
+            <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{monthlyStats.thisWeekLeads}</p>
             {monthlyStats.weekOverWeekChange !== 0 && (
-              <span className={`text-xs font-medium ${monthlyStats.weekOverWeekChange > 0 ? (isLight ? 'text-emerald-600' : 'text-primary') : 'text-red-500'}`}>
+              <span className={cn("text-xs font-medium", monthlyStats.weekOverWeekChange > 0 ? (isLight ? "text-emerald-600" : "text-primary") : "text-red-500")}>
                 {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}%
               </span>
             )}
@@ -683,52 +685,56 @@ const DashboardPage = () => {
         </div>
 
         {/* This Month */}
-        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-6 md:col-span-2 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>This Month</p>
-          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.totalLeads}</p>
-          <p className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Total leads</p>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <p className={cn("text-xs mb-1", isLight ? "text-slate-500" : "text-slate")}>This Month</p>
+          <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{monthlyStats.totalLeads}</p>
+          <p className={cn("text-xs mt-1", isLight ? "text-slate-500" : "text-slate")}>Total leads</p>
         </div>
 
         {/* Revealed - Gold accent with glow */}
-        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 ${
+        <div className={cn(
+          "col-span-6 md:col-span-2 rounded-xl p-4",
           isLight
-            ? 'bg-gradient-to-br from-amber-50 to-white border border-amber-200/60 shadow-sm'
-            : 'bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 shadow-badge-hot/30'
-        }`}>
-          <p className={`text-xs mb-1 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Revealed</p>
-          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{monthlyStats.revealedCount}</p>
-          <p className={`text-xs mt-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Unlocked</p>
+            ? "bg-gradient-to-br from-amber-50 to-white border border-amber-200 shadow-sm"
+            : "bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 shadow-badge-hot/30"
+        )}>
+          <p className={cn("text-xs mb-1", isLight ? "text-amber-700" : "text-amber-400")}>Revealed</p>
+          <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{monthlyStats.revealedCount}</p>
+          <p className={cn("text-xs mt-1", isLight ? "text-slate-500" : "text-slate")}>Unlocked</p>
         </div>
 
         {/* Credits */}
-        <div className={`col-span-6 md:col-span-2 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-6 md:col-span-2 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <p className={`text-xs mb-1 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Credits Left</p>
-          <p className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{isUnlimited ? '∞' : creditsRemaining}</p>
-          <Link to="/pricing#top-up" className={`text-xs hover:underline mt-1 inline-block ${isLight ? 'text-emerald-600' : 'text-primary'}`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <p className={cn("text-xs mb-1", isLight ? "text-slate-500" : "text-slate")}>Credits Left</p>
+          <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{isUnlimited ? '∞' : creditsRemaining}</p>
+          <Link to="/pricing#top-up" className={cn("text-xs hover:underline mt-1 inline-block", isLight ? "text-emerald-600" : "text-primary")}>
             Buy more →
           </Link>
         </div>
 
         {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
-        <div className={`col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all ${
+        <div className={cn(
+          "col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <div className={`p-4 flex items-center justify-between ${isLight ? 'border-b border-slate-200' : 'border-b border-white/[0.06]'}`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-slate-200" : "border-b border-white/[0.06]")}>
             <div>
-              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Just Listed</h3>
-              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>New opportunities in your areas</p>
+              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Just Listed</h3>
+              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>New opportunities in your areas</p>
             </div>
-            <span className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{todaysLeads.justListedCount}</span>
+            <span className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{todaysLeads.justListedCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -740,11 +746,12 @@ const DashboardPage = () => {
                 {todaysLeads.justListed.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className={`group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative ${
+                    className={cn(
+                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative",
                       isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                        : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-                    }`}
+                        ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                        : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+                    )}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(lead.id)}
                     onMouseLeave={() => setHoveredLead(null)}
@@ -752,40 +759,37 @@ const DashboardPage = () => {
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
+                        <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
                         <StatusTag type={isHotLead(lead) ? 'hot' : 'new'} isLight={isLight} />
                       </div>
-                      <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-mono text-sm font-semibold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</p>
+                      <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === lead.id && (
-                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl ${
-                        isLight
-                          ? 'bg-white border border-slate-200'
-                          : 'bg-charcoal-900/95 border border-white/[0.1]'
-                      }`}>
+                      <div className={cn(
+                        "absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl",
+                        isLight ? "bg-white border border-slate-200" : "bg-charcoal-900/95 border border-white/[0.1]"
+                      )}>
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                            isLight
-                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                              : 'bg-primary/20 hover:bg-primary/30 text-primary'
-                          }`}
+                          className={cn(
+                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
+                            isLight ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700" : "bg-primary/20 hover:bg-primary/30 text-primary"
+                          )}
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                            isLight
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                              : 'bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate'
-                          }`}
+                          className={cn(
+                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
+                            isLight ? "bg-slate-100 hover:bg-slate-200 text-slate-700" : "bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate"
+                          )}
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -797,24 +801,19 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  isLight ? 'bg-slate-100' : 'bg-charcoal-700/50'
-                }`}>
-                  <Search className={`h-8 w-8 ${isLight ? 'text-slate-400' : 'text-slate'}`} />
+                <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", isLight ? "bg-slate-100" : "bg-charcoal-700/50")}>
+                  <Search className={cn("h-8 w-8", isLight ? "text-slate-400" : "text-slate")} />
                 </div>
-                <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate'}`}>No new listings today</p>
-                <p className={`text-xs mt-1 mb-4 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Check neighboring areas for more opportunities</p>
-                <Button asChild variant="outline" size="sm" className={isLight
-                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                  : 'border-primary/30 text-primary hover:bg-primary/10'
-                }>
+                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No new listings today</p>
+                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Check neighboring areas for more opportunities</p>
+                <Button asChild variant="outline" size="sm" className={cn(isLight ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-primary/30 text-primary hover:bg-primary/10")}>
                   <Link to="/dashboard/settings">Expand Service Areas</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className={`w-full ${isLight ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-primary hover:text-primary hover:bg-primary/10'}`}>
+            <Button asChild variant="ghost" className={cn("w-full", isLight ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-primary hover:text-primary hover:bg-primary/10")}>
               <Link to="/dashboard/listings/just-listed">
                 View all listings
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -824,17 +823,18 @@ const DashboardPage = () => {
         </div>
 
         {/* Just Sold Feed */}
-        <div className={`col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all ${
+        <div className={cn(
+          "col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <div className={`p-4 flex items-center justify-between ${isLight ? 'border-b border-slate-200' : 'border-b border-white/[0.06]'}`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-slate-200" : "border-b border-white/[0.06]")}>
             <div>
-              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Just Sold</h3>
-              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Definite movers - act fast</p>
+              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Just Sold</h3>
+              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Definite movers - act fast</p>
             </div>
-            <span className={`text-2xl font-mono font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{todaysLeads.soldCount}</span>
+            <span className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{todaysLeads.soldCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -846,11 +846,12 @@ const DashboardPage = () => {
                 {todaysLeads.sold.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className={`group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative ${
+                    className={cn(
+                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative",
                       isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                        : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-                    }`}
+                        ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                        : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+                    )}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                     onMouseEnter={() => setHoveredLead(`sold-${lead.id}`)}
                     onMouseLeave={() => setHoveredLead(null)}
@@ -858,40 +859,37 @@ const DashboardPage = () => {
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
+                        <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
                         <StatusTag type="sold" isLight={isLight} />
                       </div>
-                      <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className={`font-mono text-sm font-semibold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</p>
+                      <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
                     {/* Hover actions */}
                     {hoveredLead === `sold-${lead.id}` && (
-                      <div className={`absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl ${
-                        isLight
-                          ? 'bg-white border border-slate-200'
-                          : 'bg-charcoal-900/95 border border-white/[0.1]'
-                      }`}>
+                      <div className={cn(
+                        "absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl",
+                        isLight ? "bg-white border border-slate-200" : "bg-charcoal-900/95 border border-white/[0.1]"
+                      )}>
                         <button
                           onClick={(e) => handleReveal(e, lead.id)}
                           disabled={revealingId === lead.id}
-                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                            isLight
-                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                              : 'bg-primary/20 hover:bg-primary/30 text-primary'
-                          }`}
+                          className={cn(
+                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
+                            isLight ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700" : "bg-primary/20 hover:bg-primary/30 text-primary"
+                          )}
                         >
                           <Eye className="h-3 w-3" />
                           Reveal
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-                            isLight
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                              : 'bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate'
-                          }`}
+                          className={cn(
+                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
+                            isLight ? "bg-slate-100 hover:bg-slate-200 text-slate-700" : "bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate"
+                          )}
                         >
                           <Mail className="h-3 w-3" />
                           Mail
@@ -903,24 +901,19 @@ const DashboardPage = () => {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  isLight ? 'bg-slate-100' : 'bg-charcoal-700/50'
-                }`}>
-                  <Clock className={`h-8 w-8 ${isLight ? 'text-slate-400' : 'text-slate'}`} />
+                <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", isLight ? "bg-slate-100" : "bg-charcoal-700/50")}>
+                  <Clock className={cn("h-8 w-8", isLight ? "text-slate-400" : "text-slate")} />
                 </div>
-                <p className={`font-medium ${isLight ? 'text-slate-600' : 'text-slate'}`}>No sales in your areas today</p>
-                <p className={`text-xs mt-1 mb-4 ${isLight ? 'text-slate-500' : 'text-slate'}`}>Sold leads are high-intent movers</p>
-                <Button asChild variant="outline" size="sm" className={isLight
-                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                  : 'border-primary/30 text-primary hover:bg-primary/10'
-                }>
+                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No sales in your areas today</p>
+                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Sold leads are high-intent movers</p>
+                <Button asChild variant="outline" size="sm" className={cn(isLight ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-primary/30 text-primary hover:bg-primary/10")}>
                   <Link to="/dashboard/listings/sold">View Past Sales</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className={`w-full ${isLight ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-primary hover:text-primary hover:bg-primary/10'}`}>
+            <Button asChild variant="ghost" className={cn("w-full", isLight ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-primary hover:text-primary hover:bg-primary/10")}>
               <Link to="/dashboard/listings/sold">
                 View all sold
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -930,67 +923,72 @@ const DashboardPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className={`col-span-12 md:col-span-6 lg:col-span-3 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-12 md:col-span-6 lg:col-span-3 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
-          <h3 className={`font-semibold mb-3 ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Quick Actions</h3>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
+          <h3 className={cn("font-semibold mb-3", isLight ? "text-slate-900" : "text-lightest-slate")}>Quick Actions</h3>
           <div className="space-y-2">
             <button
               onClick={() => navigate('/dashboard/mailing')}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+              className={cn(
+                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
                 isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-              }`}
+                  ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+              )}
             >
-              <Mail className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
+              <Mail className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
               <div>
-                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Send Mail</p>
-                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Direct mail campaign</p>
+                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Send Mail</p>
+                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Direct mail campaign</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/listings/just-listed')}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+              className={cn(
+                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
                 isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-              }`}
+                  ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+              )}
             >
-              <Download className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
+              <Download className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
               <div>
-                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Export Leads</p>
-                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Download CSV</p>
+                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Export Leads</p>
+                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Download CSV</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/settings')}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left ${
+              className={cn(
+                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
                 isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                  : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-              }`}
+                  ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+              )}
             >
-              <MapPin className={`h-5 w-5 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
+              <MapPin className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
               <div>
-                <p className={`text-sm font-medium ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Service Areas</p>
-                <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>Manage cities</p>
+                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Service Areas</p>
+                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Manage cities</p>
               </div>
             </button>
           </div>
         </div>
 
         {/* Service Areas */}
-        <div className={`col-span-12 md:col-span-6 lg:col-span-4 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-12 md:col-span-6 lg:col-span-4 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Service Areas</h3>
-            <Link to="/dashboard/settings" className={`text-xs hover:underline ${isLight ? 'text-emerald-600' : 'text-primary'}`}>Manage</Link>
+            <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Service Areas</h3>
+            <Link to="/dashboard/settings" className={cn("text-xs hover:underline", isLight ? "text-emerald-600" : "text-primary")}>Manage</Link>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -999,30 +997,27 @@ const DashboardPage = () => {
           ) : serviceAreaHealth.length > 0 ? (
             <div className="space-y-2">
               {serviceAreaHealth.slice(0, 4).map((area) => (
-                <div key={area.city} className={`flex items-center justify-between p-2 rounded-lg ${
-                  isLight
-                    ? 'bg-slate-50 border border-slate-200/60'
-                    : 'bg-charcoal-900/60 border border-white/[0.04]'
-                }`}>
+                <div key={area.city} className={cn(
+                  "flex items-center justify-between p-2 rounded-lg",
+                  isLight ? "bg-slate-50 border border-slate-200" : "bg-charcoal-900/60 border border-white/[0.04]"
+                )}>
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      area.status === 'high' ? (isLight ? 'bg-emerald-500' : 'bg-primary shadow-badge-new') :
-                      area.status === 'moderate' ? (isLight ? 'bg-amber-500' : 'bg-amber-400 shadow-badge-hot') :
-                      (isLight ? 'bg-slate-400' : 'bg-slate')
-                    }`} />
-                    <span className={`text-sm ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{area.city}</span>
+                    <div className={cn(
+                      "w-2 h-2 rounded-full",
+                      area.status === 'high' ? (isLight ? "bg-emerald-500" : "bg-primary shadow-badge-new") :
+                      area.status === 'moderate' ? (isLight ? "bg-amber-500" : "bg-amber-400 shadow-badge-hot") :
+                      (isLight ? "bg-slate-400" : "bg-slate")
+                    )} />
+                    <span className={cn("text-sm", isLight ? "text-slate-900" : "text-lightest-slate")}>{area.city}</span>
                   </div>
-                  <span className={`text-sm font-mono font-semibold tabular-nums ${isLight ? 'text-slate-500' : 'text-slate'}`}>{area.leadsThisWeek} leads</span>
+                  <span className={cn("text-sm font-mono font-semibold tabular-nums", isLight ? "text-slate-500" : "text-slate")}>{area.leadsThisWeek} leads</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className={`text-sm mb-3 ${isLight ? 'text-slate-500' : 'text-slate'}`}>No service areas configured</p>
-              <Button asChild size="sm" className={isLight
-                ? 'bg-slate-900 text-white hover:bg-slate-800'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-              }>
+              <p className={cn("text-sm mb-3", isLight ? "text-slate-500" : "text-slate")}>No service areas configured</p>
+              <Button asChild size="sm" className={cn(isLight ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-primary text-primary-foreground hover:bg-primary/90")}>
                 <Link to="/dashboard/settings">Add Areas</Link>
               </Button>
             </div>
@@ -1030,14 +1025,15 @@ const DashboardPage = () => {
         </div>
 
         {/* High Value Leads */}
-        <div className={`col-span-12 lg:col-span-5 rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "col-span-12 lg:col-span-5 rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
           <div className="flex items-center gap-2 mb-3">
-            <Flame className={`h-5 w-5 ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
-            <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>High-Value Leads</h3>
+            <Flame className={cn("h-5 w-5", isLight ? "text-amber-500" : "text-amber-400")} />
+            <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>High-Value Leads</h3>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -1048,58 +1044,61 @@ const DashboardPage = () => {
               {highValueLeads.slice(0, 4).map((lead) => (
                 <div
                   key={lead.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all ${
+                  className={cn(
+                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all",
                     isLight
-                      ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                      : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-                  }`}
+                      ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                      : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+                  )}
                   onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                 >
                   <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.lastcity}</p>
-                    <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.beds}bd • {lead.baths}ba</p>
+                    <p className={cn("text-sm truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
+                    <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba</p>
                   </div>
-                  <span className={`font-mono text-sm font-bold tabular-nums ${isLight ? 'text-emerald-600' : 'text-primary'}`}>{formatPrice(lead.unformattedprice)}</span>
+                  <span className={cn("font-mono text-sm font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className={`text-sm text-center py-6 ${isLight ? 'text-slate-500' : 'text-slate'}`}>No high-value leads this week</p>
+            <p className={cn("text-sm text-center py-6", isLight ? "text-slate-500" : "text-slate")}>No high-value leads this week</p>
           )}
         </div>
       </div>
 
       {/* Recently Revealed */}
       {revealedLeads.length > 0 && (
-        <div className={`rounded-xl p-4 transition-all ${
+        <div className={cn(
+          "rounded-xl p-4 transition-all",
           isLight
-            ? 'bg-white border border-slate-200/60 shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]'
-            : 'bg-charcoal-800/80 border-luminous hover-glow'
-        }`}>
+            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
+            : "bg-charcoal-800/80 border-luminous hover-glow"
+        )}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Eye className={`h-5 w-5 ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
-              <h3 className={`font-semibold ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Recently Revealed</h3>
+              <Eye className={cn("h-5 w-5", isLight ? "text-amber-500" : "text-amber-400")} />
+              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Recently Revealed</h3>
             </div>
-            <Link to="/dashboard/account" className={`text-xs hover:underline ${isLight ? 'text-emerald-600' : 'text-primary'}`}>View all</Link>
+            <Link to="/dashboard/account" className={cn("text-xs hover:underline", isLight ? "text-emerald-600" : "text-primary")}>View all</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {revealedLeads.slice(0, 4).map((lead) => (
               <div
                 key={lead.id}
-                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all",
                   isLight
-                    ? 'bg-slate-50 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300'
-                    : 'bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]'
-                }`}
+                    ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
+                    : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
+                )}
                 onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
               >
                 <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium truncate ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{lead.addressstreet}</p>
-                  <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate'}`}>{lead.lastcity}</p>
-                  <p className={`text-xs mt-1 ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>{formatDate(lead.revealed_at)}</p>
+                  <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.addressstreet}</p>
+                  <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.lastcity}</p>
+                  <p className={cn("text-xs mt-1", isLight ? "text-amber-600" : "text-amber-400")}>{formatDate(lead.revealed_at)}</p>
                 </div>
               </div>
             ))}
