@@ -297,6 +297,34 @@ export interface ChainDetectionResponse {
   message?: string;
 }
 
+// Inventory Scan types
+export interface InventoryItem {
+  label: string;
+  qty: number;
+  confidence?: number;
+  notes?: string;
+  room: string;
+  size?: string;
+  cubicFeet: number;
+}
+
+export interface InventorySummary {
+  totalItems: number;
+  totalCubicFeet: number;
+  roomBreakdown: Record<string, { items: number; cubicFeet: number }>;
+}
+
+export interface InventoryScanResponse {
+  cached: boolean;
+  scan_id: string;
+  zpid?: string;
+  inventory: InventoryItem[];
+  summary: InventorySummary;
+  photosAnalyzed: number;
+  processingTimeMs?: number;
+  scannedAt?: string;
+}
+
 // Error types
 export interface AppError {
   message: string;

@@ -27,6 +27,7 @@ import {
   Package
 } from 'lucide-react';
 import HomeownerLookupButton from './HomeownerLookupButton';
+import InventoryScanButton from './InventoryScanButton';
 import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile';
 import { Pagination } from '@/components/ui/pagination';
@@ -895,6 +896,7 @@ const UnifiedListings = () => {
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
                               <HomeownerLookupButton listing={listing} compact={false} />
+                              <InventoryScanButton listing={listing} compact={false} />
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation();

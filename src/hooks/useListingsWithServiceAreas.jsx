@@ -40,20 +40,21 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
         return cityName;
       });
 
-      // Query just_listed table directly with service area filtering
+      // Query unified listings table with status filter and service area filtering
       let query = supabase
-        .from('just_listed')
+        .from('listings')
         .select('*', { count: 'exact' })
-        .in('address_city', cityNames)
-        .order('last_seen_at', { ascending: false })
+        .eq('status', 'just_listed')
+        .in('lastcity', cityNames)
+        .order('lastseenat', { ascending: false })
         .range(from, to);
 
       // Apply additional filters
       if (filters.minPrice) {
-        query = query.gte('unformatted_price', filters.minPrice);
+        query = query.gte('unformattedprice', filters.minPrice);
       }
       if (filters.maxPrice) {
-        query = query.lte('unformatted_price', filters.maxPrice);
+        query = query.lte('unformattedprice', filters.maxPrice);
       }
       if (filters.beds) {
         query = query.gte('beds', filters.beds);
@@ -62,7 +63,7 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
         query = query.gte('baths', filters.baths);
       }
       if (filters.propertyType) {
-        query = query.eq('status_text', filters.propertyType);
+        query = query.eq('statustext', filters.propertyType);
       }
       if (filters.minSqft) {
         query = query.gte('area', filters.minSqft);
@@ -70,7 +71,7 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
       if (filters.maxSqft) {
         query = query.lte('area', filters.maxSqft);
       }
-      
+
       // Search term filter - search across address, city, state, and zip
       if (filters.searchTerm && filters.searchTerm.trim()) {
         const searchTerm = filters.searchTerm.trim();
@@ -86,9 +87,9 @@ export const useJustListedWithServiceAreas = (filters = {}, page = 1, pageSize =
       // Add service area match information to each listing
       const enrichedData = (data || []).map(listing => ({
         ...listing,
-        service_area_match: listing.address_city === profile.main_service_city 
-          ? profile.main_service_city 
-          : listing.address_city
+        service_area_match: listing.lastcity === profile.main_service_city
+          ? profile.main_service_city
+          : listing.lastcity
       }));
 
       // Get service area information
@@ -145,20 +146,21 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
         return cityName;
       });
 
-      // Query sold_listings table directly with service area filtering
+      // Query unified listings table with status filter and service area filtering
       let query = supabase
-        .from('sold_listings')
+        .from('listings')
         .select('*', { count: 'exact' })
-        .in('address_city', cityNames)
-        .order('last_seen_at', { ascending: false })
+        .eq('status', 'sold')
+        .in('lastcity', cityNames)
+        .order('lastseenat', { ascending: false })
         .range(from, to);
 
       // Apply additional filters
       if (filters.minPrice) {
-        query = query.gte('unformatted_price', filters.minPrice);
+        query = query.gte('unformattedprice', filters.minPrice);
       }
       if (filters.maxPrice) {
-        query = query.lte('unformatted_price', filters.maxPrice);
+        query = query.lte('unformattedprice', filters.maxPrice);
       }
       if (filters.beds) {
         query = query.gte('beds', filters.beds);
@@ -167,7 +169,7 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
         query = query.gte('baths', filters.baths);
       }
       if (filters.propertyType) {
-        query = query.eq('status_text', filters.propertyType);
+        query = query.eq('statustext', filters.propertyType);
       }
       if (filters.minSqft) {
         query = query.gte('area', filters.minSqft);
@@ -185,9 +187,9 @@ export const useSoldListingsWithServiceAreas = (filters = {}, page = 1, pageSize
       // Add service area match information to each listing
       const enrichedData = (data || []).map(listing => ({
         ...listing,
-        service_area_match: listing.address_city === profile.main_service_city 
-          ? profile.main_service_city 
-          : listing.address_city
+        service_area_match: listing.lastcity === profile.main_service_city
+          ? profile.main_service_city
+          : listing.lastcity
       }));
 
       // Get service area information
@@ -304,26 +306,35 @@ export const useServiceAreaStats = () => {
         };
       }
 
-      // Get just listed count
-      const { count: justListedCount } = await supabase
-        .from('just_listed')
-        .select('*', { count: 'exact', head: true })
-        .in('address_city', profile.service_cities);
+      // Extract city names from service cities (format: "City, State")
+      const cityNames = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        return cityName;
+      });
 
-      // Get sold listings count
-      const { count: soldCount } = await supabase
-        .from('sold_listings')
+      // Get just listed count from unified listings table
+      const { count: justListedCount } = await supabase
+        .from('listings')
         .select('*', { count: 'exact', head: true })
-        .in('address_city', profile.service_cities);
+        .eq('status', 'just_listed')
+        .in('lastcity', cityNames);
+
+      // Get sold listings count from unified listings table
+      const { count: soldCount } = await supabase
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'sold')
+        .in('lastcity', cityNames);
 
       // Get listings by city breakdown
       const { data: cityBreakdown } = await supabase
-        .from('just_listed')
-        .select('address_city')
-        .in('address_city', profile.service_cities);
+        .from('listings')
+        .select('lastcity')
+        .eq('status', 'just_listed')
+        .in('lastcity', cityNames);
 
       const citiesWithListings = cityBreakdown?.reduce((acc, item) => {
-        const city = item.address_city;
+        const city = item.lastcity;
         if (!acc[city]) {
           acc[city] = 0;
         }

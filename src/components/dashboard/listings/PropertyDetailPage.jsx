@@ -42,7 +42,10 @@ import {
   Package
 } from 'lucide-react';
 import HomeownerInfoCard from './HomeownerInfoCard';
+import InventoryResultsCard from './InventoryResultsCard';
 import { useHomeownerLookup } from '@/hooks/useHomeownerLookup';
+import { useInventoryScan } from '@/hooks/useInventoryScan';
+import { inventoryScanService } from '@/services/inventoryScan';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +76,17 @@ const PropertyDetailPage = () => {
     reset: resetHomeowner,
     hasData: hasHomeownerData
   } = useHomeownerLookup();
+
+  // Inventory scan hook
+  const {
+    scanFromListing: scanInventory,
+    loading: inventoryLoading,
+    data: inventoryData,
+    error: inventoryError,
+    reset: resetInventory,
+    hasData: hasInventoryData,
+    progress: inventoryProgress
+  } = useInventoryScan();
 
   // Check if user is admin
   const isAdmin = user?.email === 'johnowolabi80@gmail.com';
@@ -836,6 +850,56 @@ const PropertyDetailPage = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Inventory Scan - Only show for LA area listings with photos */}
+            {inventoryScanService.canShowScanButton(listing) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-teal" />
+                    Inventory Scan
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {!hasInventoryData && !inventoryLoading && !inventoryError && (
+                    <>
+                      <p className="text-sm text-slate mb-3">
+                        AI-powered scan to detect furniture and estimate move size from listing photos.
+                      </p>
+                      <Button
+                        className="w-full bg-teal text-deep-navy hover:bg-teal/90"
+                        onClick={() => scanInventory(listing)}
+                        disabled={inventoryLoading}
+                      >
+                        {inventoryLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing photos...
+                          </>
+                        ) : (
+                          <>
+                            <Package className="h-4 w-4 mr-2" />
+                            Scan Inventory
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                  {(hasInventoryData || inventoryLoading || inventoryError) && (
+                    <InventoryResultsCard
+                      data={inventoryData}
+                      loading={inventoryLoading}
+                      error={inventoryError}
+                      progress={inventoryProgress}
+                      onRetry={() => {
+                        resetInventory();
+                        scanInventory(listing);
+                      }}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </motion.div>
