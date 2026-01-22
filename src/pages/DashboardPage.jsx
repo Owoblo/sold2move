@@ -35,7 +35,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfile } from '@/hooks/useProfile';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link, useNavigate } from 'react-router-dom';
 import LoadingButton from '@/components/ui/LoadingButton';
@@ -44,10 +43,10 @@ import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useAnalytics } from '@/services/analytics.jsx';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const DashboardPage = () => {
   const { toast } = useToast();
-  const supabase = useSupabaseClient();
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const navigate = useNavigate();
   const { trackAction } = useAnalytics();
@@ -91,34 +90,40 @@ const DashboardPage = () => {
     const todayISO = today.toISOString();
 
     try {
-      // Fetch today's just listed
+      // Fetch today's just listed from unified listings table
       const { data: justListedData, count: justListedCount } = await supabase
-        .from('just_listed')
-        .select('id, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .from('listings')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', todayISO)
         .order('lastseenat', { ascending: false })
         .limit(5);
 
-      // Fetch today's sold
+      // Fetch today's sold from unified listings table
       const { data: soldData, count: soldCount } = await supabase
-        .from('sold_listings')
-        .select('id, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .from('listings')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext', { count: 'exact' })
+        .eq('status', 'sold')
         .in('lastcity', cityNames)
         .gte('lastseenat', todayISO)
         .order('lastseenat', { ascending: false })
         .limit(5);
+
+      // Map zpid to id for consistency
+      const mappedJustListed = (justListedData || []).map(item => ({ ...item, id: item.zpid }));
+      const mappedSold = (soldData || []).map(item => ({ ...item, id: item.zpid }));
 
       setTodaysLeads({
-        justListed: justListedData || [],
-        sold: soldData || [],
+        justListed: mappedJustListed,
+        sold: mappedSold,
         justListedCount: justListedCount || 0,
         soldCount: soldCount || 0
       });
     } catch (error) {
       console.error('Error fetching today\'s leads:', error);
     }
-  }, [supabase, profile, getCityNames]);
+  }, [profile, getCityNames]);
 
   // Fetch high-value leads (sorted by price/size)
   const fetchHighValueLeads = useCallback(async () => {
@@ -133,30 +138,34 @@ const DashboardPage = () => {
 
     try {
       const { data } = await supabase
-        .from('just_listed')
-        .select('id, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext')
+        .from('listings')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext')
+        .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', weekAgo.toISOString())
+        .not('unformattedprice', 'is', null)
         .order('unformattedprice', { ascending: false })
         .limit(5);
 
-      setHighValueLeads(data || []);
+      // Map zpid to id for consistency
+      const mappedData = (data || []).map(item => ({ ...item, id: item.zpid }));
+      setHighValueLeads(mappedData);
     } catch (error) {
       console.error('Error fetching high-value leads:', error);
     }
-  }, [supabase, profile, getCityNames]);
+  }, [profile, getCityNames]);
 
   // Fetch revealed leads that need action
   const fetchRevealedLeads = useCallback(async () => {
     if (!profile) return;
 
     try {
-      // Get user's revealed listings
+      // Get user's revealed listings with joined listing data
       const { data: reveals } = await supabase
         .from('listing_reveals')
-        .select('listing_id, revealed_at, listing_type')
+        .select('listing_id, created_at')
         .eq('user_id', profile.id)
-        .order('revealed_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (!reveals || reveals.length === 0) {
@@ -164,45 +173,40 @@ const DashboardPage = () => {
         return;
       }
 
-      // Get the listing details for revealed items
-      const justListedIds = reveals.filter(r => r.listing_type === 'just_listed' || !r.listing_type).map(r => r.listing_id);
-      const soldIds = reveals.filter(r => r.listing_type === 'sold').map(r => r.listing_id);
+      // Get the listing details from unified listings table
+      const listingIds = reveals.map(r => r.listing_id);
 
-      let allRevealedListings = [];
+      const { data: listingsData } = await supabase
+        .from('listings')
+        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity, status')
+        .in('zpid', listingIds);
 
-      if (justListedIds.length > 0) {
-        const { data: justListedData } = await supabase
-          .from('just_listed')
-          .select('id, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity')
-          .in('id', justListedIds);
-
-        if (justListedData) {
-          allRevealedListings = [...allRevealedListings, ...justListedData.map(l => ({ ...l, type: 'just_listed' }))];
-        }
+      if (!listingsData) {
+        setRevealedLeads([]);
+        return;
       }
 
-      if (soldIds.length > 0) {
-        const { data: soldData } = await supabase
-          .from('sold_listings')
-          .select('id, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity')
-          .in('id', soldIds);
-
-        if (soldData) {
-          allRevealedListings = [...allRevealedListings, ...soldData.map(l => ({ ...l, type: 'sold' }))];
-        }
-      }
-
-      // Add reveal dates
-      const enrichedListings = allRevealedListings.map(listing => {
-        const reveal = reveals.find(r => r.listing_id === listing.id);
-        return { ...listing, revealed_at: reveal?.revealed_at };
+      // Merge reveal dates with listing data
+      const enrichedListings = listingsData.map(listing => {
+        const reveal = reveals.find(r => r.listing_id === listing.zpid);
+        return {
+          id: listing.zpid,
+          addressstreet: listing.addressstreet,
+          lastseenat: listing.lastseenat,
+          unformattedprice: listing.unformattedprice,
+          beds: listing.beds,
+          baths: listing.baths,
+          lastcity: listing.lastcity,
+          type: listing.status,
+          revealed_at: reveal?.created_at
+        };
       }).sort((a, b) => new Date(b.revealed_at) - new Date(a.revealed_at));
 
       setRevealedLeads(enrichedListings.slice(0, 8));
     } catch (error) {
       console.error('Error fetching revealed leads:', error);
     }
-  }, [supabase, profile]);
+  }, [profile]);
 
   // Fetch monthly stats and lead velocity
   const fetchMonthlyStats = useCallback(async () => {
@@ -219,43 +223,52 @@ const DashboardPage = () => {
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     try {
-      // This month's total leads
+      // This month's total leads (just_listed)
       const { count: monthlyJustListed } = await supabase
-        .from('just_listed')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', monthStart.toISOString());
 
+      // This month's sold
       const { count: monthlySold } = await supabase
-        .from('sold_listings')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'sold')
         .in('lastcity', cityNames)
         .gte('lastseenat', monthStart.toISOString());
 
-      // This week's leads
+      // This week's just_listed
       const { count: thisWeekJustListed } = await supabase
-        .from('just_listed')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', weekStart.toISOString());
 
+      // This week's sold
       const { count: thisWeekSold } = await supabase
-        .from('sold_listings')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'sold')
         .in('lastcity', cityNames)
         .gte('lastseenat', weekStart.toISOString());
 
-      // Last week's leads (for comparison)
+      // Last week's just_listed (for comparison)
       const { count: lastWeekJustListed } = await supabase
-        .from('just_listed')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'just_listed')
         .in('lastcity', cityNames)
         .gte('lastseenat', twoWeeksAgo.toISOString())
         .lt('lastseenat', weekStart.toISOString());
 
+      // Last week's sold
       const { count: lastWeekSold } = await supabase
-        .from('sold_listings')
-        .select('id', { count: 'exact', head: true })
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'sold')
         .in('lastcity', cityNames)
         .gte('lastseenat', twoWeeksAgo.toISOString())
         .lt('lastseenat', weekStart.toISOString());
@@ -265,7 +278,7 @@ const DashboardPage = () => {
         .from('listing_reveals')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', profile.id)
-        .gte('revealed_at', monthStart.toISOString());
+        .gte('created_at', monthStart.toISOString());
 
       const totalLeads = (monthlyJustListed || 0) + (monthlySold || 0);
       const thisWeekLeads = (thisWeekJustListed || 0) + (thisWeekSold || 0);
@@ -285,7 +298,7 @@ const DashboardPage = () => {
     } catch (error) {
       console.error('Error fetching monthly stats:', error);
     }
-  }, [supabase, profile, getCityNames]);
+  }, [profile, getCityNames]);
 
   // Fetch service area health
   const fetchServiceAreaHealth = useCallback(async () => {
@@ -301,14 +314,16 @@ const DashboardPage = () => {
       const healthData = await Promise.all(
         cityNames.map(async (city) => {
           const { count: justListedCount } = await supabase
-            .from('just_listed')
-            .select('id', { count: 'exact', head: true })
+            .from('listings')
+            .select('zpid', { count: 'exact', head: true })
+            .eq('status', 'just_listed')
             .eq('lastcity', city)
             .gte('lastseenat', weekAgo.toISOString());
 
           const { count: soldCount } = await supabase
-            .from('sold_listings')
-            .select('id', { count: 'exact', head: true })
+            .from('listings')
+            .select('zpid', { count: 'exact', head: true })
+            .eq('status', 'sold')
             .eq('lastcity', city)
             .gte('lastseenat', weekAgo.toISOString());
 
@@ -333,7 +348,7 @@ const DashboardPage = () => {
     } catch (error) {
       console.error('Error fetching service area health:', error);
     }
-  }, [supabase, profile, getCityNames]);
+  }, [profile, getCityNames]);
 
   // Handle reveal
   const handleReveal = async (listingId, listingType = 'just_listed') => {
