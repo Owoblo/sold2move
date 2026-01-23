@@ -12,13 +12,23 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  DollarSign,
   Building,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CANADA_CITY_CLUSTERS } from '@/data/canadaCityClusters';
-import { calculatePrice, formatPrice, formatPopulation } from '@/lib/pricingUtils';
 import { cn } from '@/lib/utils';
+
+// Helper to format population
+const formatPopulation = (population) => {
+  if (!population) return '0';
+  if (population >= 1000000) {
+    return `${(population / 1000000).toFixed(1)}M`;
+  }
+  if (population >= 1000) {
+    return `${(population / 1000).toFixed(0)}K`;
+  }
+  return population.toLocaleString();
+};
 
 /**
  * CityClusterSelector - Cluster-based city selection with nearby towns
@@ -74,8 +84,8 @@ const CityClusterSelector = ({
     });
   }, [availableCities, searchQuery]);
 
-  // Calculate total population and price
-  const { totalPopulation, prices } = useMemo(() => {
+  // Calculate total population for display
+  const totalPopulation = useMemo(() => {
     let total = 0;
     selectedCities.forEach(cityName => {
       const city = CANADA_CITY_CLUSTERS[cityName];
@@ -83,10 +93,7 @@ const CityClusterSelector = ({
         total += city.population;
       }
     });
-    return {
-      totalPopulation: total,
-      prices: calculatePrice(total),
-    };
+    return total;
   }, [selectedCities]);
 
   // Toggle city expansion
@@ -162,29 +169,22 @@ const CityClusterSelector = ({
         </div>
       )}
 
-      {/* Price Preview */}
+      {/* Selection Summary */}
       {showPricePreview && selectedCities.length > 0 && (
         <Card className="bg-gradient-to-r from-teal/10 to-deep-navy border-teal/30">
           <CardContent className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-teal" />
+                <MapPin className="h-5 w-5 text-teal" />
                 <div>
-                  <p className="text-sm text-slate">Estimated Monthly Price</p>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-2xl font-bold text-lightest-slate">
-                      {formatPrice(prices.basic)}
-                    </span>
-                    <span className="text-sm text-slate">Basic</span>
-                    <span className="text-2xl font-bold text-teal">
-                      {formatPrice(prices.moversSpecial)}
-                    </span>
-                    <span className="text-sm text-slate">Movers Special</span>
-                  </div>
+                  <p className="text-sm text-slate">Selected Service Areas</p>
+                  <p className="text-lg font-semibold text-lightest-slate">
+                    {selectedCities.length} {selectedCities.length === 1 ? 'city' : 'cities'}
+                  </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-slate">Total Population</p>
+                <p className="text-sm text-slate">Combined Population</p>
                 <p className="text-lg font-semibold text-lightest-slate">
                   <Users className="h-4 w-4 inline mr-1" />
                   {formatPopulation(totalPopulation)}

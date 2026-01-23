@@ -1,13 +1,11 @@
 import React, { useState, useEffect, Component } from 'react';
-import { MapPin, Globe, Save, RotateCcw, DollarSign, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import { MapPin, Globe, Save, RotateCcw, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DatabaseCitySelector from '@/components/ui/DatabaseCitySelector';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { useAnalytics } from '@/services/analytics.jsx';
-import { useCalculatedPrice } from '@/hooks/useCalculatedPrice';
-import { formatPrice, formatPopulation } from '@/lib/pricingUtils';
 import toast from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -65,16 +63,6 @@ const MultiCitySettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState(null);
-
-  // Extract city names for price calculation (format: "City, StateCode" -> "City")
-  const cityNamesForPricing = selectedCities.map(c => c.split(', ')[0]);
-
-  // Get calculated prices based on selected cities
-  const {
-    loading: priceLoading,
-    prices,
-    totalPopulation,
-  } = useCalculatedPrice(cityNamesForPricing);
 
   // Reset error when component mounts
   useEffect(() => {
@@ -230,30 +218,15 @@ const MultiCitySettings = () => {
             </div>
           )}
 
-          {/* Calculated Price Preview */}
-          {selectedCities.length > 0 && !priceLoading && (
+          {/* Subscription Info */}
+          {selectedCities.length > 0 && (
             <div className="p-4 bg-gradient-to-r from-teal/10 to-deep-navy rounded-lg border border-teal/30">
-              <h4 className="text-sm font-medium text-lightest-slate mb-3 flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-teal" />
-                Your Estimated Monthly Price
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-slate mb-1">Basic Plan</p>
-                  <p className="text-2xl font-bold text-lightest-slate">{formatPrice(prices.basic)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate mb-1">Movers Special</p>
-                  <p className="text-2xl font-bold text-teal">{formatPrice(prices.moversSpecial)}</p>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-teal/20 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-slate">
-                  <Users className="h-4 w-4" />
-                  Total Population: {formatPopulation(totalPopulation)}
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-slate">
+                  Your subscription plan determines how many cities you can access.
                 </div>
                 <Link to="/dashboard/billing" className="text-teal text-sm hover:underline">
-                  View billing →
+                  View plans →
                 </Link>
               </div>
             </div>
@@ -279,8 +252,8 @@ const MultiCitySettings = () => {
               <ul className="text-xs text-slate space-y-1">
                 <li>• Select the main city first - it will be your primary service area</li>
                 <li>• Include nearby suburbs and smaller cities in your region</li>
-                <li>• You can select up to 20 cities total</li>
-                <li>• Your subscription price is based on the total population of your selected cities</li>
+                <li>• Your plan determines how many cities you can access (Solo: 1, Special: 2, Premium: unlimited)</li>
+                <li>• <Link to="/dashboard/billing" className="text-teal hover:underline">Upgrade your plan</Link> to add more cities</li>
               </ul>
             </div>
           </div>
