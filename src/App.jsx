@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { storeIntendedDestination } from '@/utils/authUtils';
 import { testAuthFlow } from '@/utils/authDebugger';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useVersionCheck } from '@/hooks/useVersionCheck';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
@@ -86,6 +87,9 @@ function App() {
     completeTour,
     skipTour
   } = useOnboarding();
+
+  // Check for new app versions and auto-reload to prevent chunk errors
+  useVersionCheck();
 
   // Store intended destination for deep links and protected routes
   useEffect(() => {

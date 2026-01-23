@@ -7,6 +7,9 @@ import iframeRouteRestorationPlugin from './plugins/vite-plugin-iframe-route-res
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+// Generate a unique build version based on timestamp
+const BUILD_VERSION = Date.now().toString(36);
+
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
 	for (const mutation of mutations) {
@@ -153,6 +156,12 @@ const addTransformIndexHtml = {
 	name: 'add-transform-index-html',
 	transformIndexHtml(html) {
 		const tags = [
+			// Add version meta tag for cache busting detection
+			{
+				tag: 'meta',
+				attrs: { name: 'app-version', content: BUILD_VERSION },
+				injectTo: 'head',
+			},
 			{
 				tag: 'script',
 				attrs: { type: 'module' },
