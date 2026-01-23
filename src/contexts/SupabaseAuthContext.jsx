@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
 import { getSiteUrl } from '@/lib/customSupabaseClient';
+import { setSentryUser, addSentryBreadcrumb } from '@/lib/errorHandler';
 
 const AuthContext = createContext(undefined);
 
@@ -41,21 +42,37 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         // Session will be automatically updated by useSession hook
+        // Set Sentry user context
+        setSentryUser(session.user);
+        addSentryBreadcrumb('User signed in', 'auth', { userId: session.user?.id });
       } else if (event === 'SIGNED_OUT') {
         // Clear any stored intended destination
         localStorage.removeItem('intendedDestination');
+        // Clear Sentry user context
+        setSentryUser(null);
+        addSentryBreadcrumb('User signed out', 'auth');
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Token refreshed successfully
+        addSentryBreadcrumb('Token refreshed', 'auth');
       } else if (event === 'PASSWORD_RECOVERY') {
         // Password recovery initiated
+        addSentryBreadcrumb('Password recovery initiated', 'auth');
       } else if (event === 'SIGNED_OUT' && !session) {
         // Clear any stored intended destination on session expiry
         localStorage.removeItem('intendedDestination');
+        setSentryUser(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
+
+  // Set Sentry user context on initial load if already signed in
+  useEffect(() => {
+    if (user) {
+      setSentryUser(user);
+    }
+  }, [user]);
 
   const signUp = useCallback(async (email, password) => {
     try {

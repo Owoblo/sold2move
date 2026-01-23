@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+
 // Comprehensive Error Handling System
 export class AppError extends Error {
   constructor(message, code, context = {}) {
@@ -29,7 +31,7 @@ export const buildErrorContext = (operation, params = {}) => ({
   url: window.location.href
 });
 
-// Enhanced error logger
+// Enhanced error logger with Sentry integration
 export const logError = (error, context = {}) => {
   const errorLog = {
     message: error.message,
@@ -42,7 +44,7 @@ export const logError = (error, context = {}) => {
     timestamp: new Date().toISOString()
   };
 
-  // Always log to console for debugging (temporarily enabled in all environments)
+  // Always log to console for debugging
   console.group('🚨 Error Details');
   console.error('Message:', error.message);
   console.error('Code:', error.code);
@@ -51,8 +53,32 @@ export const logError = (error, context = {}) => {
   console.error('Full Error Object:', error);
   console.groupEnd();
 
-  // In production, you might want to send this to an error tracking service
-  // like Sentry, LogRocket, etc.
+  // Send to Sentry with context
+  Sentry.withScope((scope) => {
+    // Add error code as tag for filtering
+    scope.setTag('error_code', error.code || 'UNKNOWN');
+    scope.setTag('error_type', context.queryType || context.mutationType || 'general');
+
+    // Add context as extra data
+    scope.setExtras({
+      ...errorLog.context,
+      originalMessage: error.message,
+      errorCode: error.code
+    });
+
+    // Set error level based on code
+    if (error.code === 'COLUMN_NOT_FOUND' || error.code === 'TABLE_NOT_FOUND') {
+      scope.setLevel('error');
+    } else if (error.code === 'RATE_LIMITED') {
+      scope.setLevel('warning');
+    } else {
+      scope.setLevel('error');
+    }
+
+    // Capture the error
+    Sentry.captureException(error);
+  });
+
   return errorLog;
 };
 
@@ -272,4 +298,37 @@ export const handleHealthCheckError = (error, service) => {
   );
 
   return logError(appError, context);
+};
+
+// Set user context in Sentry when user logs in
+export const setSentryUser = (user) => {
+  if (user) {
+    Sentry.setUser({
+      id: user.id,
+      email: user.email,
+      username: user.user_metadata?.full_name || user.email?.split('@')[0]
+    });
+  } else {
+    // Clear user on logout
+    Sentry.setUser(null);
+  }
+};
+
+// Add breadcrumb for tracking user actions
+export const addSentryBreadcrumb = (message, category = 'user-action', data = {}) => {
+  Sentry.addBreadcrumb({
+    message,
+    category,
+    level: 'info',
+    data
+  });
+};
+
+// Capture a message (non-error) to Sentry
+export const captureSentryMessage = (message, level = 'info', context = {}) => {
+  Sentry.withScope((scope) => {
+    scope.setLevel(level);
+    scope.setExtras(context);
+    Sentry.captureMessage(message);
+  });
 };
