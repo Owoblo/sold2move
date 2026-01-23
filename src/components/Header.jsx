@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, X, Target } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
@@ -26,19 +26,15 @@ const Header = () => {
       <nav className="max-w-7xl mx-auto flex items-center justify-between">
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="flex items-center space-x-3"
+          className="flex items-center"
         >
-          <div className="p-2 bg-gradient-to-r from-navy-accent to-teal rounded-lg">
-            <Target className="h-6 w-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xl font-bold bg-gradient-to-r from-navy-accent to-teal bg-clip-text text-transparent">
-              Sold2Move
-            </span>
-            <span className="text-xs text-slate font-medium -mt-1">
-              Your Exclusive North American Moving Pipeline
-            </span>
-          </div>
+          <Link to="/">
+            <img
+              src="/images/logos/logo-green-on-light.jpg"
+              alt="Sold2Move"
+              className="h-10 w-auto object-contain"
+            />
+          </Link>
         </motion.div>
 
         {/* Desktop Navigation */}

@@ -98,17 +98,12 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       }`}>
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
-            <Link to="/" className="flex items-center space-x-2 group">
-              <div className={`p-2 rounded-lg border ${
-                isLight
-                  ? 'bg-emerald-50 border-emerald-200/50'
-                  : 'bg-charcoal-900 border-white/[0.06]'
-              }`}>
-                <Home className={`h-6 w-6 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
-              </div>
-              {isSidebarOpen && (
-                <span className={`text-xl font-bold font-heading ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>Sold2Move</span>
-              )}
+            <Link to="/" className="flex items-center group">
+              <img
+                src={isLight ? '/images/logos/logo-green-on-light.jpg' : '/images/logos/logo-green-on-dark.jpg'}
+                alt="Sold2Move"
+                className={`object-contain ${isSidebarOpen ? 'h-10 w-auto' : 'h-8 w-8 object-cover rounded-lg'}`}
+              />
             </Link>
             {isSidebarOpen && (
               <button
