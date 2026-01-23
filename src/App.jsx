@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Toaster as ShadToaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/Header';
@@ -19,7 +19,7 @@ import { useVersionCheck } from '@/hooks/useVersionCheck';
 
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const HowItWorksPage = lazy(() => import('@/pages/HowItWorksPage'));
-const PricingPage = lazy(() => import('@/pages/PricingPage'));
+// PricingPage removed - redirecting to /request-demo instead
 const FAQPage = lazy(() => import('@/pages/FAQPage'));
 const AboutPage = lazy(() => import('@/pages/AboutPage'));
 const ContactPage = lazy(() => import('@/pages/ContactPage'));
@@ -122,7 +122,7 @@ function App() {
               <Routes location={location}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
-                <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/pricing" element={<Navigate to="/request-demo" replace />} />
                 <Route path="/faq" element={<FAQPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
