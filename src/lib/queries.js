@@ -206,7 +206,20 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       is_furnished: r.is_furnished,
       furniture_confidence: r.furniture_confidence,
       furniture_scan_date: r.furniture_scan_date,
-      furniture_items_detected: r.furniture_items_detected
+      // Parse furniture_items_detected if it's a JSON string, otherwise use as-is
+      furniture_items_detected: (() => {
+        if (!r.furniture_items_detected) return null;
+        if (Array.isArray(r.furniture_items_detected)) return r.furniture_items_detected;
+        if (typeof r.furniture_items_detected === 'string') {
+          try {
+            const parsed = JSON.parse(r.furniture_items_detected);
+            return Array.isArray(parsed) ? parsed : null;
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      })()
     }));
 
     console.log('Mapped data length:', mappedData.length);
@@ -413,7 +426,20 @@ export async function fetchListingById(listingId) {
       is_furnished: data.is_furnished,
       furniture_confidence: data.furniture_confidence,
       furniture_scan_date: data.furniture_scan_date,
-      furniture_items_detected: data.furniture_items_detected
+      // Parse furniture_items_detected if it's a JSON string, otherwise use as-is
+      furniture_items_detected: (() => {
+        if (!data.furniture_items_detected) return null;
+        if (Array.isArray(data.furniture_items_detected)) return data.furniture_items_detected;
+        if (typeof data.furniture_items_detected === 'string') {
+          try {
+            const parsed = JSON.parse(data.furniture_items_detected);
+            return Array.isArray(parsed) ? parsed : null;
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      })()
     };
   } catch (error) {
     throw error;

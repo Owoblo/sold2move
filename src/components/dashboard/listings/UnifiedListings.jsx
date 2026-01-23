@@ -879,7 +879,7 @@ const UnifiedListings = () => {
                                   {listing.is_furnished === true && (
                                     <span
                                       className="flex items-center gap-1 px-2 py-0.5 bg-violet-500/20 text-violet-400 text-xs font-semibold rounded-full shadow-[0_0_12px_hsl(270_100%_65%/0.4)] cursor-help"
-                                      title={listing.furniture_items_detected?.length > 0
+                                      title={Array.isArray(listing.furniture_items_detected) && listing.furniture_items_detected.length > 0
                                         ? `Detected: ${listing.furniture_items_detected.join(', ')}`
                                         : 'Furnished property'}
                                     >

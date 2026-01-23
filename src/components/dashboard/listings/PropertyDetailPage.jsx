@@ -713,7 +713,7 @@ const PropertyDetailPage = () => {
                     )}
 
                     {/* Detected Items */}
-                    {listing.furniture_items_detected && listing.furniture_items_detected.length > 0 && (
+                    {Array.isArray(listing.furniture_items_detected) && listing.furniture_items_detected.length > 0 && (
                       <div className="space-y-2">
                         <span className="text-slate text-sm">Detected Items:</span>
                         <div className="flex flex-wrap gap-2">
