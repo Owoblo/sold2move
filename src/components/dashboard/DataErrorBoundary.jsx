@@ -20,7 +20,13 @@ class DataErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Data Error Boundary caught an error:', error, errorInfo);
+    console.error('=== DataErrorBoundary caught an error ===');
+    console.error('Error:', error);
+    console.error('Error message:', error?.message);
+    console.error('Error code:', error?.code);
+    console.error('Error stack:', error?.stack);
+    console.error('Component Stack:', errorInfo?.componentStack);
+    console.error('==========================================');
     this.setState({ errorInfo });
     
     // Track error for analytics

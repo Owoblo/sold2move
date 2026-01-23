@@ -23,9 +23,15 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
   return useQuery({
     queryKey: listingKeys.justListed(filters, page),
     queryFn: async () => {
+      console.log('=== useJustListedEnhanced queryFn START ===');
+      console.log('Input filters:', JSON.stringify(filters, null, 2));
+      console.log('Page:', page, 'PageSize:', pageSize);
+      console.log('Profile:', profile ? { id: profile.id, city_name: profile.city_name, service_cities: profile.service_cities, country_code: profile.country_code } : 'null');
+
       try {
         // Support both single city and multiple cities
         const cityFilter = filters.city_name;
+        console.log('City filter from filters:', cityFilter);
 
         // If no city filter is provided, use profile's service_cities (user markets)
         // This ensures users only see listings from their selected markets
@@ -33,10 +39,13 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         if (!finalCityFilter && profile?.service_cities?.length > 0) {
           // Extract city names from "City, State" format
           finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
+          console.log('Using service_cities as filter:', finalCityFilter);
         } else if (!finalCityFilter && profile?.city_name) {
           // Fallback to primary city if service_cities not set
           finalCityFilter = [profile.city_name];
+          console.log('Using city_name as filter:', finalCityFilter);
         }
+        console.log('Final city filter:', finalCityFilter);
 
         // Add AI furniture filter and country code from user profile
         const enhancedFilters = {
@@ -44,7 +53,9 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           aiFurnitureFilter: profile?.ai_furniture_filter || false,
           countryCode: profile?.country_code || null, // Add country restriction
         };
+        console.log('Enhanced filters:', JSON.stringify(enhancedFilters, null, 2));
 
+        console.log('Calling fetchJustListed...');
         const { data, count } = await fetchJustListed(
           null, // No run ID needed
           finalCityFilter || null, // Allow null city filter
@@ -52,6 +63,12 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           pageSize,
           enhancedFilters
         );
+
+        console.log('fetchJustListed returned:');
+        console.log('  - Count:', count);
+        console.log('  - Data length:', data?.length);
+        console.log('  - First item:', data?.[0] ? { id: data[0].id, addressStreet: data[0].addressStreet } : 'none');
+        console.log('=== useJustListedEnhanced queryFn SUCCESS ===');
 
         return {
           data: data || [],
@@ -62,6 +79,11 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
           hasPrevPage: page > 1,
         };
       } catch (error) {
+        console.error('=== useJustListedEnhanced queryFn ERROR ===');
+        console.error('Error:', error);
+        console.error('Error message:', error?.message);
+        console.error('Error code:', error?.code);
+        console.error('Error stack:', error?.stack);
         throw error;
       }
     },
@@ -91,43 +113,69 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
   return useQuery({
     queryKey: listingKeys.soldListings(filters, page),
     queryFn: async () => {
-      // Support both single city and multiple cities
-      const cityFilter = filters.city_name;
+      console.log('=== useSoldListingsEnhanced queryFn START ===');
+      console.log('Input filters:', JSON.stringify(filters, null, 2));
+      console.log('Page:', page, 'PageSize:', pageSize);
+      console.log('Profile:', profile ? { id: profile.id, city_name: profile.city_name, service_cities: profile.service_cities, country_code: profile.country_code } : 'null');
 
-      // If no city filter is provided, use profile's service_cities (user markets)
-      // This ensures users only see listings from their selected markets
-      let finalCityFilter = cityFilter;
-      if (!finalCityFilter && profile?.service_cities?.length > 0) {
-        // Extract city names from "City, State" format
-        finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
-      } else if (!finalCityFilter && profile?.city_name) {
-        // Fallback to primary city if service_cities not set
-        finalCityFilter = [profile.city_name];
+      try {
+        // Support both single city and multiple cities
+        const cityFilter = filters.city_name;
+        console.log('City filter from filters:', cityFilter);
+
+        // If no city filter is provided, use profile's service_cities (user markets)
+        // This ensures users only see listings from their selected markets
+        let finalCityFilter = cityFilter;
+        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+          // Extract city names from "City, State" format
+          finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
+          console.log('Using service_cities as filter:', finalCityFilter);
+        } else if (!finalCityFilter && profile?.city_name) {
+          // Fallback to primary city if service_cities not set
+          finalCityFilter = [profile.city_name];
+          console.log('Using city_name as filter:', finalCityFilter);
+        }
+        console.log('Final city filter:', finalCityFilter);
+
+        // Add AI furniture filter and country code from user profile
+        const enhancedFilters = {
+          ...filters,
+          aiFurnitureFilter: profile?.ai_furniture_filter || false,
+          countryCode: profile?.country_code || null, // Add country restriction
+        };
+        console.log('Enhanced filters:', JSON.stringify(enhancedFilters, null, 2));
+
+        console.log('Calling fetchSoldSincePrev...');
+        // fetchSoldSincePrev now uses server-side pagination via fetchListings
+        const { data, count } = await fetchSoldSincePrev(
+          null, // currentRunId not needed anymore
+          null, // prevRunId not needed anymore
+          finalCityFilter || null,
+          { ...enhancedFilters, page, pageSize }
+        );
+
+        console.log('fetchSoldSincePrev returned:');
+        console.log('  - Count:', count);
+        console.log('  - Data length:', data?.length);
+        console.log('  - First item:', data?.[0] ? { id: data[0].id, addressStreet: data[0].addressStreet } : 'none');
+        console.log('=== useSoldListingsEnhanced queryFn SUCCESS ===');
+
+        return {
+          data: data || [],
+          count: count || 0,
+          totalPages: Math.ceil((count || 0) / pageSize),
+          currentPage: page,
+          hasNextPage: page < Math.ceil((count || 0) / pageSize),
+          hasPrevPage: page > 1,
+        };
+      } catch (error) {
+        console.error('=== useSoldListingsEnhanced queryFn ERROR ===');
+        console.error('Error:', error);
+        console.error('Error message:', error?.message);
+        console.error('Error code:', error?.code);
+        console.error('Error stack:', error?.stack);
+        throw error;
       }
-
-      // Add AI furniture filter and country code from user profile
-      const enhancedFilters = {
-        ...filters,
-        aiFurnitureFilter: profile?.ai_furniture_filter || false,
-        countryCode: profile?.country_code || null, // Add country restriction
-      };
-
-      // fetchSoldSincePrev now uses server-side pagination via fetchListings
-      const { data, count } = await fetchSoldSincePrev(
-        null, // currentRunId not needed anymore
-        null, // prevRunId not needed anymore
-        finalCityFilter || null,
-        { ...enhancedFilters, page, pageSize }
-      );
-
-      return {
-        data: data || [],
-        count: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize),
-        currentPage: page,
-        hasNextPage: page < Math.ceil((count || 0) / pageSize),
-        hasPrevPage: page > 1,
-      };
     },
     enabled: true, // Always enabled - let the query handle empty filters gracefully
     staleTime: 2 * 60 * 1000, // 2 minutes

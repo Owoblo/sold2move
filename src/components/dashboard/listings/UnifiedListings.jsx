@@ -223,13 +223,38 @@ const UnifiedListings = () => {
     data: justListedData,
     isLoading: justListedLoading,
     error: justListedError,
+    isFetching: justListedFetching,
+    isError: justListedIsError,
   } = useJustListedEnhanced(filters, currentPage, PAGE_SIZE);
 
   const {
     data: soldListingsData,
     isLoading: soldListingsLoading,
     error: soldListingsError,
+    isFetching: soldListingsFetching,
+    isError: soldListingsIsError,
   } = useSoldListingsEnhanced(filters, currentPage, PAGE_SIZE);
+
+  // DEBUG: Log data loading state
+  console.log('=== UnifiedListings Debug ===');
+  console.log('Active Tab:', activeTab);
+  console.log('Current Page:', currentPage);
+  console.log('Filters:', JSON.stringify(filters, null, 2));
+  console.log('Profile Loading:', profileLoading);
+  console.log('Profile:', profile ? { id: profile.id, city_name: profile.city_name, service_cities: profile.service_cities } : null);
+
+  console.log('--- Just Listed ---');
+  console.log('Loading:', justListedLoading, 'Fetching:', justListedFetching);
+  console.log('Data:', justListedData ? { count: justListedData.count, dataLength: justListedData.data?.length } : null);
+  console.log('Error:', justListedError);
+  console.log('isError:', justListedIsError);
+
+  console.log('--- Sold Listings ---');
+  console.log('Loading:', soldListingsLoading, 'Fetching:', soldListingsFetching);
+  console.log('Data:', soldListingsData ? { count: soldListingsData.count, dataLength: soldListingsData.data?.length } : null);
+  console.log('Error:', soldListingsError);
+  console.log('isError:', soldListingsIsError);
+  console.log('============================');
 
   // Get current data based on active tab
   const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
@@ -395,7 +420,14 @@ const UnifiedListings = () => {
   }
 
   if (currentError) {
-    console.error('UnifiedListings: Error:', currentError);
+    console.error('=== UnifiedListings Error Details ===');
+    console.error('Error Object:', currentError);
+    console.error('Error Message:', currentError?.message);
+    console.error('Error Code:', currentError?.code);
+    console.error('Error Stack:', currentError?.stack);
+    console.error('Active Tab:', activeTab);
+    console.error('Filters at error time:', JSON.stringify(filters, null, 2));
+    console.error('=====================================');
   }
 
   const hasFilters = filters.searchTerm || filters.beds || filters.baths || filters.propertyType ||

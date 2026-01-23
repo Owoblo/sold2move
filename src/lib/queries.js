@@ -35,15 +35,26 @@ export async function getMostRecentRunWithData() {
  * @param {object} filters - Additional filters (price, beds, baths, dates, countryCode, etc.)
  */
 export async function fetchListings(status = null, cityName = null, page = 1, pageSize = 20, filters = {}) {
+  console.log('=== fetchListings START ===');
+  console.log('Parameters:');
+  console.log('  - status:', status);
+  console.log('  - cityName:', cityName);
+  console.log('  - page:', page);
+  console.log('  - pageSize:', pageSize);
+  console.log('  - filters:', JSON.stringify(filters, null, 2));
+
   try {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
+    console.log('Pagination range:', from, 'to', to);
 
     // Start building the query - fetching from unified 'listings' table
     let query = supabase
       .from('listings')
       .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,contenttype,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected', { count: 'exact' })
       .range(from, to);
+
+    console.log('Building query...');
 
     // Filter by status if provided
     if (status) {
@@ -139,9 +150,21 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       }
     }
 
+    console.log('Executing Supabase query...');
     const { data, error, count } = await query;
 
+    console.log('Supabase query completed:');
+    console.log('  - Raw data length:', data?.length);
+    console.log('  - Count:', count);
+    console.log('  - Error:', error);
+
     if (error) {
+      console.error('=== fetchListings DATABASE ERROR ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error hint:', error?.hint);
+      console.error('Error details:', error?.details);
       throw handleDatabaseError(error, 'fetchListings', {
         table: 'listings',
         operation: 'select_listings',
@@ -156,6 +179,7 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
     // Filter out LOT (empty land) listings - they have no home to move from
     // This is done in JS to avoid .or() query builder conflicts
     const filteredData = (data || []).filter(r => r.contenttype !== 'LOT');
+    console.log('After LOT filter, data length:', filteredData.length);
 
     // Map database column names to expected property names
     const mappedData = filteredData.map((r) => ({
@@ -185,14 +209,27 @@ export async function fetchListings(status = null, cityName = null, page = 1, pa
       furniture_items_detected: r.furniture_items_detected
     }));
 
+    console.log('Mapped data length:', mappedData.length);
+    console.log('First mapped item:', mappedData[0] ? { id: mappedData[0].id, addressStreet: mappedData[0].addressStreet, status: mappedData[0].status } : 'none');
+    console.log('=== fetchListings SUCCESS ===');
+
     return { data: mappedData, count: count || 0 };
   } catch (error) {
+    console.error('=== fetchListings CATCH ERROR ===');
+    console.error('Error:', error);
+    console.error('Error message:', error?.message);
+    console.error('Error code:', error?.code);
+    console.error('Error stack:', error?.stack);
+
     // Provide more specific error information
     if (error.code === 'PGRST116') {
+      console.error('Error type: No data found (PGRST116)');
       throw new Error('No data found for the specified criteria. Please check your filters or try again later.');
     } else if (error.code === 'PGRST301') {
+      console.error('Error type: Database connection issue (PGRST301)');
       throw new Error('Database connection issue. Please try again in a moment.');
     } else if (error.message?.includes('column') || error.message?.includes('does not exist')) {
+      console.error('Error type: Database structure issue');
       throw new Error('Database structure issue. Please contact support.');
     }
 

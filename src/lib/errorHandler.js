@@ -42,15 +42,14 @@ export const logError = (error, context = {}) => {
     timestamp: new Date().toISOString()
   };
 
-  // Log to console in development
-  if (process.env.NODE_ENV === 'development') {
-    console.group('🚨 Error Details');
-    console.error('Message:', error.message);
-    console.error('Code:', error.code);
-    console.error('Context:', errorLog.context);
-    console.error('Stack:', error.stack);
-    console.groupEnd();
-  }
+  // Always log to console for debugging (temporarily enabled in all environments)
+  console.group('🚨 Error Details');
+  console.error('Message:', error.message);
+  console.error('Code:', error.code);
+  console.error('Context:', JSON.stringify(errorLog.context, null, 2));
+  console.error('Stack:', error.stack);
+  console.error('Full Error Object:', error);
+  console.groupEnd();
 
   // In production, you might want to send this to an error tracking service
   // like Sentry, LogRocket, etc.
