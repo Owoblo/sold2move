@@ -1,12 +1,12 @@
 import { corsHeaders } from './cors.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import Stripe from 'npm:stripe@^14';
-import { sendEmail } from '../_shared/email-sender.ts';
+import { sendEmail } from './email-sender.ts';
 import {
   buildReceiptEmail,
   buildSubscriptionActivatedEmail,
   buildSubscriptionCancelledEmail,
-} from '../_shared/email-templates.ts';
+} from './email-templates.ts';
 
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
