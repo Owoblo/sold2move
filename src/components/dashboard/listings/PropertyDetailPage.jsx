@@ -54,6 +54,17 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import PageWrapper from '@/components/layout/PageWrapper';
 
+// Canadian provinces - homeowner lookup is not available for these
+const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU'];
+
+/**
+ * Check if a listing is from Canada based on its state/province code
+ */
+const isCanadianListing = (listing) => {
+  const state = listing?.addressState || listing?.addressstate || listing?.address_state || '';
+  return CA_PROVINCES.includes(state.toUpperCase());
+};
+
 const PropertyDetailPage = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
@@ -813,40 +824,54 @@ const PropertyDetailPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {!hasHomeownerData && !homeownerLoading && !homeownerError && (
-                  <>
-                    <p className="text-sm text-slate mb-3">
-                      Look up contact information for the property owner including phone numbers and email addresses.
+                {isCanadianListing(listing) ? (
+                  <div className="text-center py-4">
+                    <MapPin className="h-8 w-8 text-slate mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-slate">
+                      Homeowner lookup is not available for Canadian listings.
                     </p>
-                    <Button
-                      className="w-full bg-teal text-deep-navy hover:bg-teal/90"
-                      onClick={() => lookupFromListing(listing)}
-                      disabled={homeownerLoading}
-                    >
-                      {homeownerLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Looking up...
-                        </>
-                      ) : (
-                        <>
-                          <UserSearch className="h-4 w-4 mr-2" />
-                          Get Homeowner Info
-                        </>
-                      )}
-                    </Button>
+                    <p className="text-xs text-slate/70 mt-1">
+                      This feature is only available for US properties.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {!hasHomeownerData && !homeownerLoading && !homeownerError && (
+                      <>
+                        <p className="text-sm text-slate mb-3">
+                          Look up contact information for the property owner including phone numbers and email addresses.
+                        </p>
+                        <Button
+                          className="w-full bg-teal text-deep-navy hover:bg-teal/90"
+                          onClick={() => lookupFromListing(listing)}
+                          disabled={homeownerLoading}
+                        >
+                          {homeownerLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Looking up...
+                            </>
+                          ) : (
+                            <>
+                              <UserSearch className="h-4 w-4 mr-2" />
+                              Get Homeowner Info
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    {(hasHomeownerData || homeownerLoading || homeownerError) && (
+                      <HomeownerInfoCard
+                        data={homeownerData}
+                        loading={homeownerLoading}
+                        error={homeownerError}
+                        onRetry={() => {
+                          resetHomeowner();
+                          lookupFromListing(listing);
+                        }}
+                      />
+                    )}
                   </>
-                )}
-                {(hasHomeownerData || homeownerLoading || homeownerError) && (
-                  <HomeownerInfoCard
-                    data={homeownerData}
-                    loading={homeownerLoading}
-                    error={homeownerError}
-                    onRetry={() => {
-                      resetHomeowner();
-                      lookupFromListing(listing);
-                    }}
-                  />
                 )}
               </CardContent>
             </Card>

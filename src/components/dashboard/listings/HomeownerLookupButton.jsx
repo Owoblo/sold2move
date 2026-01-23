@@ -7,10 +7,21 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog';
-import { User, Loader2, UserSearch } from 'lucide-react';
+import { User, Loader2, UserSearch, MapPinOff } from 'lucide-react';
 import { useHomeownerLookup } from '@/hooks/useHomeownerLookup';
 import HomeownerInfoCard from './HomeownerInfoCard';
 import toast from '@/lib/toast';
+
+// Canadian provinces - homeowner lookup is not available for these
+const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU'];
+
+/**
+ * Check if a listing is from Canada based on its state/province code
+ */
+const isCanadianListing = (listing) => {
+  const state = listing?.addressState || listing?.addressstate || listing?.address_state || '';
+  return CA_PROVINCES.includes(state.toUpperCase());
+};
 
 /**
  * Button component for triggering homeowner lookups
@@ -30,6 +41,37 @@ const HomeownerLookupButton = ({
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { lookupFromListing, loading, data, error, reset, hasData } = useHomeownerLookup();
+
+  // Check if this is a Canadian listing
+  const isCanadian = isCanadianListing(listing);
+
+  // For Canadian listings, show a disabled button with explanation
+  if (isCanadian) {
+    if (compact) {
+      return (
+        <Button
+          variant={variant}
+          size="sm"
+          disabled
+          className={`h-8 w-8 p-0 opacity-50 cursor-not-allowed ${className}`}
+          title="Homeowner info not available for Canadian listings"
+        >
+          <MapPinOff className="h-4 w-4" />
+        </Button>
+      );
+    }
+    return (
+      <Button
+        variant={variant}
+        disabled
+        className={`opacity-50 cursor-not-allowed ${className}`}
+        title="Homeowner info not available for Canadian listings"
+      >
+        <MapPinOff className="h-4 w-4 mr-2" />
+        Not Available in Canada
+      </Button>
+    );
+  }
 
   const handleLookup = async (e) => {
     // Prevent row click in table
