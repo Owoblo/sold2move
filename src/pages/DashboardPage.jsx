@@ -10,7 +10,6 @@ import {
   Truck,
   RefreshCw,
   TrendingUp,
-  Eye,
   Sparkles,
   Flame,
   Clock,
@@ -137,19 +136,15 @@ const DashboardPage = () => {
   // State for dashboard data
   const [todaysLeads, setTodaysLeads] = useState({ justListed: [], sold: [], justListedCount: 0, soldCount: 0 });
   const [highValueLeads, setHighValueLeads] = useState([]);
-  const [revealedLeads, setRevealedLeads] = useState([]);
   const [weeklyTrend, setWeeklyTrend] = useState([]);
   const [monthlyStats, setMonthlyStats] = useState({
     totalLeads: 0,
-    revealedCount: 0,
     thisWeekLeads: 0,
     lastWeekLeads: 0,
     weekOverWeekChange: 0
   });
   const [serviceAreaHealth, setServiceAreaHealth] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [revealingId, setRevealingId] = useState(null);
-  const [hoveredLead, setHoveredLead] = useState(null);
 
   // Get city names from profile
   const getCityNames = useCallback(() => {
@@ -243,57 +238,6 @@ const DashboardPage = () => {
     }
   }, [profile, getCityNames]);
 
-  // Fetch revealed leads that need action
-  const fetchRevealedLeads = useCallback(async () => {
-    if (!profile) return;
-
-    try {
-      const { data: reveals } = await supabase
-        .from('listing_reveals')
-        .select('listing_id, created_at')
-        .eq('user_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (!reveals || reveals.length === 0) {
-        setRevealedLeads([]);
-        return;
-      }
-
-      const listingIds = reveals.map(r => r.listing_id);
-
-      const { data: listingsData } = await supabase
-        .from('listings')
-        .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, lastcity, status, imgsrc')
-        .in('zpid', listingIds);
-
-      if (!listingsData) {
-        setRevealedLeads([]);
-        return;
-      }
-
-      const enrichedListings = listingsData.map(listing => {
-        const reveal = reveals.find(r => r.listing_id === listing.zpid);
-        return {
-          id: listing.zpid,
-          addressstreet: listing.addressstreet,
-          lastseenat: listing.lastseenat,
-          unformattedprice: listing.unformattedprice,
-          beds: listing.beds,
-          baths: listing.baths,
-          lastcity: listing.lastcity,
-          type: listing.status,
-          imgsrc: listing.imgsrc,
-          revealed_at: reveal?.created_at
-        };
-      }).sort((a, b) => new Date(b.revealed_at) - new Date(a.revealed_at));
-
-      setRevealedLeads(enrichedListings.slice(0, 8));
-    } catch (error) {
-      console.error('Error fetching revealed leads:', error);
-    }
-  }, [profile]);
-
   // Fetch monthly stats and lead velocity with daily breakdown for sparkline
   const fetchMonthlyStats = useCallback(async () => {
     if (!profile) return;
@@ -377,13 +321,6 @@ const DashboardPage = () => {
         .gte('lastseenat', twoWeeksAgo.toISOString())
         .lt('lastseenat', weekStart.toISOString());
 
-      // Count reveals this month
-      const { count: revealedCount } = await supabase
-        .from('listing_reveals')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', profile.id)
-        .gte('created_at', monthStart.toISOString());
-
       const totalLeads = (monthlyJustListed || 0) + (monthlySold || 0);
       const thisWeekLeads = (thisWeekJustListed || 0) + (thisWeekSold || 0);
       const lastWeekLeads = (lastWeekJustListed || 0) + (lastWeekSold || 0);
@@ -394,7 +331,6 @@ const DashboardPage = () => {
 
       setMonthlyStats({
         totalLeads,
-        revealedCount: revealedCount || 0,
         thisWeekLeads,
         lastWeekLeads,
         weekOverWeekChange
@@ -453,49 +389,6 @@ const DashboardPage = () => {
     }
   }, [profile, getCityNames]);
 
-  // Handle reveal
-  const handleReveal = async (e, listingId) => {
-    e.stopPropagation();
-    setRevealingId(listingId);
-
-    try {
-      trackAction('listing_reveal_attempt', { listingId });
-
-      const numericListingId = Number(listingId);
-      if (isNaN(numericListingId)) {
-        throw new Error('Invalid listing ID');
-      }
-
-      const { data, error } = await supabase.rpc('reveal_listing', { p_listing_id: numericListingId });
-      if (error) throw error;
-
-      if (data.ok) {
-        toast({
-          title: "Address Revealed!",
-          description: data.already_revealed ? "You've already revealed this address." : "1 credit has been deducted."
-        });
-
-        fetchRevealedLeads();
-
-        if (!data.already_revealed && !data.unlimited) {
-          refreshProfile();
-        }
-      } else if (data.error === 'insufficient_credits') {
-        toast({
-          variant: 'destructive',
-          title: "Insufficient Credits",
-          description: "Please purchase more credits to reveal this address."
-        });
-      } else {
-        throw new Error(data.error || 'An unknown error occurred.');
-      }
-    } catch (err) {
-      toast({ variant: "destructive", title: "Reveal Failed", description: err.message });
-    } finally {
-      setRevealingId(null);
-    }
-  };
-
   // Load all dashboard data
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -508,7 +401,6 @@ const DashboardPage = () => {
       await Promise.all([
         fetchTodaysLeads(),
         fetchHighValueLeads(),
-        fetchRevealedLeads(),
         fetchMonthlyStats(),
         fetchServiceAreaHealth()
       ]);
@@ -518,7 +410,7 @@ const DashboardPage = () => {
     if (!profileLoading) {
       loadDashboardData();
     }
-  }, [profile, profileLoading, fetchTodaysLeads, fetchHighValueLeads, fetchRevealedLeads, fetchMonthlyStats, fetchServiceAreaHealth]);
+  }, [profile, profileLoading, fetchTodaysLeads, fetchHighValueLeads, fetchMonthlyStats, fetchServiceAreaHealth]);
 
   // Format helpers
   const formatPrice = (price) => {
@@ -552,8 +444,6 @@ const DashboardPage = () => {
     return lead.unformattedprice && lead.unformattedprice > 800000;
   };
 
-  const creditsRemaining = profile?.credits_remaining ?? 0;
-  const isUnlimited = profile?.unlimited ?? false;
   const totalTodaysLeads = todaysLeads.justListedCount + todaysLeads.soldCount;
 
   // Loading state
@@ -613,24 +503,6 @@ const DashboardPage = () => {
           <p className={`text-sm mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate'}`}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className={`px-4 py-2 rounded-lg ${
-            isLight
-              ? 'bg-white border border-slate-200 shadow-sm'
-              : 'bg-charcoal-800/80 border-luminous'
-          }`}>
-            <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate'}`}>Credits: </span>
-            <span className={`text-lg font-mono font-semibold tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>
-              {isUnlimited ? '∞' : creditsRemaining}
-            </span>
-          </div>
-          <Button asChild size="sm" className={isLight
-            ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm'
-          }>
-            <Link to="/pricing#top-up">Buy Credits</Link>
-          </Button>
         </div>
       </div>
 
@@ -701,32 +573,6 @@ const DashboardPage = () => {
           <p className={cn("text-xs mt-1", isLight ? "text-slate-500" : "text-slate")}>Total leads</p>
         </div>
 
-        {/* Revealed - Gold accent with glow */}
-        <div className={cn(
-          "col-span-6 md:col-span-2 rounded-xl p-4",
-          isLight
-            ? "bg-gradient-to-br from-amber-50 to-white border border-amber-200 shadow-sm"
-            : "bg-gradient-to-br from-amber-500/15 to-amber-500/5 border border-amber-500/30 shadow-badge-hot/30"
-        )}>
-          <p className={cn("text-xs mb-1", isLight ? "text-amber-700" : "text-amber-400")}>Revealed</p>
-          <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{monthlyStats.revealedCount}</p>
-          <p className={cn("text-xs mt-1", isLight ? "text-slate-500" : "text-slate")}>Unlocked</p>
-        </div>
-
-        {/* Credits */}
-        <div className={cn(
-          "col-span-6 md:col-span-2 rounded-xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <p className={cn("text-xs mb-1", isLight ? "text-slate-500" : "text-slate")}>Credits Left</p>
-          <p className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-slate-900" : "text-lightest-slate")}>{isUnlimited ? '∞' : creditsRemaining}</p>
-          <Link to="/pricing#top-up" className={cn("text-xs hover:underline mt-1 inline-block", isLight ? "text-emerald-600" : "text-primary")}>
-            Buy more →
-          </Link>
-        </div>
-
         {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
         <div className={cn(
           "col-span-12 lg:col-span-6 rounded-xl overflow-hidden transition-all",
@@ -752,14 +598,12 @@ const DashboardPage = () => {
                   <div
                     key={lead.id}
                     className={cn(
-                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative",
+                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer",
                       isLight
                         ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
                         : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
                     )}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-                    onMouseEnter={() => setHoveredLead(lead.id)}
-                    onMouseLeave={() => setHoveredLead(null)}
                   >
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
@@ -772,35 +616,6 @@ const DashboardPage = () => {
                     <div className="text-right">
                       <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
-                    {/* Hover actions */}
-                    {hoveredLead === lead.id && (
-                      <div className={cn(
-                        "absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl",
-                        isLight ? "bg-white border border-slate-200" : "bg-charcoal-900/95 border border-white/[0.1]"
-                      )}>
-                        <button
-                          onClick={(e) => handleReveal(e, lead.id)}
-                          disabled={revealingId === lead.id}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                            isLight ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700" : "bg-primary/20 hover:bg-primary/30 text-primary"
-                          )}
-                        >
-                          <Eye className="h-3 w-3" />
-                          Reveal
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                            isLight ? "bg-slate-100 hover:bg-slate-200 text-slate-700" : "bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate"
-                          )}
-                        >
-                          <Mail className="h-3 w-3" />
-                          Mail
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -852,14 +667,12 @@ const DashboardPage = () => {
                   <div
                     key={lead.id}
                     className={cn(
-                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer relative",
+                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer",
                       isLight
                         ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
                         : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
                     )}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-                    onMouseEnter={() => setHoveredLead(`sold-${lead.id}`)}
-                    onMouseLeave={() => setHoveredLead(null)}
                   >
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
@@ -872,35 +685,6 @@ const DashboardPage = () => {
                     <div className="text-right">
                       <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
                     </div>
-                    {/* Hover actions */}
-                    {hoveredLead === `sold-${lead.id}` && (
-                      <div className={cn(
-                        "absolute right-3 top-1/2 -translate-y-1/2 flex gap-1 rounded-lg p-1 shadow-xl",
-                        isLight ? "bg-white border border-slate-200" : "bg-charcoal-900/95 border border-white/[0.1]"
-                      )}>
-                        <button
-                          onClick={(e) => handleReveal(e, lead.id)}
-                          disabled={revealingId === lead.id}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                            isLight ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-700" : "bg-primary/20 hover:bg-primary/30 text-primary"
-                          )}
-                        >
-                          <Eye className="h-3 w-3" />
-                          Reveal
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate('/dashboard/mailing'); }}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                            isLight ? "bg-slate-100 hover:bg-slate-200 text-slate-700" : "bg-charcoal-700 hover:bg-charcoal-600 text-lightest-slate"
-                          )}
-                        >
-                          <Mail className="h-3 w-3" />
-                          Mail
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -1072,44 +856,6 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* Recently Revealed */}
-      {revealedLeads.length > 0 && (
-        <div className={cn(
-          "rounded-xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-slate-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Eye className={cn("h-5 w-5", isLight ? "text-amber-500" : "text-amber-400")} />
-              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Recently Revealed</h3>
-            </div>
-            <Link to="/dashboard/account" className={cn("text-xs hover:underline", isLight ? "text-emerald-600" : "text-primary")}>View all</Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {revealedLeads.slice(0, 4).map((lead) => (
-              <div
-                key={lead.id}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all",
-                  isLight
-                    ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
-                    : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-                )}
-                onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
-              >
-                <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
-                <div className="min-w-0 flex-1">
-                  <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.addressstreet}</p>
-                  <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.lastcity}</p>
-                  <p className={cn("text-xs mt-1", isLight ? "text-amber-600" : "text-amber-400")}>{formatDate(lead.revealed_at)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
