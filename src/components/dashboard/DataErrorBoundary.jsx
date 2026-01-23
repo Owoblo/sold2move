@@ -1,8 +1,9 @@
 import React from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
 
 class DataErrorBoundary extends React.Component {
   constructor(props) {
@@ -28,7 +29,17 @@ class DataErrorBoundary extends React.Component {
     console.error('Component Stack:', errorInfo?.componentStack);
     console.error('==========================================');
     this.setState({ errorInfo });
-    
+
+    // Send to Sentry with full context
+    Sentry.withScope((scope) => {
+      scope.setTag('error_boundary', 'DataErrorBoundary');
+      scope.setTag('retry_count', this.state.retryCount);
+      scope.setExtra('componentStack', errorInfo?.componentStack);
+      scope.setExtra('url', window.location.href);
+      scope.setLevel('error');
+      Sentry.captureException(error);
+    });
+
     // Track error for analytics
     if (window.analytics) {
       window.analytics.trackError(error, {
@@ -105,14 +116,14 @@ class DataErrorBoundary extends React.Component {
                 </Button>
               </div>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {this.state.error && (
                 <details className="mt-4 text-left">
-                  <summary className="cursor-pointer text-sm text-slate hover:text-lightest-slate">
-                    Error Details (Development)
+                  <summary className="cursor-pointer text-sm text-slate hover:text-lightest-slate flex items-center gap-1">
+                    <ChevronDown className="w-4 h-4" />
+                    Error Details
                   </summary>
-                  <pre className="mt-2 text-xs text-red-400 bg-red-500/10 p-2 rounded overflow-auto">
-                    {this.state.error.toString()}
-                    {this.state.errorInfo && this.state.errorInfo.componentStack}
+                  <pre className="mt-2 text-xs text-red-400 bg-red-500/10 p-2 rounded overflow-auto max-h-48">
+                    {this.state.error?.message || this.state.error?.toString()}
                   </pre>
                 </details>
               )}

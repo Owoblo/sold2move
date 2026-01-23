@@ -419,6 +419,7 @@ const UnifiedListings = () => {
     );
   }
 
+  // Handle query errors gracefully
   if (currentError) {
     console.error('=== UnifiedListings Error Details ===');
     console.error('Error Object:', currentError);
@@ -428,6 +429,41 @@ const UnifiedListings = () => {
     console.error('Active Tab:', activeTab);
     console.error('Filters at error time:', JSON.stringify(filters, null, 2));
     console.error('=====================================');
+
+    // Show inline error UI instead of crashing
+    return (
+      <div className="space-y-4">
+        <Helmet>
+          <title>Error | Sold2Move</title>
+        </Helmet>
+        <Card className="bg-light-navy/80 border-red-500/20">
+          <CardContent className="py-16 text-center">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Building className="h-8 w-8 text-red-500" />
+            </div>
+            <h3 className="text-lg font-medium text-lightest-slate mb-2">Unable to Load Listings</h3>
+            <p className="text-slate mb-4 max-w-md mx-auto">
+              {currentError?.message || "Something went wrong while loading the data. Please try again."}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button
+                onClick={() => window.location.reload()}
+                className="bg-primary text-primary-foreground"
+              >
+                Refresh Page
+              </Button>
+              <Button
+                onClick={clearFilters}
+                variant="outline"
+                className="border-primary/50 text-primary"
+              >
+                Clear Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const hasFilters = filters.searchTerm || filters.beds || filters.baths || filters.propertyType ||
