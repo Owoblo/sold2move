@@ -40,7 +40,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAnalytics } from '@/services/analytics.jsx';
-import { useJustListedEnhanced, useSoldListingsEnhanced } from '@/hooks/useListingsEnhanced';
+import { useJustListedEnhanced, useSoldListingsEnhanced, useActiveListingsEnhanced } from '@/hooks/useListingsEnhanced';
 import CitySelector from '@/components/ui/CitySelector';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 import { isFurnitureFilterAvailable, FURNITURE_STATUS_OPTIONS } from '@/constants/furnitureFilter';
@@ -153,6 +153,9 @@ const UnifiedListings = () => {
     if (location.pathname.includes('/sold')) {
       return 'sold';
     }
+    if (location.pathname.includes('/active')) {
+      return 'active';
+    }
     return 'just-listed';
   };
 
@@ -235,6 +238,14 @@ const UnifiedListings = () => {
     isError: soldListingsIsError,
   } = useSoldListingsEnhanced(filters, currentPage, PAGE_SIZE);
 
+  const {
+    data: activeListingsData,
+    isLoading: activeListingsLoading,
+    error: activeListingsError,
+    isFetching: activeListingsFetching,
+    isError: activeListingsIsError,
+  } = useActiveListingsEnhanced(filters, currentPage, PAGE_SIZE);
+
   // DEBUG: Log data loading state
   console.log('=== UnifiedListings Debug ===');
   console.log('Active Tab:', activeTab);
@@ -257,9 +268,21 @@ const UnifiedListings = () => {
   console.log('============================');
 
   // Get current data based on active tab
-  const currentData = activeTab === 'just-listed' ? justListedData : soldListingsData;
-  const currentLoading = activeTab === 'just-listed' ? justListedLoading : soldListingsLoading;
-  const currentError = activeTab === 'just-listed' ? justListedError : soldListingsError;
+  const currentData = activeTab === 'just-listed'
+    ? justListedData
+    : activeTab === 'active'
+      ? activeListingsData
+      : soldListingsData;
+  const currentLoading = activeTab === 'just-listed'
+    ? justListedLoading
+    : activeTab === 'active'
+      ? activeListingsLoading
+      : soldListingsLoading;
+  const currentError = activeTab === 'just-listed'
+    ? justListedError
+    : activeTab === 'active'
+      ? activeListingsError
+      : soldListingsError;
 
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -380,8 +403,12 @@ const UnifiedListings = () => {
     setCurrentPage(1);
     setSelectedListings(new Set());
     trackAction('tab_change', { from: activeTab, to: tab });
-    const newPath = tab === 'sold' ? '/dashboard/listings/sold' : '/dashboard/listings/just-listed';
-    window.history.replaceState(null, '', newPath);
+    const pathMap = {
+      'just-listed': '/dashboard/listings/just-listed',
+      'active': '/dashboard/listings/active',
+      'sold': '/dashboard/listings/sold'
+    };
+    window.history.replaceState(null, '', pathMap[tab] || '/dashboard/listings/just-listed');
   };
 
   const clearFilters = () => {
@@ -473,17 +500,17 @@ const UnifiedListings = () => {
   return (
     <div className="space-y-4">
       <Helmet>
-        <title>{activeTab === 'just-listed' ? 'Just Listed' : 'Sold'} Properties | Sold2Move</title>
+        <title>{activeTab === 'just-listed' ? 'Just Listed' : activeTab === 'active' ? 'Active Listings' : 'Sold'} Properties | Sold2Move</title>
       </Helmet>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-lightest-slate">
-            {activeTab === 'just-listed' ? 'Just Listed' : 'Recently Sold'}
+            {activeTab === 'just-listed' ? 'Just Listed' : activeTab === 'active' ? 'Active Listings' : 'Recently Sold'}
           </h1>
           <p className="text-sm text-slate mt-0.5">
-            {activeTab === 'just-listed' ? 'New listing opportunities' : 'High-intent moving leads'}
+            {activeTab === 'just-listed' ? 'New listing opportunities (last 2 days)' : activeTab === 'active' ? 'Currently on the market' : 'High-intent moving leads'}
             {filters.city_name.length > 0 && (
               <span> in <span className="text-primary">{filters.city_name.length === 1 ? filters.city_name[0] : `${filters.city_name.length} cities`}</span></span>
             )}
@@ -504,6 +531,21 @@ const UnifiedListings = () => {
             {justListedData?.count > 0 && (
               <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${activeTab === 'just-listed' ? 'bg-deep-navy/20' : 'bg-lightest-navy/20'}`}>
                 {justListedData.count.toLocaleString()}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => handleTabChange('active')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'active'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-slate hover:text-lightest-slate'
+            }`}
+          >
+            Active
+            {activeListingsData?.count > 0 && (
+              <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${activeTab === 'active' ? 'bg-deep-navy/20' : 'bg-lightest-navy/20'}`}>
+                {activeListingsData.count.toLocaleString()}
               </span>
             )}
           </button>
@@ -790,6 +832,8 @@ const UnifiedListings = () => {
               <div className="w-16 h-16 bg-deep-navy/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 {activeTab === 'just-listed' ? (
                   <Building className="h-8 w-8 text-slate" />
+                ) : activeTab === 'active' ? (
+                  <Home className="h-8 w-8 text-slate" />
                 ) : (
                   <CheckCircle className="h-8 w-8 text-slate" />
                 )}
@@ -798,7 +842,9 @@ const UnifiedListings = () => {
               <p className="text-slate mb-4 max-w-md mx-auto">
                 {hasFilters
                   ? "No properties match your filters. Try adjusting your search criteria."
-                  : "No properties found in your service areas."}
+                  : activeTab === 'active'
+                    ? "No active listings found in your service areas."
+                    : "No properties found in your service areas."}
               </p>
               {hasFilters && (
                 <Button onClick={clearFilters} variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">

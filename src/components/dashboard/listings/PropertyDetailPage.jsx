@@ -39,7 +39,8 @@ import {
   ExternalLink,
   UserSearch,
   Sofa,
-  Package
+  Package,
+  X
 } from 'lucide-react';
 import HomeownerInfoCard from './HomeownerInfoCard';
 import InventoryResultsCard from './InventoryResultsCard';
@@ -727,13 +728,17 @@ const PropertyDetailPage = () => {
                     {Array.isArray(listing.furniture_items_detected) && listing.furniture_items_detected.length > 0 && (
                       <div className="space-y-2">
                         <span className="text-slate text-sm">Detected Items:</span>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 items-center">
                           {listing.furniture_items_detected.map((item, index) => (
                             <Badge key={index} variant="outline" className="text-xs capitalize bg-charcoal-700/50">
                               {item}
                             </Badge>
                           ))}
+                          <span className="text-xs text-slate/70 italic">+ many others</span>
                         </div>
+                        <p className="text-[10px] text-slate/50 italic">
+                          Note: Only 4-5 photos are scanned. Actual inventory may vary.
+                        </p>
                       </div>
                     )}
 

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useProfile } from '@/hooks/useProfile';
-import { fetchJustListed, fetchSoldSincePrev, fetchRevealedListings, getMostRecentRunWithData } from '@/lib/queries';
+import { fetchJustListed, fetchSoldSincePrev, fetchActiveListings, fetchRevealedListings, getMostRecentRunWithData } from '@/lib/queries';
 import { handleQueryError, handleMutationError, getUserFriendlyMessage } from '@/lib/errorHandler';
 
 // Query keys for consistent caching
@@ -10,6 +10,7 @@ export const listingKeys = {
   all: ['listings'],
   justListed: (filters, page) => ['just-listed', filters, page],
   soldListings: (filters, page) => ['sold-listings', filters, page],
+  activeListings: (filters, page) => ['active-listings', filters, page],
   revealed: (userId) => ['revealed-listings', userId],
   runs: () => ['runs'],
 };
@@ -189,6 +190,76 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
     },
     onError: (error) => {
       console.error('useSoldListingsEnhanced: Error occurred:', error);
+    },
+  });
+};
+
+// Enhanced hook for active listings (currently on market, older than 2 days)
+export const useActiveListingsEnhanced = (filters = {}, page = 1, pageSize = 20) => {
+  const supabase = useSupabaseClient();
+  const { toast } = useToast();
+  const { profile } = useProfile();
+
+  return useQuery({
+    queryKey: listingKeys.activeListings(filters, page),
+    queryFn: async () => {
+      console.log('=== useActiveListingsEnhanced queryFn START ===');
+      console.log('Input filters:', JSON.stringify(filters, null, 2));
+      console.log('Page:', page, 'PageSize:', pageSize);
+
+      try {
+        // Support both single city and multiple cities
+        const cityFilter = filters.city_name;
+
+        // If no city filter is provided, use profile's service_cities (user markets)
+        let finalCityFilter = cityFilter;
+        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+          finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
+        } else if (!finalCityFilter && profile?.city_name) {
+          finalCityFilter = [profile.city_name];
+        }
+
+        // Add AI furniture filter and country code from user profile
+        const enhancedFilters = {
+          ...filters,
+          aiFurnitureFilter: profile?.ai_furniture_filter || false,
+          countryCode: profile?.country_code || null,
+        };
+
+        const { data, count } = await fetchActiveListings(
+          finalCityFilter || null,
+          page,
+          pageSize,
+          enhancedFilters
+        );
+
+        console.log('fetchActiveListings returned:', { count, dataLength: data?.length });
+
+        return {
+          data: data || [],
+          count: count || 0,
+          totalPages: Math.ceil((count || 0) / pageSize),
+          currentPage: page,
+          hasNextPage: page < Math.ceil((count || 0) / pageSize),
+          hasPrevPage: page > 1,
+        };
+      } catch (error) {
+        console.error('=== useActiveListingsEnhanced queryFn ERROR ===');
+        console.error('Error:', error);
+        throw error;
+      }
+    },
+    enabled: true,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    keepPreviousData: true,
+    retry: (failureCount, error) => {
+      if (error.code === 'COLUMN_NOT_FOUND' || error.code === 'TABLE_NOT_FOUND') {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    onError: (error) => {
+      console.error('useActiveListingsEnhanced: Error occurred:', error);
     },
   });
 };
