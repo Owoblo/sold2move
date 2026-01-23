@@ -1,22 +1,62 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, RefreshCw, LogOut, Home } from 'lucide-react';
 import { getAndClearIntendedDestination, getDefaultAuthenticatedPath } from '@/utils/authUtils';
 import { debugAuthFlow, debugSupabaseError, debugUserState, debugProfileState, debugDatabaseOperation, debugNavigationFlow } from '@/utils/authDebugger';
+
+const MAX_RETRIES = 3;
+const TIMEOUT_DURATION = 15000; // 15 seconds before showing error state
 
 const PostAuthPage = () => {
   const { profile, loading: profileLoading, refreshProfile } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const supabase = useSupabaseClient();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const { toast } = useToast();
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isStuck, setIsStuck] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const timeoutRef = useRef(null);
+  const hasAttemptedCreation = useRef(false);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Set up stuck detection timeout
+  useEffect(() => {
+    if (profileLoading || isCreatingProfile) {
+      timeoutRef.current = setTimeout(() => {
+        console.log('⚠️ PostAuthPage: Stuck detection triggered');
+        setIsStuck(true);
+        setErrorMessage('Taking longer than expected. You can try again or continue to dashboard.');
+      }, TIMEOUT_DURATION);
+    } else {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [profileLoading, isCreatingProfile]);
 
   // Create profile if it doesn't exist
   const createProfileIfNeeded = async () => {
@@ -26,7 +66,8 @@ const PostAuthPage = () => {
       userId: session?.user?.id,
       hasProfile: !!profile,
       profileLoading,
-      isCreatingProfile
+      isCreatingProfile,
+      retryCount
     });
 
     if (!session?.user || profile || profileLoading || isCreatingProfile) {
@@ -39,7 +80,17 @@ const PostAuthPage = () => {
       return;
     }
 
+    if (retryCount >= MAX_RETRIES) {
+      console.log('❌ Max retries reached, showing error state');
+      setIsStuck(true);
+      setErrorMessage('Unable to set up your account after multiple attempts. Please try again or contact support.');
+      return;
+    }
+
     setIsCreatingProfile(true);
+    setIsStuck(false);
+    setErrorMessage(null);
+    hasAttemptedCreation.current = true;
 
     try {
       debugUserState(session.user, 'Creating Profile For');
@@ -140,43 +191,71 @@ const PostAuthPage = () => {
       console.error('❌ CRITICAL: Failed to create profile:', error);
       console.error('❌ Full error object:', JSON.stringify(error, null, 2));
       console.error('❌ Error stack:', error.stack);
-      
+
       // Handle specific database errors
-      let errorMessage = "There was an error setting up your account. Please try again.";
-      
+      let userMessage = "There was an error setting up your account. Please try again.";
+
       if (error.message?.includes('permission denied')) {
-        errorMessage = "Database permission error. Please contact support.";
+        userMessage = "Database permission error. Please contact support.";
         console.error('❌ PERMISSION DENIED ERROR - Check RLS policies');
       } else if (error.message?.includes('duplicate key')) {
-        errorMessage = "Account already exists. Redirecting to login...";
+        userMessage = "Account already exists. Redirecting...";
         console.log('✅ Duplicate key - profile exists, refreshing...');
         await refreshProfile();
         return;
       } else if (error.message?.includes('foreign key')) {
-        errorMessage = "User authentication error. Please try logging in again.";
+        userMessage = "Session issue. Please try logging in again.";
         console.error('❌ FOREIGN KEY ERROR - User not in auth.users table');
       } else if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-        errorMessage = "Database table missing. Please contact support.";
+        userMessage = "Database configuration error. Please contact support.";
         console.error('❌ TABLE MISSING ERROR - profiles table does not exist');
       } else if (error.message?.includes('column') && error.message?.includes('does not exist')) {
-        errorMessage = "Database schema error. Please contact support.";
+        userMessage = "Database schema error. Please contact support.";
         console.error('❌ COLUMN MISSING ERROR - profiles table schema incorrect');
       } else if (error.message) {
-        errorMessage = `Database error: ${error.message}`;
+        userMessage = `Error: ${error.message}`;
         console.error('❌ UNKNOWN DATABASE ERROR:', error.message);
       }
-      
+
       // Show detailed error in console for debugging
-      console.error('❌ USER-FACING ERROR MESSAGE:', errorMessage);
-      
+      console.error('❌ USER-FACING ERROR MESSAGE:', userMessage);
+
+      setRetryCount(prev => prev + 1);
+      setErrorMessage(userMessage);
+      setIsStuck(true);
+
       toast({
         variant: "destructive",
-        title: "Profile Creation Failed",
-        description: errorMessage,
+        title: "Profile Setup Issue",
+        description: userMessage,
       });
     } finally {
       setIsCreatingProfile(false);
     }
+  };
+
+  // Manual retry function
+  const handleRetry = async () => {
+    console.log('🔄 Manual retry triggered');
+    setIsStuck(false);
+    setErrorMessage(null);
+    setRetryCount(0);
+    hasAttemptedCreation.current = false;
+    await refreshProfile();
+  };
+
+  // Force continue to dashboard (even without profile - will redirect to post-auth again if needed)
+  const handleContinueToDashboard = () => {
+    console.log('🔄 Force continue to dashboard');
+    const destination = getAndClearIntendedDestination() || '/dashboard';
+    navigate(destination, { replace: true });
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    console.log('🔄 User requested logout from PostAuthPage');
+    await signOut();
+    navigate('/login', { replace: true });
   };
 
   useEffect(() => {
@@ -186,21 +265,25 @@ const PostAuthPage = () => {
       userId: session?.user?.id,
       profileLoading,
       hasProfile: !!profile,
-      isCreatingProfile
+      isCreatingProfile,
+      isStuck,
+      retryCount
     });
 
-    if (session?.user && !profileLoading && !profile && !isCreatingProfile) {
+    // Only attempt creation if we haven't already tried and failed
+    if (session?.user && !profileLoading && !profile && !isCreatingProfile && !isStuck) {
       console.log('🔄 PostAuthPage: Conditions met, calling createProfileIfNeeded');
       createProfileIfNeeded();
     } else {
       console.log('🔍 PostAuthPage: Conditions not met, skipping profile creation', {
-        reason: !session?.user ? 'no session/user' : 
-                profileLoading ? 'profile loading' : 
-                profile ? 'profile exists' : 
+        reason: !session?.user ? 'no session/user' :
+                profileLoading ? 'profile loading' :
+                profile ? 'profile exists' :
+                isStuck ? 'stuck state active' :
                 'already creating'
       });
     }
-  }, [session, profile, profileLoading, isCreatingProfile]);
+  }, [session, profile, profileLoading, isCreatingProfile, isStuck]);
 
   useEffect(() => {
     // Redirect immediately if profile exists - no need to stay on this page
@@ -224,12 +307,63 @@ const PostAuthPage = () => {
     }
   }, [profile, profileLoading, session, navigate, location.state]);
 
+  // Show error/stuck state with recovery options
+  if (isStuck || errorMessage) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate p-4">
+        <div className="bg-light-navy/30 rounded-lg p-8 max-w-md w-full text-center">
+          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Session Setup Issue</h2>
+          <p className="text-slate mb-6">
+            {errorMessage || 'Something went wrong while setting up your account.'}
+          </p>
+
+          <div className="space-y-3">
+            <Button
+              onClick={handleRetry}
+              className="w-full bg-teal text-deep-navy hover:bg-teal/90"
+              disabled={isCreatingProfile}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isCreatingProfile ? 'animate-spin' : ''}`} />
+              {retryCount > 0 ? `Try Again (${MAX_RETRIES - retryCount} left)` : 'Try Again'}
+            </Button>
+
+            <Button
+              onClick={handleContinueToDashboard}
+              variant="outline"
+              className="w-full"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Continue to Dashboard
+            </Button>
+
+            <Button
+              onClick={handleLogout}
+              variant="ghost"
+              className="w-full text-slate hover:text-lightest-slate"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out & Try Again
+            </Button>
+          </div>
+
+          <p className="text-xs text-slate mt-6">
+            If this problem persists, please contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col justify-center items-center h-screen bg-deep-navy text-lightest-slate">
       <LoadingSpinner size="xl" />
       <p className="text-light-slate mt-4">
         {isCreatingProfile ? 'Setting up your account...' : 'Finalizing your session...'}
       </p>
+      {retryCount > 0 && (
+        <p className="text-slate text-sm mt-2">Attempt {retryCount + 1} of {MAX_RETRIES + 1}</p>
+      )}
     </div>
   );
 };

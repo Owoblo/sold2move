@@ -7,6 +7,7 @@ export const useProfile = () => {
   const supabase = useSupabaseClient();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+  const [error, setError] = useState(null);
 
   // Update profile function for settings pages
   const updateProfile = useCallback(async (updates) => {
@@ -50,44 +51,54 @@ export const useProfile = () => {
         console.log('🔄 Fetching profile for user:', session.user.id);
       }
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*, service_cities, main_service_city, service_area_cluster')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Profile fetch result:', {
-          hasData: !!data,
-          errorCode: error?.code,
-          errorMessage: error?.message,
-          profileData: data ? {
-            id: data.id,
-            company_name: data.company_name,
-            credits_remaining: data.credits_remaining,
-            onboarding_complete: data.onboarding_complete,
-            trial_granted: data.trial_granted
-          } : null
-        });
+      setError(null);
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('profiles')
+          .select('*, service_cities, main_service_city, service_area_cluster')
+          .eq('id', session.user.id)
+          .single();
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 Profile fetch result:', {
+            hasData: !!data,
+            errorCode: fetchError?.code,
+            errorMessage: fetchError?.message,
+            profileData: data ? {
+              id: data.id,
+              company_name: data.company_name,
+              credits_remaining: data.credits_remaining,
+              onboarding_complete: data.onboarding_complete,
+              trial_granted: data.trial_granted
+            } : null
+          });
+        }
+
+        // PGRST116 = "not found" - not an error, just no profile yet
+        if (fetchError && fetchError.code !== 'PGRST116') {
+          console.error('❌ Error fetching profile:', {
+            code: fetchError.code,
+            message: fetchError.message,
+            details: fetchError.details
+          });
+          setError(fetchError);
+        }
+
+        setProfile(data);
+      } catch (err) {
+        console.error('❌ Unexpected error fetching profile:', err);
+        setError(err);
+      } finally {
+        setLoading(false);
       }
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error fetching profile:', {
-          code: error.code,
-          message: error.message,
-          details: error.details
-        });
-      }
-      
-      setProfile(data);
-      setLoading(false);
     } else {
       if (process.env.NODE_ENV === 'development') {
         console.log('🔍 No session/user, clearing profile');
       }
       setLoading(false);
       setProfile(null);
+      setError(null);
     }
   }, [session?.user?.id, supabase]);
 
@@ -110,5 +121,5 @@ export const useProfile = () => {
 
   }, [supabase, fetchProfile]);
 
-  return { loading, profile, setProfile, refreshProfile: fetchProfile, updateProfile, session };
+  return { loading, profile, setProfile, refreshProfile: fetchProfile, updateProfile, session, error };
 };
