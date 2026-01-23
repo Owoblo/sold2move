@@ -163,7 +163,7 @@ const DashboardPage = () => {
     return profile.city_name ? [profile.city_name] : [];
   }, [profile]);
 
-  // Fetch today's fresh leads (Just Listed + Sold)
+  // Fetch today's fresh leads (Just Listed) and recent sold listings
   const fetchTodaysLeads = useCallback(async () => {
     if (!profile) return;
 
@@ -173,6 +173,11 @@ const DashboardPage = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
+
+    // For sold listings, show recent sales (last 7 days) to ensure there's always data
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 7);
+    const recentISO = recentDate.toISOString();
 
     try {
       // Fetch today's just listed from unified listings table - include imgsrc
@@ -185,13 +190,13 @@ const DashboardPage = () => {
         .order('lastseenat', { ascending: false })
         .limit(6);
 
-      // Fetch today's sold from unified listings table
+      // Fetch recent sold listings (last 7 days) - more useful than just today
       const { data: soldData, count: soldCount } = await supabase
         .from('listings')
         .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
         .eq('status', 'sold')
         .in('lastcity', cityNames)
-        .gte('lastseenat', todayISO)
+        .gte('lastseenat', recentISO)
         .order('lastseenat', { ascending: false })
         .limit(6);
 
@@ -831,8 +836,8 @@ const DashboardPage = () => {
         )}>
           <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-slate-200" : "border-b border-white/[0.06]")}>
             <div>
-              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Just Sold</h3>
-              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Definite movers - act fast</p>
+              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Recently Sold</h3>
+              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>High-intent movers - act fast</p>
             </div>
             <span className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{todaysLeads.soldCount}</span>
           </div>
@@ -904,8 +909,8 @@ const DashboardPage = () => {
                 <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", isLight ? "bg-slate-100" : "bg-charcoal-700/50")}>
                   <Clock className={cn("h-8 w-8", isLight ? "text-slate-400" : "text-slate")} />
                 </div>
-                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No sales in your areas today</p>
-                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Sold leads are high-intent movers</p>
+                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No recent sales in your areas</p>
+                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Check back soon for new opportunities</p>
                 <Button asChild variant="outline" size="sm" className={cn(isLight ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-primary/30 text-primary hover:bg-primary/10")}>
                   <Link to="/dashboard/listings/sold">View Past Sales</Link>
                 </Button>
