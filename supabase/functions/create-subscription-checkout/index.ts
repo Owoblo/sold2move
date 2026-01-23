@@ -148,10 +148,10 @@ Deno.serve(async (req) => {
     console.log('Processing subscription checkout for user:', user.id);
     console.log('Selected tier:', tierId);
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabaseAuth
+    // Get user profile (use admin client to avoid RLS issues)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, business_email, email, full_name, service_cities')
+      .select('stripe_customer_id, business_email, full_name, service_cities')
       .eq('id', user.id)
       .single();
 
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
 
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: user.email || profile?.business_email || profile?.email,
+        email: user.email || profile?.business_email,
         name: profile?.full_name || undefined,
         metadata: {
           supabase_user_id: user.id,
