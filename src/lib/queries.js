@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import { handleDatabaseError, handleQueryError, retryWithBackoff } from '@/lib/errorHandler';
 
+// Canadian provinces/territories - used for country filtering
+const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU'];
+
 // Utility function to get the most recent run that has data
 export async function getMostRecentRunWithData() {
   try {
@@ -480,9 +483,6 @@ export async function getListingsCountByStatus(cityName = null) {
     throw error;
   }
 }
-
-// Canadian provinces/territories
-const CA_PROVINCES = ['ON', 'BC', 'AB', 'QC', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'YT', 'NU'];
 
 /**
  * Fetch available cities from the listings table
