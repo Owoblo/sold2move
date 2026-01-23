@@ -6,6 +6,12 @@ import {
   buildReceiptEmail,
   buildSubscriptionActivatedEmail,
   buildSubscriptionCancelledEmail,
+  buildOrderConfirmationEmail,
+  buildTrialEndingEmail,
+  buildPaymentFailedEmail,
+  buildSubscriptionReceiptEmail,
+  buildPlanChangedEmail,
+  buildTrialStartedEmail,
 } from './email-templates.ts';
 
 const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
@@ -165,33 +171,33 @@ Deno.serve(async (req) => {
         const userId = session.metadata?.supabase_user_id;
 
         if (userId && session.mode === 'payment' && session.payment_status === 'paid') {
-          const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-          const creditPrice = lineItems.data.find(item => item.price?.lookup_key?.startsWith('credit_pack_'));
+          // Check if this is a product order (design service)
+          const orderId = session.metadata?.order_id;
 
-          if (creditPrice) {
-            const creditsAmount = parseInt(creditPrice.price?.metadata?.credits_amount || '0');
-            if (creditsAmount > 0) {
-              const { data: profile, error: fetchProfileError } = await supabaseAdmin
-                .from('profiles')
-                .select('credits_remaining')
-                .eq('id', userId)
-                .single();
+          if (orderId) {
+            // Handle product order payment
+            console.log(`Processing product order payment: ${orderId}`);
 
-              if (fetchProfileError) throw fetchProfileError;
+            // Update order status to paid
+            const { data: order, error: orderUpdateError } = await supabaseAdmin
+              .from('design_orders')
+              .update({
+                status: 'paid',
+                stripe_payment_intent_id: session.payment_intent as string,
+                paid_at: new Date().toISOString(),
+              })
+              .eq('id', orderId)
+              .select('*, design_products(*)')
+              .single();
 
-              const newCredits = (profile?.credits_remaining || 0) + creditsAmount;
+            if (orderUpdateError) {
+              console.error('Error updating order:', orderUpdateError);
+            } else {
+              console.log(`Order ${orderId} marked as paid`);
 
-              const { error: updateCreditsError } = await supabaseAdmin
-                .from('profiles')
-                .update({ credits_remaining: newCredits })
-                .eq('id', userId);
-
-              if (updateCreditsError) throw updateCreditsError;
-              console.log(`User ${userId} topped up ${creditsAmount} credits. New total: ${newCredits}`);
-
-              // Send payment confirmation email
-              if (session.customer_email || session.customer_details?.email) {
-                const userEmail = session.customer_email || session.customer_details?.email;
+              // Send order confirmation email
+              const userEmail = session.customer_email || session.customer_details?.email || order.customer_email;
+              if (userEmail) {
                 const amountPaid = session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}` : 'N/A';
                 const purchaseDate = new Date().toLocaleDateString('en-US', {
                   month: 'long',
@@ -199,35 +205,106 @@ Deno.serve(async (req) => {
                   year: 'numeric'
                 });
 
-                const html = buildReceiptEmail({
+                const html = buildOrderConfirmationEmail({
+                  orderId: orderId,
+                  productName: order.design_products?.name || session.metadata?.product_name || 'Design Service',
                   amount: amountPaid,
-                  description: `Credit Pack - ${creditsAmount} Credits`,
-                  credits: creditsAmount,
-                  date: purchaseDate
+                  customerName: order.customer_name,
+                  date: purchaseDate,
                 });
 
                 const emailResult = await sendEmail({
-                  to: userEmail!,
-                  subject: 'Payment Confirmed - Credits Added',
+                  to: userEmail,
+                  subject: 'Order Confirmed - ' + (order.design_products?.name || 'Design Service'),
                   html
                 });
 
                 if (emailResult.success) {
-                  console.log(`✅ Payment confirmation email sent to ${userEmail}`);
+                  console.log(`✅ Order confirmation email sent to ${userEmail}`);
                   await supabaseAdmin.from('email_logs').insert({
                     user_id: userId,
-                    email_type: 'payment_confirmation',
+                    email_type: 'order_confirmation',
                     recipient_email: userEmail,
-                    subject: 'Payment Confirmed - Credits Added',
+                    subject: 'Order Confirmed - ' + (order.design_products?.name || 'Design Service'),
                     status: 'sent',
                     resend_message_id: emailResult.messageId,
                     metadata: {
+                      order_id: orderId,
+                      product_id: order.product_id,
+                      product_name: order.design_products?.name,
                       amount: amountPaid,
-                      credits_purchased: creditsAmount,
-                      new_total: newCredits,
                       session_id: session.id
                     }
                   });
+                }
+              }
+            }
+          } else {
+            // Handle credit pack purchase
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+            const creditPrice = lineItems.data.find(item => item.price?.lookup_key?.startsWith('credit_pack_'));
+
+            if (creditPrice) {
+              const creditsAmount = parseInt(creditPrice.price?.metadata?.credits_amount || '0');
+              if (creditsAmount > 0) {
+                const { data: profile, error: fetchProfileError } = await supabaseAdmin
+                  .from('profiles')
+                  .select('credits_remaining')
+                  .eq('id', userId)
+                  .single();
+
+                if (fetchProfileError) throw fetchProfileError;
+
+                const newCredits = (profile?.credits_remaining || 0) + creditsAmount;
+
+                const { error: updateCreditsError } = await supabaseAdmin
+                  .from('profiles')
+                  .update({ credits_remaining: newCredits })
+                  .eq('id', userId);
+
+                if (updateCreditsError) throw updateCreditsError;
+                console.log(`User ${userId} topped up ${creditsAmount} credits. New total: ${newCredits}`);
+
+                // Send payment confirmation email
+                if (session.customer_email || session.customer_details?.email) {
+                  const userEmail = session.customer_email || session.customer_details?.email;
+                  const amountPaid = session.amount_total ? `$${(session.amount_total / 100).toFixed(2)}` : 'N/A';
+                  const purchaseDate = new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
+
+                  const html = buildReceiptEmail({
+                    amount: amountPaid,
+                    description: `Credit Pack - ${creditsAmount} Credits`,
+                    credits: creditsAmount,
+                    date: purchaseDate
+                  });
+
+                  const emailResult = await sendEmail({
+                    to: userEmail!,
+                    subject: 'Payment Confirmed - Credits Added',
+                    html
+                  });
+
+                  if (emailResult.success) {
+                    console.log(`✅ Payment confirmation email sent to ${userEmail}`);
+                    await supabaseAdmin.from('email_logs').insert({
+                      user_id: userId,
+                      email_type: 'payment_confirmation',
+                      recipient_email: userEmail,
+                      subject: 'Payment Confirmed - Credits Added',
+                      status: 'sent',
+                      resend_message_id: emailResult.messageId,
+                      metadata: {
+                        amount: amountPaid,
+                        credits_purchased: creditsAmount,
+                        new_total: newCredits,
+                        session_id: session.id
+                      }
+                    });
+                  }
                 }
               }
             }

@@ -592,6 +592,66 @@ export function buildContactAdminEmail(formData: {
 // ============================================================================
 
 /**
+ * Build order confirmation email
+ */
+export function buildOrderConfirmationEmail(order: {
+  orderId: string;
+  productName: string;
+  amount: string;
+  customerName: string;
+  date: string;
+}): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Hi ${order.customerName},
+    </p>
+    <p style="text-align: center; margin-bottom: 24px;">
+      Thank you for your order! We've received your payment and our design team will begin working on your custom design.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Order ID</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0;">#${order.orderId.slice(0, 8)}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Product</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${order.productName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Date</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${order.date}</td>
+        </tr>
+        <tr style="border-top: 1px solid #233554;">
+          <td style="color: #ccd6f6; padding: 16px 0 8px 0; font-weight: 600;">Total Paid</td>
+          <td style="color: #64ffda; text-align: right; padding: 16px 0 8px 0; font-size: 20px; font-weight: 600;">${order.amount}</td>
+        </tr>
+      </table>
+    </div>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <h3 style="color: #ccd6f6; font-size: 16px; margin: 0 0 16px 0;">What's Next?</h3>
+      <ul style="color: #8892b0; padding-left: 20px; margin: 0;">
+        <li style="margin-bottom: 12px;">Our design team will review your order and any notes you provided</li>
+        <li style="margin-bottom: 12px;">You'll receive your first draft within 3-5 business days</li>
+        <li style="margin-bottom: 12px;">You have 2 rounds of revisions included</li>
+        <li style="margin-bottom: 12px;">Final files will be delivered in print-ready PDF and PNG formats</li>
+      </ul>
+    </div>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Order Confirmed!',
+    preheader: `Your order for ${order.productName} has been confirmed`,
+    content,
+    ctaButton: {
+      text: 'View Your Orders',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/orders`,
+    },
+    footerText: 'Questions about your order? Reply to this email or contact support@sold2move.com',
+  });
+}
+
+/**
  * Build password changed email
  */
 export function buildPasswordChangedEmail(): string {
