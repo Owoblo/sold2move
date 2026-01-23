@@ -40,7 +40,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const AccountHub = lazy(() => import('@/components/dashboard/pages/AccountHub'));
 const Orders = lazy(() => import('@/components/dashboard/pages/Orders'));
 const SupportTicket = lazy(() => import('@/components/dashboard/pages/SupportTicket'));
-const Billing = lazy(() => import('@/components/dashboard/pages/BillingLive'));
+const Billing = lazy(() => import('@/components/dashboard/pages/PricingPage'));
 const MailingAssets = lazy(() => import('@/components/dashboard/pages/MailingAssets'));
 const Products = lazy(() => import('@/components/dashboard/pages/Products'));
 const Listings = lazy(() => import('@/components/dashboard/pages/Listings'));
