@@ -31,7 +31,7 @@ export const buildErrorContext = (operation, params = {}) => ({
   url: window.location.href
 });
 
-// Enhanced error logger with Sentry integration
+// Enhanced error logger with Sentry integration - PRODUCTION READY
 export const logError = (error, context = {}) => {
   const errorLog = {
     message: error.message,
@@ -53,31 +53,53 @@ export const logError = (error, context = {}) => {
   console.error('Full Error Object:', error);
   console.groupEnd();
 
-  // Send to Sentry with context
-  Sentry.withScope((scope) => {
-    // Add error code as tag for filtering
-    scope.setTag('error_code', error.code || 'UNKNOWN');
-    scope.setTag('error_type', context.queryType || context.mutationType || 'general');
+  // Send to Sentry with full context
+  try {
+    Sentry.withScope((scope) => {
+      // Add tags for filtering in Sentry dashboard
+      scope.setTag('error_code', error.code || 'UNKNOWN');
+      scope.setTag('error_type', context.queryType || context.mutationType || 'general');
+      scope.setTag('operation', context.operation || context.queryName || context.mutationName || 'unknown');
 
-    // Add context as extra data
-    scope.setExtras({
-      ...errorLog.context,
-      originalMessage: error.message,
-      errorCode: error.code
+      // Add page URL and component info
+      scope.setTag('page_url', window.location.pathname);
+      scope.setTag('full_url', window.location.href);
+
+      // Add all context as extra data for debugging
+      scope.setExtras({
+        ...errorLog.context,
+        originalMessage: error.message,
+        errorCode: error.code,
+        errorStack: error.stack,
+        browserInfo: navigator.userAgent,
+        screenSize: `${window.innerWidth}x${window.innerHeight}`,
+        timestamp: errorLog.timestamp
+      });
+
+      // Set error level based on severity
+      if (error.code === 'COLUMN_NOT_FOUND' || error.code === 'TABLE_NOT_FOUND') {
+        scope.setLevel('error');
+      } else if (error.code === 'RATE_LIMITED' || error.code === 'VALIDATION_ERROR') {
+        scope.setLevel('warning');
+      } else if (error.code === 'AUTH_ERROR' || error.code === 'PERMISSION_ERROR') {
+        scope.setLevel('warning');
+      } else {
+        scope.setLevel('error');
+      }
+
+      // Add fingerprint for better grouping
+      if (error.code) {
+        scope.setFingerprint([error.code, context.operation || 'unknown']);
+      }
+
+      // Capture the error - this sends to Sentry
+      Sentry.captureException(error);
+      console.log('📤 Error sent to Sentry');
     });
-
-    // Set error level based on code
-    if (error.code === 'COLUMN_NOT_FOUND' || error.code === 'TABLE_NOT_FOUND') {
-      scope.setLevel('error');
-    } else if (error.code === 'RATE_LIMITED') {
-      scope.setLevel('warning');
-    } else {
-      scope.setLevel('error');
-    }
-
-    // Capture the error
-    Sentry.captureException(error);
-  });
+  } catch (sentryError) {
+    // If Sentry fails, at least log it
+    console.error('Failed to send error to Sentry:', sentryError);
+  }
 
   return errorLog;
 };

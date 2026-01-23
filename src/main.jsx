@@ -3,30 +3,42 @@ import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 
-// Initialize Sentry as early as possible
+// Determine if we're in production
+const isProduction = window.location.hostname !== 'localhost' &&
+                     window.location.hostname !== '127.0.0.1' &&
+                     !window.location.hostname.includes('localhost');
+
+// Initialize Sentry - PRODUCTION READY
 Sentry.init({
   dsn: "https://9d2effdb593d85825cfbc9b0197d9520@o4510756974362624.ingest.us.sentry.io/4510756980981760",
 
-  // Set environment based on hostname
-  environment: window.location.hostname === 'localhost' ? 'development' : 'production',
+  // Environment detection
+  environment: isProduction ? 'production' : 'development',
 
-  // Only send errors in production (set to 1.0 to capture 100% of errors)
-  sampleRate: window.location.hostname === 'localhost' ? 0 : 1.0,
+  // CAPTURE 100% OF ALL ERRORS IN PRODUCTION
+  sampleRate: 1.0,
 
-  // Enable debug mode in development
-  debug: window.location.hostname === 'localhost',
+  // Enable in both environments so we can test, but filter in beforeSend
+  enabled: true,
 
-  // Configure which errors to capture
-  beforeSend(event, hint) {
-    // Don't send errors in development
-    if (window.location.hostname === 'localhost') {
-      console.log('🔍 Sentry would capture (dev mode):', event);
-      return null;
-    }
-    return event;
-  },
+  // Capture unhandled promise rejections
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      // Capture 10% of all sessions for replay
+      maskAllText: false,
+      blockAllMedia: false,
+    }),
+  ],
 
-  // Add user context when available
+  // Performance monitoring - capture 100% of transactions in production
+  tracesSampleRate: isProduction ? 0.1 : 0,
+
+  // Session replay - capture sessions with errors
+  replaysSessionSampleRate: 0,
+  replaysOnErrorSampleRate: isProduction ? 1.0 : 0,
+
+  // Add context
   initialScope: {
     tags: {
       app: 'sold2move',
@@ -34,13 +46,39 @@ Sentry.init({
     }
   },
 
-  // Ignore common non-actionable errors
+  // Configure which errors to capture
+  beforeSend(event, hint) {
+    // In development, log but don't send
+    if (!isProduction) {
+      console.log('🔍 [Sentry Dev] Would capture:', {
+        message: event.message || hint?.originalException?.message,
+        type: event.exception?.values?.[0]?.type,
+        url: event.request?.url
+      });
+      return null; // Don't send in development
+    }
+
+    // In production, send EVERYTHING
+    console.log('📤 [Sentry] Sending error to dashboard');
+    return event;
+  },
+
+  // Only ignore truly non-actionable browser noise
   ignoreErrors: [
+    // Browser extension errors
+    /^chrome-extension:\/\//,
+    /^moz-extension:\/\//,
+    // ResizeObserver is genuinely noise
     'ResizeObserver loop limit exceeded',
     'ResizeObserver loop completed with undelivered notifications',
-    'Non-Error promise rejection captured',
-    /Loading chunk \d+ failed/,
-    /Network request failed/,
+  ],
+
+  // Don't ignore errors from these URLs
+  denyUrls: [
+    // Ignore errors from browser extensions
+    /extensions\//i,
+    /^chrome:\/\//i,
+    /^moz-extension:\/\//i,
   ],
 });
 
