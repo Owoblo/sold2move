@@ -10,6 +10,7 @@ import OnboardingTour from '@/components/onboarding/OnboardingTour';
 import WelcomeMessage from '@/components/onboarding/WelcomeMessage';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import CookieConsent from '@/components/CookieConsent';
+import FloatingChat from '@/components/support/FloatingChat';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { storeIntendedDestination } from '@/utils/authUtils';
 import { testAuthFlow } from '@/utils/authDebugger';
@@ -48,6 +49,8 @@ const Mailing = lazy(() => import('@/components/dashboard/pages/Mailing'));
 const Resources = lazy(() => import('@/components/dashboard/pages/Resources'));
 const SampleMailers = lazy(() => import('@/components/dashboard/pages/SampleMailers'));
 const VideoTutorials = lazy(() => import('@/components/dashboard/pages/VideoTutorials'));
+const WalletPage = lazy(() => import('@/components/dashboard/pages/WalletPage'));
+const CampaignBuilder = lazy(() => import('@/components/dashboard/pages/CampaignBuilder'));
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'));
 const HealthCheck = lazy(() => import('@/pages/HealthCheck'));
 const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
@@ -202,6 +205,8 @@ function App() {
                           <Route path="/dashboard/resources" element={<Resources />} />
                           <Route path="/dashboard/sample-mailers" element={<SampleMailers />} />
                           <Route path="/dashboard/tutorials" element={<VideoTutorials />} />
+                          <Route path="/dashboard/wallet" element={<WalletPage />} />
+                          <Route path="/dashboard/campaigns/new" element={<CampaignBuilder />} />
                         </Routes>
                       </DashboardLayout>
                     </RouteGuard>
@@ -215,6 +220,7 @@ function App() {
       {!isDashboardRoute && <Footer />}
       <CookieConsent />
       <ShadToaster />
+      <FloatingChat />
 
       {/* Onboarding Components - Only show for authenticated users */}
       {session && (

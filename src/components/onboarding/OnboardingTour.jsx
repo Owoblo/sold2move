@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  X, 
-  CheckCircle, 
-  Zap, 
-  Search, 
-  Download, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  CheckCircle,
+  Zap,
+  Search,
+  Download,
   Settings,
   Home,
   Building,
@@ -18,7 +18,13 @@ import {
   Target,
   Star,
   ArrowRight,
-  Play
+  Play,
+  Mail,
+  Wallet,
+  FileText,
+  Send,
+  Palette,
+  Users
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile.jsx';
 import { useToast } from '@/components/ui/use-toast';
@@ -207,9 +213,145 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
       position: 'center'
     },
     {
+      id: 'direct-mail-intro',
+      title: 'Direct Mail Services',
+      description: 'Turn your leads into customers with professional direct mail campaigns.',
+      icon: Mail,
+      content: (
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="h-8 w-8 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-lightest-slate mb-2">
+              Reach Homeowners Directly
+            </h3>
+            <p className="text-slate text-sm">
+              Don't just find leads - convert them! Send professional postcards and letters directly to homeowners.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center p-3 bg-deep-navy/30 rounded-lg">
+              <FileText className="h-5 w-5 text-teal mx-auto mb-1" />
+              <p className="text-xs text-lightest-slate font-medium">Postcards</p>
+              <p className="text-xs text-slate">$1.50/pc</p>
+            </div>
+            <div className="text-center p-3 bg-deep-navy/30 rounded-lg">
+              <Mail className="h-5 w-5 text-blue-400 mx-auto mb-1" />
+              <p className="text-xs text-lightest-slate font-medium">Letters</p>
+              <p className="text-xs text-slate">$2.50/pc</p>
+            </div>
+            <div className="text-center p-3 bg-deep-navy/30 rounded-lg">
+              <Palette className="h-5 w-5 text-purple-400 mx-auto mb-1" />
+              <p className="text-xs text-lightest-slate font-medium">Handwritten</p>
+              <p className="text-xs text-slate">$3.50/pc</p>
+            </div>
+          </div>
+        </div>
+      ),
+      action: 'Tell me more!',
+      position: 'center'
+    },
+    {
+      id: 'wallet',
+      title: 'Fund Your Wallet',
+      description: 'Add funds to your wallet to launch campaigns instantly.',
+      icon: Wallet,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
+              <div className="w-10 h-10 bg-teal/20 rounded-full flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-teal" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-lightest-slate">Prepaid Wallet</p>
+                <p className="text-xs text-slate">Fund once, send campaigns anytime</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
+              <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-lightest-slate">No Hidden Fees</p>
+                <p className="text-xs text-slate">Pay only for what you send</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-deep-navy/30 rounded-lg">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-lightest-slate">Never Expires</p>
+                <p className="text-xs text-slate">Funds stay in your account forever</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-teal/5 border border-teal/20 rounded-lg p-3">
+            <p className="text-sm text-teal">
+              <strong>Pro Tip:</strong> Fund $500 to get ~250 letters sent - enough to reach an entire neighborhood!
+            </p>
+          </div>
+        </div>
+      ),
+      action: 'Got it!',
+      position: 'center'
+    },
+    {
+      id: 'campaign-builder',
+      title: 'Create Campaigns',
+      description: 'Build and launch direct mail campaigns in minutes.',
+      icon: Send,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sm font-bold text-teal">1</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Choose a Template</p>
+                <p className="text-xs text-slate">Professional designs ready to use</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sm font-bold text-teal">2</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Add Your Info</p>
+                <p className="text-xs text-slate">Customize with your name and contact</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-sm font-bold text-teal">3</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Select Recipients</p>
+                <p className="text-xs text-slate">Pick from your leads with one click</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Send className="h-4 w-4 text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-lightest-slate">Send!</p>
+                <p className="text-xs text-slate">We print and mail within 24-48 hours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+      action: 'Awesome!',
+      position: 'center'
+    },
+    {
       id: 'complete',
       title: 'You\'re All Set!',
-      description: 'Start finding and converting moving leads right away.',
+      description: 'Start finding leads and converting them into customers.',
       icon: CheckCircle,
       content: (
         <div className="space-y-4 text-center">
@@ -217,25 +359,34 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
             <CheckCircle className="h-8 w-8 text-teal" />
           </div>
           <h3 className="text-lg font-semibold text-lightest-slate">
-            Ready to Find Your First Leads?
+            Ready to Grow Your Business?
           </h3>
           <p className="text-slate text-sm">
-            You now know how to use Sold2Move to find and convert moving leads. 
-            Let's start with your first search!
+            You now know how to find leads AND convert them with direct mail campaigns.
           </p>
-          <div className="bg-deep-navy/30 rounded-lg p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate">Your free trial:</span>
-              <span className="text-teal font-semibold">1 Month Free</span>
+          <div className="bg-deep-navy/30 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-3 p-2 bg-deep-navy/50 rounded">
+              <Search className="h-4 w-4 text-teal" />
+              <span className="text-sm text-lightest-slate">Find fresh leads daily</span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-1">
-              <span className="text-slate">Value:</span>
-              <span className="text-lightest-slate font-semibold">Over $500</span>
+            <div className="flex items-center gap-3 p-2 bg-deep-navy/50 rounded">
+              <Mail className="h-4 w-4 text-purple-400" />
+              <span className="text-sm text-lightest-slate">Send direct mail campaigns</span>
             </div>
+            <div className="flex items-center gap-3 p-2 bg-deep-navy/50 rounded">
+              <Target className="h-4 w-4 text-amber-400" />
+              <span className="text-sm text-lightest-slate">Convert leads to customers</span>
+            </div>
+          </div>
+          <div className="pt-2">
+            <Badge className="bg-teal/20 text-teal border-teal/30">
+              <Zap className="h-3 w-3 mr-1" />
+              1 Month Free Trial
+            </Badge>
           </div>
         </div>
       ),
-      action: 'Start Finding Leads',
+      action: 'Get Started!',
       position: 'center'
     }
   ];

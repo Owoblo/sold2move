@@ -273,9 +273,96 @@ Deno.serve(async (req) => {
         const userId = session.metadata?.supabase_user_id;
 
         if (userId && session.mode === 'payment' && session.payment_status === 'paid') {
-          // Check if this is a product order (design service)
+          // Check payment type from metadata
+          const paymentType = session.metadata?.type;
           const orderId = session.metadata?.order_id;
 
+          // Handle wallet funding
+          if (paymentType === 'wallet_funding') {
+            const fundingAmount = parseFloat(session.metadata?.amount || '0');
+            console.log(`Processing wallet funding: $${fundingAmount} for user ${userId}`);
+
+            // Get user's wallet
+            const { data: wallet, error: walletError } = await supabaseAdmin
+              .from('wallets')
+              .select('id, balance')
+              .eq('user_id', userId)
+              .single();
+
+            if (walletError || !wallet) {
+              console.error('Wallet not found for user:', userId);
+              break;
+            }
+
+            const newBalance = parseFloat(wallet.balance) + fundingAmount;
+
+            // Update wallet balance
+            const { error: updateError } = await supabaseAdmin
+              .from('wallets')
+              .update({ balance: newBalance })
+              .eq('id', wallet.id);
+
+            if (updateError) {
+              console.error('Error updating wallet balance:', updateError);
+              break;
+            }
+
+            // Create transaction record
+            await supabaseAdmin.from('wallet_transactions').insert({
+              wallet_id: wallet.id,
+              user_id: userId,
+              type: 'deposit',
+              amount: fundingAmount,
+              balance_before: parseFloat(wallet.balance),
+              balance_after: newBalance,
+              description: `Added $${fundingAmount.toFixed(2)} to wallet`,
+              reference_type: 'stripe_payment',
+              stripe_payment_intent_id: session.payment_intent as string,
+              metadata: { session_id: session.id }
+            });
+
+            console.log(`✅ Wallet funded: $${fundingAmount} for user ${userId}. New balance: $${newBalance}`);
+
+            // Send confirmation email
+            const userEmail = session.customer_email || session.customer_details?.email;
+            if (userEmail) {
+              const html = buildReceiptEmail({
+                amount: `$${fundingAmount.toFixed(2)}`,
+                description: 'Wallet Funds Added',
+                date: new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })
+              });
+
+              const emailResult = await sendEmail({
+                to: userEmail,
+                subject: `Wallet Funded - $${fundingAmount.toFixed(2)} Added`,
+                html
+              });
+
+              if (emailResult.success) {
+                console.log(`✅ Wallet funding confirmation sent to ${userEmail}`);
+                await supabaseAdmin.from('email_logs').insert({
+                  user_id: userId,
+                  email_type: 'wallet_funded',
+                  recipient_email: userEmail,
+                  subject: `Wallet Funded - $${fundingAmount.toFixed(2)} Added`,
+                  status: 'sent',
+                  resend_message_id: emailResult.messageId,
+                  metadata: {
+                    amount: fundingAmount,
+                    new_balance: newBalance,
+                    session_id: session.id
+                  }
+                });
+              }
+            }
+            break;
+          }
+
+          // Check if this is a product order (design service)
           if (orderId) {
             // Handle product order payment
             console.log(`Processing product order payment: ${orderId}`);
