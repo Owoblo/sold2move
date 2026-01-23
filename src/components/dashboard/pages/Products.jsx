@@ -16,7 +16,7 @@ import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile';
 import { useProducts, useCouponValidation } from '@/hooks/useProducts';
 import { supabase } from '@/lib/customSupabaseClient';
-import { getStripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripeClient';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import {

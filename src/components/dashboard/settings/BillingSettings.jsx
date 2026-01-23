@@ -41,7 +41,7 @@ const BillingSettings = () => {
       return <SkeletonLoader count={3} className="h-6 w-full mb-2" />;
     }
 
-    if (!profile?.plan_tier || profile.plan_tier === 'free') {
+    if (!profile?.subscription_tier && !profile?.subscription_status) {
       return <p className="text-slate">You are currently on the Free plan.</p>;
     }
 
@@ -49,7 +49,9 @@ const BillingSettings = () => {
       <div className="space-y-2 text-lightest-slate">
         <div className="flex justify-between items-center">
           <span className="text-slate">Plan:</span>
-          <Badge variant="outline" className="capitalize bg-teal/10 text-teal border-teal/50">{profile.plan_tier}</Badge>
+          <Badge variant="outline" className="capitalize bg-teal/10 text-teal border-teal/50">
+            {profile.subscription_tier_name || profile.subscription_tier || 'Free'}
+          </Badge>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-slate">Status:</span>

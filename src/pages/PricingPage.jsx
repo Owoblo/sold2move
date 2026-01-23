@@ -140,11 +140,17 @@ const PricingPage = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPriceId, setLoadingPriceId] = useState(null);
   
-  const { loading: subscriptionLoading, activePriceId } = useActiveSubscription();
+  const { loading: subscriptionLoading, isActive, subscription } = useActiveSubscription();
 
   const isPaid = profile && ['active', 'trialing', 'past_due'].includes(profile.subscription_status);
-  
-  const isCurrentPlan = (planPriceId) => Boolean(activePriceId && planPriceId && activePriceId === planPriceId);
+
+  // Check if a plan matches the user's current subscription
+  // Compares plan title (case-insensitive) with subscription_plan or subscription_tier_name
+  const isCurrentPlan = (planTitle) => {
+    if (!isActive || !subscription) return false;
+    const currentPlan = (subscription.plan || subscription.tierName || '').toLowerCase();
+    return currentPlan === planTitle.toLowerCase();
+  };
 
   const handleCheckout = async (price, mode = 'subscription') => {
     const priceId = price?.id || (mode === 'subscription' ? 'free_trial' : null);
@@ -239,7 +245,7 @@ const PricingPage = () => {
 
         <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-8 items-stretch">
           {pricingPlans.map((plan) => (
-            <PricingCard key={plan.title} plan={plan} isYearly={isYearly} handleCheckout={handleCheckout} loadingPriceId={loadingPriceId} isPaid={isPaid} isCurrentPlan={isCurrentPlan(isYearly ? plan.prices.yearly.id : plan.prices.monthly.id)} navigate={navigate} />
+            <PricingCard key={plan.title} plan={plan} isYearly={isYearly} handleCheckout={handleCheckout} loadingPriceId={loadingPriceId} isPaid={isPaid} isCurrentPlan={isCurrentPlan(plan.title)} navigate={navigate} />
           ))}
         </div>
         

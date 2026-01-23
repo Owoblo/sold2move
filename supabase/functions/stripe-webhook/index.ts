@@ -119,26 +119,128 @@ Deno.serve(async (req) => {
               : 'N/A';
 
             if (event.type === 'customer.subscription.created') {
-              // Send subscription activated email
-              const html = buildSubscriptionActivatedEmail(formattedPlanName, formattedDate);
-              const emailResult = await sendEmail({
-                to: userEmail,
-                subject: `Welcome to ${formattedPlanName}!`,
-                html
-              });
+              // Check if this is a trial subscription
+              const isTrialing = subscription.status === 'trialing' && subscription.trial_end;
 
-              if (emailResult.success) {
-                console.log(`✅ Subscription activated email sent to ${userEmail}`);
-                // Log the email
-                await supabaseAdmin.from('email_logs').insert({
-                  user_id: supabaseUserId,
-                  email_type: 'subscription_activated',
-                  recipient_email: userEmail,
-                  subject: `Welcome to ${formattedPlanName}!`,
-                  status: 'sent',
-                  resend_message_id: emailResult.messageId,
-                  metadata: { plan_name: planName, subscription_id: subscription.id }
+              if (isTrialing) {
+                // Send trial started email
+                const trialEndDate = new Date(subscription.trial_end! * 1000).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
                 });
+                const trialDays = subscription.trial_end
+                  ? Math.ceil((subscription.trial_end * 1000 - Date.now()) / (24 * 60 * 60 * 1000))
+                  : 14;
+
+                const html = buildTrialStartedEmail(formattedPlanName, trialEndDate, trialDays);
+                const emailResult = await sendEmail({
+                  to: userEmail,
+                  subject: `Your ${formattedPlanName} Trial Has Started!`,
+                  html
+                });
+
+                if (emailResult.success) {
+                  console.log(`✅ Trial started email sent to ${userEmail}`);
+                  await supabaseAdmin.from('email_logs').insert({
+                    user_id: supabaseUserId,
+                    email_type: 'trial_started',
+                    recipient_email: userEmail,
+                    subject: `Your ${formattedPlanName} Trial Has Started!`,
+                    status: 'sent',
+                    resend_message_id: emailResult.messageId,
+                    metadata: {
+                      plan_name: planName,
+                      subscription_id: subscription.id,
+                      trial_end: trialEndDate,
+                      trial_days: trialDays,
+                    }
+                  });
+                }
+              } else {
+                // Send subscription activated email (for non-trial activations)
+                const html = buildSubscriptionActivatedEmail(formattedPlanName, formattedDate);
+                const emailResult = await sendEmail({
+                  to: userEmail,
+                  subject: `Welcome to ${formattedPlanName}!`,
+                  html
+                });
+
+                if (emailResult.success) {
+                  console.log(`✅ Subscription activated email sent to ${userEmail}`);
+                  await supabaseAdmin.from('email_logs').insert({
+                    user_id: supabaseUserId,
+                    email_type: 'subscription_activated',
+                    recipient_email: userEmail,
+                    subject: `Welcome to ${formattedPlanName}!`,
+                    status: 'sent',
+                    resend_message_id: emailResult.messageId,
+                    metadata: { plan_name: planName, subscription_id: subscription.id }
+                  });
+                }
+              }
+            } else if (event.type === 'customer.subscription.updated') {
+              // Check if plan changed by looking at previous_attributes
+              const previousAttributes = (event.data as any).previous_attributes;
+              const previousItems = previousAttributes?.items?.data;
+
+              if (previousItems && previousItems.length > 0) {
+                const previousPrice = previousItems[0]?.price;
+                const currentPrice = subscription.items.data[0]?.price;
+
+                // Check if the price/product changed (plan change)
+                if (previousPrice && currentPrice && previousPrice.id !== currentPrice.id) {
+                  const oldPlanName = previousPrice.metadata?.tier_name ||
+                    previousPrice.lookup_key?.replace(/_monthly|_yearly/, '') ||
+                    'Previous Plan';
+                  const newPlanName = tierName || planName;
+                  const newPrice = currentPrice.unit_amount
+                    ? `$${(currentPrice.unit_amount / 100).toFixed(0)}`
+                    : 'N/A';
+
+                  // Determine if upgrade (higher price = upgrade)
+                  const oldAmount = previousPrice.unit_amount || 0;
+                  const newAmount = currentPrice.unit_amount || 0;
+                  const isUpgrade = newAmount > oldAmount;
+
+                  const effectiveDate = new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  });
+
+                  const html = buildPlanChangedEmail({
+                    oldPlan: oldPlanName.charAt(0).toUpperCase() + oldPlanName.slice(1),
+                    newPlan: formattedPlanName,
+                    newPrice,
+                    effectiveDate,
+                    isUpgrade,
+                  });
+
+                  const emailResult = await sendEmail({
+                    to: userEmail,
+                    subject: `Plan ${isUpgrade ? 'Upgraded' : 'Changed'} Successfully`,
+                    html
+                  });
+
+                  if (emailResult.success) {
+                    console.log(`✅ Plan changed email sent to ${userEmail}`);
+                    await supabaseAdmin.from('email_logs').insert({
+                      user_id: supabaseUserId,
+                      email_type: 'plan_changed',
+                      recipient_email: userEmail,
+                      subject: `Plan ${isUpgrade ? 'Upgraded' : 'Changed'} Successfully`,
+                      status: 'sent',
+                      resend_message_id: emailResult.messageId,
+                      metadata: {
+                        old_plan: oldPlanName,
+                        new_plan: planName,
+                        is_upgrade: isUpgrade,
+                        subscription_id: subscription.id
+                      }
+                    });
+                  }
+                }
               }
             } else if (event.type === 'customer.subscription.deleted') {
               // Send subscription cancelled email
@@ -312,7 +414,194 @@ Deno.serve(async (req) => {
         }
         break;
 
-      // Handle other events as needed (e.g., invoice.payment_succeeded, invoice.payment_failed)
+      case 'customer.subscription.trial_will_end':
+        // Trial ending in 3 days - send reminder
+        const trialSubscription = event.data.object as Stripe.Subscription;
+        const trialCustomerId = trialSubscription.customer as string;
+
+        try {
+          const trialCustomer = await stripe.customers.retrieve(trialCustomerId);
+          const trialUserId = (trialCustomer as Stripe.Customer).metadata?.supabase_user_id;
+          const trialUserEmail = (trialCustomer as Stripe.Customer).email;
+
+          if (trialUserEmail) {
+            const tierName = trialSubscription.metadata?.tier_name || 'Your Plan';
+            const trialEnd = trialSubscription.trial_end
+              ? new Date(trialSubscription.trial_end * 1000).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : 'soon';
+
+            // Calculate days remaining (usually 3 when this event fires)
+            const daysRemaining = trialSubscription.trial_end
+              ? Math.max(0, Math.ceil((trialSubscription.trial_end * 1000 - Date.now()) / (24 * 60 * 60 * 1000)))
+              : 3;
+
+            const html = buildTrialEndingEmail(tierName, daysRemaining, trialEnd);
+            const emailResult = await sendEmail({
+              to: trialUserEmail,
+              subject: `Your trial ends in ${daysRemaining} days`,
+              html,
+            });
+
+            if (emailResult.success) {
+              console.log(`✅ Trial ending email sent to ${trialUserEmail}`);
+              await supabaseAdmin.from('email_logs').insert({
+                user_id: trialUserId,
+                email_type: 'trial_ending',
+                recipient_email: trialUserEmail,
+                subject: `Your trial ends in ${daysRemaining} days`,
+                status: 'sent',
+                resend_message_id: emailResult.messageId,
+                metadata: {
+                  plan_name: tierName,
+                  days_remaining: daysRemaining,
+                  trial_end: trialEnd,
+                  subscription_id: trialSubscription.id,
+                },
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error sending trial ending email:', err);
+        }
+        break;
+
+      case 'invoice.payment_succeeded':
+        // Subscription renewal payment succeeded - send receipt
+        const paidInvoice = event.data.object as Stripe.Invoice;
+
+        // Only send for subscription renewals (not first payment which is handled by subscription.created)
+        if (paidInvoice.billing_reason === 'subscription_cycle' && paidInvoice.subscription) {
+          const invoiceCustomerId = paidInvoice.customer as string;
+
+          try {
+            const invoiceCustomer = await stripe.customers.retrieve(invoiceCustomerId);
+            const invoiceUserId = (invoiceCustomer as Stripe.Customer).metadata?.supabase_user_id;
+            const invoiceUserEmail = paidInvoice.customer_email || (invoiceCustomer as Stripe.Customer).email;
+
+            if (invoiceUserEmail) {
+              const sub = await stripe.subscriptions.retrieve(paidInvoice.subscription as string);
+              const planName = sub.metadata?.tier_name || 'Subscription';
+              const amount = paidInvoice.amount_paid ? `$${(paidInvoice.amount_paid / 100).toFixed(2)}` : 'N/A';
+              const date = new Date(paidInvoice.created * 1000).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              });
+              const periodStart = paidInvoice.period_start
+                ? new Date(paidInvoice.period_start * 1000).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : 'N/A';
+              const periodEnd = paidInvoice.period_end
+                ? new Date(paidInvoice.period_end * 1000).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })
+                : 'N/A';
+
+              const html = buildSubscriptionReceiptEmail({
+                planName,
+                amount,
+                date,
+                periodStart,
+                periodEnd,
+                invoiceNumber: paidInvoice.number || undefined,
+              });
+
+              const emailResult = await sendEmail({
+                to: invoiceUserEmail,
+                subject: `Payment Receipt - ${planName}`,
+                html,
+              });
+
+              if (emailResult.success) {
+                console.log(`✅ Subscription receipt email sent to ${invoiceUserEmail}`);
+                await supabaseAdmin.from('email_logs').insert({
+                  user_id: invoiceUserId,
+                  email_type: 'subscription_receipt',
+                  recipient_email: invoiceUserEmail,
+                  subject: `Payment Receipt - ${planName}`,
+                  status: 'sent',
+                  resend_message_id: emailResult.messageId,
+                  metadata: {
+                    plan_name: planName,
+                    amount,
+                    invoice_id: paidInvoice.id,
+                    invoice_number: paidInvoice.number,
+                    period_start: periodStart,
+                    period_end: periodEnd,
+                  },
+                });
+              }
+            }
+          } catch (err) {
+            console.error('Error sending subscription receipt email:', err);
+          }
+        }
+        break;
+
+      case 'invoice.payment_failed':
+        // Payment failed - send notification
+        const failedInvoice = event.data.object as Stripe.Invoice;
+        const failedCustomerId = failedInvoice.customer as string;
+
+        try {
+          const failedCustomer = await stripe.customers.retrieve(failedCustomerId);
+          const failedUserId = (failedCustomer as Stripe.Customer).metadata?.supabase_user_id;
+          const failedUserEmail = failedInvoice.customer_email || (failedCustomer as Stripe.Customer).email;
+
+          if (failedUserEmail && failedInvoice.subscription) {
+            const failedSub = await stripe.subscriptions.retrieve(failedInvoice.subscription as string);
+            const planName = failedSub.metadata?.tier_name || 'Subscription';
+            const amount = failedInvoice.amount_due ? `$${(failedInvoice.amount_due / 100).toFixed(2)}` : 'N/A';
+
+            // Check next payment attempt date
+            const nextRetryDate = failedInvoice.next_payment_attempt
+              ? new Date(failedInvoice.next_payment_attempt * 1000).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })
+              : undefined;
+
+            const html = buildPaymentFailedEmail(planName, amount, nextRetryDate);
+            const emailResult = await sendEmail({
+              to: failedUserEmail,
+              subject: 'Action Required: Payment Failed',
+              html,
+            });
+
+            if (emailResult.success) {
+              console.log(`✅ Payment failed email sent to ${failedUserEmail}`);
+              await supabaseAdmin.from('email_logs').insert({
+                user_id: failedUserId,
+                email_type: 'payment_failed',
+                recipient_email: failedUserEmail,
+                subject: 'Action Required: Payment Failed',
+                status: 'sent',
+                resend_message_id: emailResult.messageId,
+                metadata: {
+                  plan_name: planName,
+                  amount,
+                  invoice_id: failedInvoice.id,
+                  next_retry_date: nextRetryDate,
+                  attempt_count: failedInvoice.attempt_count,
+                },
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error sending payment failed email:', err);
+        }
+        break;
+
       default:
         console.log(`Unhandled event type ${event.type}`);
     }

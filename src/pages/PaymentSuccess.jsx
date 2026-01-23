@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
-import { CheckCircle, CreditCard, Loader2 } from 'lucide-react';
+import { CheckCircle, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 
+/**
+ * PaymentSuccess page - displays after successful Stripe checkout.
+ *
+ * Note: Profile updates are handled by the Stripe webhook (stripe-webhook edge function).
+ * This page just fetches and displays the updated subscription data.
+ */
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [creditsAdded, setCreditsAdded] = useState(0);
-  const [totalCredits, setTotalCredits] = useState(0);
+  const [subscription, setSubscription] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const sessionId = searchParams.get('session_id');
+  const MAX_RETRIES = 5;
+  const RETRY_DELAY = 2000; // 2 seconds between retries
 
   useEffect(() => {
     if (!sessionId) {
@@ -21,12 +28,12 @@ export default function PaymentSuccess() {
       return;
     }
 
-    handlePaymentSuccess();
+    fetchSubscriptionData();
   }, [sessionId]);
 
-  const handlePaymentSuccess = async () => {
+  const fetchSubscriptionData = async () => {
     try {
-      console.log('🎉 Processing payment success for session:', sessionId);
+      console.log('🎉 Fetching subscription data after payment success');
 
       // Get the current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -34,72 +41,88 @@ export default function PaymentSuccess() {
         throw new Error('User not authenticated');
       }
 
-      // Get user's current profile with existing credits_remaining
-      let profile = { credits_remaining: 500, subscription_status: 'inactive' }; // Default 500 free credits
-      
-      try {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('credits_remaining, subscription_status')
-          .eq('id', user.id)
-          .single();
+      // Fetch profile with subscription data (set by webhook)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          subscription_status,
+          subscription_plan,
+          subscription_tier,
+          subscription_tier_name,
+          credits_remaining,
+          next_billing_date,
+          current_period_end
+        `)
+        .eq('id', user.id)
+        .single();
 
-        if (profileData) {
-          profile = {
-            credits_remaining: profileData.credits_remaining || 500, // Use existing credits or default to 500
-            subscription_status: profileData.subscription_status || 'inactive'
-          };
-        }
-      } catch (error) {
-        console.log('Profile query failed, using defaults:', error.message);
+      if (profileError) {
+        throw new Error('Failed to fetch profile data');
       }
 
-      // Add credits based on the plan (Starter = 100 credits)
-      const creditsToAdd = 100; // Starter plan credits
-      const newCredits = profile.credits_remaining + creditsToAdd;
+      // Check if webhook has processed the payment yet
+      const isActive = profile.subscription_status === 'active' || profile.subscription_status === 'trialing';
 
-      console.log(`💰 Current credits: ${profile.credits_remaining}, Adding: ${creditsToAdd}, New total: ${newCredits}`);
-
-      // Update user's profile with new credits and subscription status
-      try {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            credits_remaining: newCredits,
-            subscription_status: 'active',
-            subscription_plan: 'starter',
-            subscription_started_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (updateError) {
-          console.log('Profile update failed:', updateError.message);
-          // Don't throw error, just log it
-        } else {
-          console.log('✅ Successfully updated user profile with new credits');
-        }
-      } catch (error) {
-        console.log('Profile update failed:', error.message);
-        // Don't throw error, just log it
+      if (!isActive && retryCount < MAX_RETRIES) {
+        // Webhook may not have processed yet, retry after delay
+        console.log(`⏳ Subscription not active yet, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+        setRetryCount(prev => prev + 1);
+        setTimeout(fetchSubscriptionData, RETRY_DELAY);
+        return;
       }
 
-      // Remove the old error handling since we're handling it above
+      if (!isActive && retryCount >= MAX_RETRIES) {
+        // Webhook still hasn't processed, but show success anyway
+        // (payment was successful, webhook may be delayed)
+        console.log('⚠️ Webhook may be delayed, showing pending status');
+        setSubscription({
+          status: 'processing',
+          tierName: 'Your subscription',
+          credits: profile.credits_remaining || 0,
+          message: 'Your payment was successful! Your subscription is being activated.'
+        });
+        setLoading(false);
+        startRedirectTimer();
+        return;
+      }
 
-      console.log('✅ Added', creditsToAdd, 'credits to user account');
-      setCreditsAdded(creditsToAdd);
-      setTotalCredits(newCredits);
-      setSuccess(true);
+      console.log('✅ Subscription data loaded:', profile);
+
+      setSubscription({
+        status: profile.subscription_status,
+        tierName: profile.subscription_tier_name || profile.subscription_plan || 'Subscription',
+        tier: profile.subscription_tier,
+        credits: profile.credits_remaining || 0,
+        nextBillingDate: profile.next_billing_date || profile.current_period_end
+      });
+
       setLoading(false);
-
-      // Redirect to dashboard after 3 seconds
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
+      startRedirectTimer();
 
     } catch (err) {
-      console.error('❌ Payment success handling error:', err);
+      console.error('❌ Error fetching subscription data:', err);
       setError(err.message);
       setLoading(false);
+    }
+  };
+
+  const startRedirectTimer = () => {
+    // Redirect to dashboard after 4 seconds
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 4000);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return null;
     }
   };
 
@@ -108,7 +131,9 @@ export default function PaymentSuccess() {
       <div className="min-h-screen bg-deep-navy flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-teal mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">Processing Your Payment...</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">
+            {retryCount > 0 ? 'Activating Your Subscription...' : 'Processing Your Payment...'}
+          </h2>
           <p className="text-slate">Please wait while we confirm your subscription</p>
         </div>
       </div>
@@ -120,8 +145,12 @@ export default function PaymentSuccess() {
       <div className="min-h-screen bg-deep-navy flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Payment Processing Error</h2>
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-400 mb-2">Something Went Wrong</h2>
             <p className="text-slate mb-4">{error}</p>
+            <p className="text-slate text-sm mb-4">
+              Your payment may still have been successful. Please check your dashboard.
+            </p>
             <button
               onClick={() => navigate('/dashboard')}
               className="bg-teal text-deep-navy px-4 py-2 rounded hover:bg-teal/90"
@@ -134,34 +163,49 @@ export default function PaymentSuccess() {
     );
   }
 
+  const isProcessing = subscription?.status === 'processing';
+
   return (
     <div className="min-h-screen bg-deep-navy flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-6">
         <div className="bg-teal-500/10 border border-teal-500/20 rounded-lg p-8">
           <CheckCircle className="h-16 w-16 text-teal mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Successful! 🎉</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Payment Successful!</h2>
           <p className="text-slate mb-4">
-            Your Starter subscription has been activated
+            {isProcessing
+              ? subscription.message
+              : `Your ${subscription?.tierName} plan has been activated`
+            }
           </p>
-          
+
           <div className="bg-light-navy/50 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
               <CreditCard className="h-5 w-5 text-teal" />
-              <span className="text-white font-semibold">Credits Added</span>
+              <span className="text-white font-semibold">Your Credits</span>
             </div>
             <div className="text-3xl font-bold text-teal">
-              +{creditsAdded}
+              {subscription?.credits?.toLocaleString() || 0}
             </div>
-            <p className="text-slate text-sm">Credits added to your account</p>
-            <div className="mt-2 pt-2 border-t border-slate/20">
-              <p className="text-slate text-sm">Total Credits: <span className="text-white font-semibold">{totalCredits}</span></p>
-            </div>
+            <p className="text-slate text-sm">Credits available</p>
           </div>
 
           <div className="space-y-2 text-sm text-slate">
-            <p>✅ Subscription: Active</p>
-            <p>✅ Plan: Starter ($9.99 CAD/month)</p>
-            <p>✅ Credits: {totalCredits} total available</p>
+            <p>
+              <span className="text-teal">✓</span> Status:{' '}
+              <span className="text-white capitalize">
+                {isProcessing ? 'Activating...' : subscription?.status}
+              </span>
+            </p>
+            <p>
+              <span className="text-teal">✓</span> Plan:{' '}
+              <span className="text-white">{subscription?.tierName}</span>
+            </p>
+            {subscription?.nextBillingDate && (
+              <p>
+                <span className="text-teal">✓</span> Next billing:{' '}
+                <span className="text-white">{formatDate(subscription.nextBillingDate)}</span>
+              </p>
+            )}
           </div>
 
           <div className="mt-6">
@@ -174,7 +218,7 @@ export default function PaymentSuccess() {
           </div>
 
           <p className="text-xs text-slate mt-4">
-            Redirecting to dashboard in 3 seconds...
+            Redirecting to dashboard shortly...
           </p>
         </div>
       </div>

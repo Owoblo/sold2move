@@ -389,17 +389,17 @@ export function buildWelcomeEmail(userName?: string): string {
       <h3 style="color: #ccd6f6; font-size: 16px; margin: 0 0 16px 0;">Here's what you can do:</h3>
       <ul style="color: #8892b0; padding-left: 20px; margin: 0;">
         <li style="margin-bottom: 12px;">Browse recently sold properties in your service areas</li>
-        <li style="margin-bottom: 12px;">Reveal homeowner contact information with credits</li>
+        <li style="margin-bottom: 12px;">Access homeowner contact information</li>
         <li style="margin-bottom: 12px;">Set up daily email alerts for new listings</li>
         <li style="margin-bottom: 12px;">Track your lead generation progress</li>
       </ul>
     </div>
-    <p style="text-align: center;">You have <strong style="color: #64ffda;">100 free credits</strong> to get started!</p>
+    <p style="text-align: center;">You have a <strong style="color: #64ffda;">14-day free trial</strong> to explore all features!</p>
   `;
 
   return buildEmailTemplate({
     title: greeting,
-    preheader: 'Your account is verified. Start finding leads today!',
+    preheader: 'Your account is verified. Start your free trial today!',
     content,
     ctaButton: {
       text: 'Go to Dashboard',
@@ -615,5 +615,321 @@ export function buildPasswordChangedEmail(): string {
       url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
     },
     footerText: 'If you did not request this change, please contact support@sold2move.com immediately.',
+  });
+}
+
+// ============================================================================
+// Trial & Payment Status Templates
+// ============================================================================
+
+/**
+ * Build trial ending soon email
+ */
+export function buildTrialEndingEmail(planName: string, daysRemaining: number, trialEndDate: string): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your free trial for <strong style="color: #64ffda;">${planName}</strong> is ending soon.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 32px; margin-bottom: 24px; text-align: center;">
+      <p style="color: #8892b0; margin: 0 0 8px 0;">Trial ends in</p>
+      <p style="color: #f59e0b; font-size: 48px; font-weight: bold; margin: 0;">${daysRemaining}</p>
+      <p style="color: #8892b0; margin: 8px 0 0 0;">${daysRemaining === 1 ? 'day' : 'days'}</p>
+    </div>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Trial Ends</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${trialEndDate}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">
+      To continue accessing all features without interruption, make sure your payment method is up to date.
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Your Trial is Ending Soon',
+    preheader: `Your ${planName} trial ends in ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}`,
+    content,
+    ctaButton: {
+      text: 'Manage Subscription',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/billing`,
+    },
+    footerText: 'Your card will be charged automatically when your trial ends unless you cancel.',
+  });
+}
+
+/**
+ * Build payment failed email
+ */
+export function buildPaymentFailedEmail(planName: string, amount: string, nextRetryDate?: string): string {
+  const retryInfo = nextRetryDate
+    ? `<p style="color: #8892b0; text-align: center; margin-top: 16px;">We'll automatically retry the payment on <strong style="color: #ccd6f6;">${nextRetryDate}</strong>.</p>`
+    : '';
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="background-color: #ef4444; border-radius: 50%; width: 64px; height: 64px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+        <span style="color: white; font-size: 32px;">!</span>
+      </div>
+      <p style="color: #ccd6f6; margin: 0;">
+        We were unable to process your payment for <strong style="color: #64ffda;">${planName}</strong>.
+      </p>
+    </div>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Amount Due</td>
+          <td style="color: #ef4444; text-align: right; padding: 8px 0;">${amount}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center; margin-bottom: 16px;">
+      Please update your payment method to avoid service interruption.
+    </p>
+    ${retryInfo}
+  `;
+
+  return buildEmailTemplate({
+    title: 'Payment Failed',
+    preheader: `Action required: Your payment of ${amount} could not be processed`,
+    content,
+    ctaButton: {
+      text: 'Update Payment Method',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/billing`,
+    },
+    footerText: 'If you need help, please contact support@sold2move.com.',
+  });
+}
+
+/**
+ * Build subscription receipt email (for renewals and successful payments)
+ */
+export function buildSubscriptionReceiptEmail(data: {
+  planName: string;
+  amount: string;
+  date: string;
+  periodStart: string;
+  periodEnd: string;
+  invoiceNumber?: string;
+}): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Thank you for your continued subscription to <strong style="color: #64ffda;">${data.planName}</strong>!
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        ${data.invoiceNumber ? `
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Invoice</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">#${data.invoiceNumber}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Date</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.date}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Billing Period</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.periodStart} - ${data.periodEnd}</td>
+        </tr>
+        <tr style="border-top: 1px solid #233554;">
+          <td style="color: #ccd6f6; padding: 16px 0 8px 0; font-weight: 600;">Total Paid</td>
+          <td style="color: #64ffda; text-align: right; padding: 16px 0 8px 0; font-size: 20px; font-weight: 600;">${data.amount}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">Your subscription will automatically renew on ${data.periodEnd}.</p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Payment Receipt',
+    preheader: `Your payment of ${data.amount} for ${data.planName} was successful`,
+    content,
+    ctaButton: {
+      text: 'View Billing History',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/billing`,
+    },
+    footerText: 'This receipt serves as confirmation of your payment. For invoice copies, visit your billing dashboard.',
+  });
+}
+
+/**
+ * Build plan changed email (upgrade/downgrade)
+ */
+export function buildPlanChangedEmail(data: {
+  oldPlan: string;
+  newPlan: string;
+  newPrice: string;
+  effectiveDate: string;
+  isUpgrade: boolean;
+}): string {
+  const changeType = data.isUpgrade ? 'upgraded' : 'changed';
+  const icon = data.isUpgrade ? '🚀' : '📋';
+
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your subscription has been ${changeType} successfully!
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px;">
+        <div style="text-align: center; flex: 1;">
+          <p style="color: #8892b0; margin: 0 0 4px 0; font-size: 12px;">Previous Plan</p>
+          <p style="color: #ccd6f6; margin: 0; font-size: 16px;">${data.oldPlan}</p>
+        </div>
+        <div style="color: #64ffda; font-size: 24px;">→</div>
+        <div style="text-align: center; flex: 1;">
+          <p style="color: #8892b0; margin: 0 0 4px 0; font-size: 12px;">New Plan</p>
+          <p style="color: #64ffda; margin: 0; font-size: 16px; font-weight: 600;">${data.newPlan}</p>
+        </div>
+      </div>
+      <hr style="border: none; border-top: 1px solid #233554; margin: 16px 0;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">New Monthly Rate</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0; font-weight: 600;">${data.newPrice}/mo</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Effective</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.effectiveDate}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">
+      ${data.isUpgrade
+        ? 'You now have access to all your new plan features immediately.'
+        : 'Your plan change will take effect at the start of your next billing cycle.'}
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: `Plan ${data.isUpgrade ? 'Upgraded' : 'Changed'} Successfully`,
+    preheader: `Your subscription has been ${changeType} to ${data.newPlan}`,
+    content,
+    ctaButton: {
+      text: 'View Your Plan',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard/billing`,
+    },
+  });
+}
+
+/**
+ * Build trial started email (for new trial subscriptions)
+ */
+export function buildTrialStartedEmail(planName: string, trialEndDate: string, trialDays: number): string {
+  const content = `
+    <p style="text-align: center; margin-bottom: 24px;">
+      Your <strong style="color: #64ffda;">${trialDays}-day free trial</strong> has started!
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Plan</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0; font-weight: 600;">${planName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Trial Period</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${trialDays} days</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Trial Ends</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${trialEndDate}</td>
+        </tr>
+      </table>
+    </div>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <h3 style="color: #ccd6f6; font-size: 16px; margin: 0 0 16px 0;">During your trial, you can:</h3>
+      <ul style="color: #8892b0; padding-left: 20px; margin: 0;">
+        <li style="margin-bottom: 12px;">Browse all recently sold properties in your selected cities</li>
+        <li style="margin-bottom: 12px;">Access homeowner contact information</li>
+        <li style="margin-bottom: 12px;">Set up personalized email alerts</li>
+        <li style="margin-bottom: 12px;">Use our AI-powered furniture detection</li>
+      </ul>
+    </div>
+    <p style="text-align: center;">
+      We'll send you a reminder before your trial ends. You can cancel anytime.
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: `Welcome to Your ${planName} Trial!`,
+    preheader: `Your ${trialDays}-day free trial of ${planName} has started`,
+    content,
+    ctaButton: {
+      text: 'Start Exploring',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+    footerText: 'No charges until your trial ends. Cancel anytime from your billing dashboard.',
+  });
+}
+
+// ============================================================================
+// Order/Product Templates
+// ============================================================================
+
+/**
+ * Build order confirmation email (for design services/products)
+ */
+export function buildOrderConfirmationEmail(data: {
+  orderId: string;
+  productName: string;
+  amount: string;
+  customerName?: string;
+  date: string;
+}): string {
+  const greeting = data.customerName ? `Hi ${data.customerName},` : '';
+
+  const content = `
+    ${greeting ? `<p style="text-align: center; margin-bottom: 16px;">${greeting}</p>` : ''}
+    <p style="text-align: center; margin-bottom: 24px;">
+      Thank you for your order! We've received your payment and will begin processing your request.
+    </p>
+    <div style="background-color: #0a192f; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Order ID</td>
+          <td style="color: #64ffda; text-align: right; padding: 8px 0; font-family: monospace;">${data.orderId.slice(0, 8).toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Product</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.productName}</td>
+        </tr>
+        <tr>
+          <td style="color: #8892b0; padding: 8px 0;">Date</td>
+          <td style="color: #ccd6f6; text-align: right; padding: 8px 0;">${data.date}</td>
+        </tr>
+        <tr style="border-top: 1px solid #233554;">
+          <td style="color: #ccd6f6; padding: 16px 0 8px 0; font-weight: 600;">Total</td>
+          <td style="color: #64ffda; text-align: right; padding: 16px 0 8px 0; font-size: 20px; font-weight: 600;">${data.amount}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="text-align: center;">
+      We'll notify you when your order is ready. If you have any questions, please don't hesitate to contact support.
+    </p>
+  `;
+
+  return buildEmailTemplate({
+    title: 'Order Confirmed',
+    preheader: `Your order for ${data.productName} has been confirmed`,
+    content,
+    ctaButton: {
+      text: 'View Order Status',
+      url: `${Deno.env.get('SITE_URL') || 'https://sold2move.com'}/dashboard`,
+    },
+    footerText: 'If you have questions about your order, please contact support@sold2move.com.',
   });
 }

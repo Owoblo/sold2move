@@ -22,7 +22,20 @@ export interface Profile {
   onboarding_complete: boolean;
   credits_remaining: number;
   unlimited: boolean;
-  subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled';
+  // Stripe subscription fields
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'unpaid';
+  subscription_plan?: string;
+  subscription_tier?: 'solo' | 'special' | 'premium' | string;
+  subscription_tier_name?: string;
+  city_limit?: number | null;
+  next_billing_date?: string;
+  current_period_start?: string;
+  current_period_end?: string;
+  pending_subscription_tier?: string;
+  pending_subscription_price?: number;
+  subscription_checkout_created_at?: string;
   created_at: string;
   updated_at: string;
 }
