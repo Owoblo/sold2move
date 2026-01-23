@@ -67,9 +67,19 @@ Deno.serve(async (req) => {
         const supabaseUserId = (customerData as Stripe.Customer).metadata.supabase_user_id;
 
         if (supabaseUserId) {
-          const planName = subscription.items.data[0].price.lookup_key?.replace(/_monthly|_yearly/, '') || 'unknown';
+          // Get tier info from subscription metadata (new fixed-tier system)
+          const tierId = subscription.metadata?.tier_id || null;
+          const tierName = subscription.metadata?.tier_name || null;
+          const cityLimit = subscription.metadata?.city_limit || null;
+
+          // Fallback to lookup_key for backward compatibility
+          const planName = tierId || subscription.items.data[0].price.lookup_key?.replace(/_monthly|_yearly/, '') || 'unknown';
           const status = subscription.status;
           const nextBillingDate = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
+          const currentPeriodStart = subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null;
+
+          // Determine if user should have unlimited cities (premium tier)
+          const hasUnlimitedCities = tierId === 'premium' || cityLimit === 'unlimited' || planName === 'enterprise';
 
           const { error: updateError } = await supabaseAdmin
             .from('profiles')
@@ -77,13 +87,20 @@ Deno.serve(async (req) => {
               stripe_subscription_id: subscription.id,
               subscription_status: status,
               subscription_plan: planName,
+              subscription_tier: tierId, // New field for fixed-tier system
+              subscription_tier_name: tierName,
+              city_limit: cityLimit === 'unlimited' ? null : (cityLimit ? parseInt(cityLimit) : null),
               next_billing_date: nextBillingDate,
-              unlimited: planName === 'enterprise', // Set unlimited for enterprise plan
+              current_period_start: currentPeriodStart,
+              unlimited: hasUnlimitedCities,
+              // Clear pending fields on successful subscription
+              pending_subscription_tier: null,
+              pending_subscription_price: null,
             })
             .eq('id', supabaseUserId);
 
           if (updateError) throw updateError;
-          console.log(`Subscription ${subscription.id} for user ${supabaseUserId} updated to ${status} (${planName}).`);
+          console.log(`Subscription ${subscription.id} for user ${supabaseUserId} updated to ${status} (tier: ${tierId || planName}).`);
 
           // Get user email for notification
           const userEmail = (customerData as Stripe.Customer).email;
