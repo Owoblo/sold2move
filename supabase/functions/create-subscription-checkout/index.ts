@@ -36,19 +36,15 @@ const PRICING_TIERS = {
 };
 
 // Initialize Stripe
-let stripe: Stripe;
-try {
-  const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-  if (!stripeSecretKey) {
-    throw new Error('STRIPE_SECRET_KEY environment variable is not set');
-  }
-  stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2023-10-16',
-    httpClient: Stripe.createFetchHttpClient(),
-  });
-} catch (error) {
-  console.error('Failed to initialize Stripe:', error);
+const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+if (!stripeSecretKey) {
+  console.error('STRIPE_SECRET_KEY environment variable is not set');
 }
+
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, {
+  apiVersion: '2023-10-16',
+  httpClient: Stripe.createFetchHttpClient(),
+}) : null;
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -57,6 +53,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Check if Stripe is initialized
+    if (!stripe) {
+      console.error('Stripe not initialized - missing STRIPE_SECRET_KEY');
+      return new Response(
+        JSON.stringify({ error: 'Payment service not configured' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Parse request body
     let requestBody;
     try {
