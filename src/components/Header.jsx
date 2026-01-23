@@ -30,7 +30,7 @@ const Header = () => {
         >
           <Link to="/">
             <img
-              src="/images/logos/logo-green-on-light.jpg"
+              src="/images/logos/logo-transparent.png"
               alt="Sold2Move"
               className="h-10 w-auto object-contain"
             />

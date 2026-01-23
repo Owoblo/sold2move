@@ -61,7 +61,7 @@ const Header = () => {
       <nav className="container mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center group">
           <img
-            src={theme === 'dark' ? '/images/logos/logo-green-on-dark.jpg' : '/images/logos/logo-green-on-light.jpg'}
+            src="/images/logos/logo-transparent.png"
             alt="Sold2Move"
             className="h-10 w-auto object-contain"
           />
