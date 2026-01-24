@@ -544,7 +544,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-6 md:col-span-2 rounded-2xl p-4 transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)] hover:-translate-y-0.5"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", isLight ? "text-gray-500" : "text-slate")}>This Week</p>
@@ -565,7 +565,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-6 md:col-span-2 rounded-2xl p-4 transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)] hover:-translate-y-0.5"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", isLight ? "text-gray-500" : "text-slate")}>This Month</p>
@@ -577,7 +577,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)]"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-gray-100" : "border-b border-white/[0.06]")}>
@@ -646,7 +646,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)]"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-gray-100" : "border-b border-white/[0.06]")}>
@@ -715,7 +715,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)]"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <h3 className={cn("font-semibold mb-3", isLight ? "text-slate-900" : "text-lightest-slate")}>Quick Actions</h3>
@@ -772,7 +772,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-12 md:col-span-6 lg:col-span-4 rounded-2xl p-4 transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)]"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <div className="flex items-center justify-between mb-3">
@@ -817,7 +817,7 @@ const DashboardPage = () => {
         <div className={cn(
           "col-span-12 lg:col-span-5 rounded-2xl p-4 transition-all",
           isLight
-            ? "bg-white shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04)] hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06)]"
+            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
             : "bg-charcoal-800/80 border-luminous hover-glow"
         )}>
           <div className="flex items-center gap-2 mb-3">
