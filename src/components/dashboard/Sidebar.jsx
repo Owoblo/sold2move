@@ -70,13 +70,13 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
 
   const baseLinkClasses = "flex items-center p-2 rounded-lg transition-all duration-200";
 
-  // Theme-aware link classes
+  // Theme-aware link classes - Premium light mode styling
   const inactiveLinkClasses = isLight
-    ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    ? "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
     : "text-slate hover:bg-charcoal-700/50 hover:text-lightest-slate";
 
   const activeLinkClasses = isLight
-    ? "bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200/50"
+    ? "bg-emerald-50/80 text-emerald-700 font-semibold border-l-[3px] border-l-emerald-500 rounded-l-none"
     : "bg-primary/10 text-primary font-semibold shadow-badge-new/30";
 
   return (
@@ -93,7 +93,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
 
       <aside className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
         isLight
-          ? 'bg-white/92 backdrop-blur-xl border-r border-slate-200/60 shadow-[4px_0_24px_rgba(0,0,0,0.04)]'
+          ? 'bg-white border-r border-black/[0.04] shadow-[4px_0_30px_rgba(0,0,0,0.03)]'
           : 'bg-charcoal-800 border-r border-white/[0.06]'
       } ${
         isSidebarOpen

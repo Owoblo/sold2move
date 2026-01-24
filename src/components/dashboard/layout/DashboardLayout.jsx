@@ -36,7 +36,7 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${
-      isLight ? 'bg-slate-50' : 'bg-charcoal-900'
+      isLight ? 'bg-[#F4F5F7]' : 'bg-charcoal-900'
     }`}>
       {/* Sidebar */}
       <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
@@ -48,9 +48,9 @@ const DashboardLayout = ({ children }) => {
         {/* Dashboard Header */}
         <DashboardHeader isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-        {/* Page Content */}
+        {/* Page Content - Soft pearl grey background in light mode */}
         <main className={`flex-1 overflow-y-auto p-4 md:p-6 ${
-          isLight ? 'bg-slate-50' : ''
+          isLight ? 'bg-[#F4F5F7]' : ''
         }`}>
           {children}
         </main>

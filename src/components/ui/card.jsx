@@ -11,13 +11,14 @@ const Card = React.forwardRef(({ className, variant = 'default', ...props }, ref
       ref={ref}
       className={cn(
         // Base styling
-        'rounded-xl text-card-foreground transition-all duration-300',
-        // Light mode: Paper & Ink with soft ambient shadows
+        'rounded-2xl text-card-foreground transition-all duration-300',
+        // Light mode: Luxury Gallery - floating cards with NO borders, large soft shadows
         isLight && [
-          'bg-white border border-slate-200/60',
-          'shadow-[0_1px_3px_rgb(0_0_0/0.04),0_4px_12px_rgb(0_0_0/0.04)]',
-          'hover:shadow-[0_4px_12px_rgb(0_0_0/0.06),0_8px_24px_rgb(0_0_0/0.06)]',
-          'hover:border-slate-200/80',
+          'bg-white',
+          'border-none', // Remove borders - shadows do the work
+          'shadow-[0_2px_4px_rgb(0_0_0/0.02),0_8px_24px_rgb(0_0_0/0.04),0_16px_48px_rgb(0_0_0/0.02)]',
+          'hover:shadow-[0_4px_8px_rgb(0_0_0/0.03),0_12px_32px_rgb(0_0_0/0.06),0_24px_64px_rgb(0_0_0/0.03)]',
+          'hover:-translate-y-0.5',
         ],
         // Dark mode: Stealth styling with luminous borders
         !isLight && [
@@ -27,15 +28,15 @@ const Card = React.forwardRef(({ className, variant = 'default', ...props }, ref
         ],
         // Variant styles
         variant === 'elevated' && (isLight
-          ? 'shadow-[0_8px_24px_rgb(0_0_0/0.08),0_16px_48px_rgb(0_0_0/0.08)] border-slate-200/40'
+          ? 'shadow-[0_8px_16px_rgb(0_0_0/0.04),0_20px_48px_rgb(0_0_0/0.08),0_40px_80px_rgb(0_0_0/0.04)]'
           : 'bg-charcoal-700 shadow-elevation-2'
         ),
         variant === 'accent' && (isLight
-          ? 'border-emerald-500/20 shadow-[0_0_0_1px_hsl(155_80%_32%/0.1),0_2px_8px_hsl(155_80%_32%/0.08)]'
+          ? 'shadow-[0_2px_8px_hsl(158_64%_35%/0.12)]'
           : 'border-electric-500/30 shadow-luminous-accent'
         ),
         variant === 'hero' && (isLight
-          ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200/50 shadow-[0_8px_32px_rgb(0_0_0/0.06)]'
+          ? 'bg-gradient-to-br from-emerald-50 to-white shadow-[0_8px_32px_rgb(0_0_0/0.06)]'
           : 'bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30'
         ),
         className

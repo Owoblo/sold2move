@@ -239,101 +239,98 @@ html, body {
   }
 
   /* ================================================
-     LIGHT MODE - "PAPER & INK" GALLERY EDITION
-     Premium, airy, high-end interface
+     LIGHT MODE - "LUXURY GALLERY" EDITION
+     World-class, Apple Store minimalism
      ================================================ */
   [data-theme='light'] {
-    /* --- Paper & Ink Foundation --- */
-    /* Cool grey base - reduces eye strain, feels premium */
-    --background: 210 40% 98%;              /* #F8FAFC - Off-white canvas */
-    --foreground: 222 47% 11%;              /* #0F172A - Deep ink black */
+    /* --- Soft Pearl Canvas (NOT pure white - feels premium) --- */
+    --background: 220 14% 96%;              /* #F4F5F7 - Soft pearl grey */
+    --foreground: 220 43% 11%;              /* #111827 - Deep ink charcoal */
 
-    /* Pure white cards float above the canvas */
-    --card: 0 0% 100%;                      /* #FFFFFF - Crisp white surfaces */
-    --card-foreground: 222 47% 11%;         /* #0F172A - Maximum readability */
+    /* Pure white cards FLOAT above the pearl canvas */
+    --card: 0 0% 100%;                      /* #FFFFFF - Crisp floating surfaces */
+    --card-foreground: 220 43% 11%;         /* #111827 - Maximum contrast */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 43% 11%;
 
-    /* --- British Racing Green / Deep Emerald --- */
-    /* Adapted for legibility on white - rich, sophisticated */
-    --primary: 155 80% 32%;                 /* #0F9D58 - Deep emerald */
+    /* --- Rich Emerald (NOT neon - sophisticated) --- */
+    --primary: 158 64% 35%;                 /* #1F9D55 - Deep rich emerald */
     --primary-foreground: 0 0% 100%;        /* White text on primary */
 
-    /* Secondary surfaces with subtle warmth */
-    --secondary: 210 40% 96%;               /* #F1F5F9 - Light grey */
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary surfaces */
+    --secondary: 220 14% 94%;               /* #EBEDF0 - Subtle grey */
+    --secondary-foreground: 220 43% 11%;
 
     /* Muted elements for hierarchy */
-    --muted: 210 40% 94%;                   /* #E2E8F0 - Softer grey */
-    --muted-foreground: 215 20% 45%;        /* #64748B - Readable grey */
+    --muted: 220 14% 92%;                   /* #E5E7EB - Light grey */
+    --muted-foreground: 220 9% 46%;         /* #6B7280 - Readable grey */
 
     /* Accent for hover states */
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 220 14% 95%;
+    --accent-foreground: 220 43% 11%;
 
     /* Destructive - maintained visibility */
     --destructive: 0 72% 51%;               /* #DC2626 - Clear red */
     --destructive-foreground: 0 0% 100%;
 
-    /* --- Refined Borders & Inputs --- */
-    --border: 214 32% 91%;                  /* #E2E8F0 - Subtle borders */
-    --input: 214 32% 91%;
-    --ring: 155 80% 32%;                    /* Matches primary */
+    /* --- MINIMAL Borders (shadows do the work) --- */
+    --border: 220 13% 91%;                  /* #E5E7EB - Very subtle */
+    --input: 220 13% 91%;
+    --ring: 158 64% 35%;                    /* Matches primary emerald */
 
     /* --- Charcoal Scale for Light Mode --- */
-    /* These become light surfaces instead of dark */
-    --charcoal-950: 210 40% 98%;            /* Lightest - page bg */
-    --charcoal-900: 210 40% 98%;            /* Page background */
-    --charcoal-800: 0 0% 100%;              /* Card surfaces */
-    --charcoal-700: 210 40% 96%;            /* Elevated surfaces */
-    --charcoal-600: 214 32% 91%;            /* Borders */
-    --charcoal-500: 215 20% 65%;            /* Muted text */
+    --charcoal-950: 220 14% 96%;            /* Soft pearl - page bg */
+    --charcoal-900: 220 14% 96%;            /* Page background */
+    --charcoal-800: 0 0% 100%;              /* Card surfaces - pure white */
+    --charcoal-700: 220 14% 98%;            /* Elevated surfaces */
+    --charcoal-600: 220 13% 91%;            /* Borders (minimal) */
+    --charcoal-500: 220 9% 46%;             /* Muted text */
 
-    /* --- Electric Green Adaptation for Light Mode --- */
-    /* Deeper, richer greens that pop against white */
-    --electric-500: 155 80% 32%;            /* #0F9D58 - Primary emerald */
-    --electric-400: 155 75% 38%;            /* #17B169 - Hover state */
-    --electric-600: 155 85% 26%;            /* #0A7B44 - Pressed state */
-    --electric-300: 155 65% 45%;            /* For subtle highlights */
+    /* --- Rich Emerald Scale (NOT neon lime) --- */
+    --electric-500: 158 64% 35%;            /* #1F9D55 - Rich emerald */
+    --electric-400: 158 58% 42%;            /* #2AAD62 - Hover state */
+    --electric-600: 158 72% 28%;            /* #166D3D - Pressed state */
+    --electric-300: 158 45% 50%;            /* Subtle highlights */
 
     /* --- Legacy Light Mode Mapping --- */
-    --deep-navy: 210 40% 98%;               /* #F8FAFC - Background */
-    --light-navy: 0 0% 100%;                /* #FFFFFF - Cards */
-    --lightest-navy: 214 32% 91%;           /* #E2E8F0 - Borders */
-    --slate: 215 20% 45%;                   /* #64748B - Secondary text */
-    --light-slate: 215 25% 35%;             /* #475569 - Tertiary text */
-    --lightest-slate: 222 47% 11%;          /* #0F172A - Primary text */
-    --white: 222 47% 11%;                   /* Inverted for light mode */
+    --deep-navy: 220 14% 96%;               /* Soft pearl background */
+    --light-navy: 0 0% 100%;                /* Pure white cards */
+    --lightest-navy: 220 13% 91%;           /* Subtle borders */
+    --slate: 220 9% 46%;                    /* #6B7280 - Secondary text */
+    --light-slate: 220 13% 33%;             /* #4B5563 - Tertiary text */
+    --lightest-slate: 220 43% 11%;          /* #111827 - Primary text (ink black) */
+    --white: 220 43% 11%;                   /* Inverted for contrast */
 
-    /* --- Soft Ambient Shadows (Apple-esque) --- */
-    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
-    --shadow-lg: 0 10px 30px -5px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.03);
-    --shadow-xl: 0 20px 40px -10px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.03);
-    --shadow-2xl: 0 25px 60px -15px rgb(0 0 0 / 0.12);
+    /* --- LARGE SOFT AMBIENT SHADOWS (Apple-esque floating cards) --- */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.02);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.03), 0 1px 2px -1px rgb(0 0 0 / 0.02);
+    --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
+    --shadow-lg: 0 10px 40px -10px rgb(0 0 0 / 0.08), 0 4px 12px -4px rgb(0 0 0 / 0.03);
+    --shadow-xl: 0 20px 50px -15px rgb(0 0 0 / 0.1), 0 8px 16px -8px rgb(0 0 0 / 0.04);
+    --shadow-2xl: 0 30px 70px -20px rgb(0 0 0 / 0.15);
 
-    /* --- Card Float Shadow (Bento Lighting) --- */
-    --shadow-card: 0 1px 3px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04);
-    --shadow-card-hover: 0 4px 12px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.06);
-    --shadow-card-elevated: 0 8px 24px rgb(0 0 0 / 0.08), 0 16px 48px rgb(0 0 0 / 0.08);
+    /* --- Card Float Shadow (Bento/Gallery Lighting) --- */
+    /* Cards should look like they're floating 1 inch above */
+    --shadow-card: 0 2px 4px rgb(0 0 0 / 0.02), 0 8px 24px rgb(0 0 0 / 0.04), 0 16px 48px rgb(0 0 0 / 0.02);
+    --shadow-card-hover: 0 4px 8px rgb(0 0 0 / 0.03), 0 12px 32px rgb(0 0 0 / 0.06), 0 24px 64px rgb(0 0 0 / 0.03);
+    --shadow-card-elevated: 0 8px 16px rgb(0 0 0 / 0.04), 0 20px 48px rgb(0 0 0 / 0.08), 0 40px 80px rgb(0 0 0 / 0.04);
 
-    /* --- Subtle Emerald Glow (for CTAs in light mode) --- */
-    --shadow-glow-sm: 0 0 0 1px hsl(155 80% 32% / 0.1), 0 2px 8px hsl(155 80% 32% / 0.08);
-    --shadow-glow: 0 0 0 2px hsl(155 80% 32% / 0.15), 0 4px 16px hsl(155 80% 32% / 0.12);
-    --shadow-glow-lg: 0 0 0 2px hsl(155 80% 32% / 0.2), 0 8px 32px hsl(155 80% 32% / 0.15);
-    --shadow-glow-xl: 0 0 0 3px hsl(155 80% 32% / 0.25), 0 12px 48px hsl(155 80% 32% / 0.2);
+    /* --- Subtle Emerald Glow (for important CTAs only) --- */
+    --shadow-glow-sm: 0 2px 8px hsl(158 64% 35% / 0.12);
+    --shadow-glow: 0 4px 16px hsl(158 64% 35% / 0.15);
+    --shadow-glow-lg: 0 8px 32px hsl(158 64% 35% / 0.18);
+    --shadow-glow-xl: 0 12px 48px hsl(158 64% 35% / 0.22);
 
-    /* --- Badge Shadows (More subtle for light mode) --- */
-    --shadow-badge-new: 0 0 8px hsl(155 80% 32% / 0.3);
-    --shadow-badge-hot: 0 0 8px hsl(45 100% 45% / 0.4);
-    --shadow-badge-sold: 0 0 8px hsl(220 90% 50% / 0.3);
+    /* --- Badge Shadows (Subtle, premium) --- */
+    --shadow-badge-new: 0 2px 8px hsl(158 64% 35% / 0.2);
+    --shadow-badge-hot: 0 2px 8px hsl(45 100% 45% / 0.25);
+    --shadow-badge-sold: 0 2px 8px hsl(220 90% 50% / 0.2);
 
-    /* --- Glassmorphism for Sidebar --- */
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(0, 0, 0, 0.06);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    /* --- Glassmorphism (subtle, premium) --- */
+    --glass-bg: rgba(255, 255, 255, 0.92);
+    --glass-border: rgba(0, 0, 0, 0.04);
+    --glass-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
   }
 }
 
@@ -692,7 +689,192 @@ html, body {
   [data-theme='light'] input:focus,
   [data-theme='light'] textarea:focus,
   [data-theme='light'] select:focus {
-    border-color: hsl(155 80% 32%);
-    box-shadow: 0 0 0 3px hsl(155 80% 32% / 0.1);
+    border-color: hsl(158 64% 35%);
+    box-shadow: 0 0 0 3px hsl(158 64% 35% / 0.08);
+  }
+
+  /* ================================================
+     PREMIUM LIGHT MODE - LUXURY GALLERY UTILITIES
+     ================================================ */
+
+  /* Premium Floating Card (main cards in dashboard) */
+  [data-theme='light'] .card-premium {
+    background: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+  }
+
+  [data-theme='light'] .card-premium:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Stats Card (big numbers) - Editorial look */
+  [data-theme='light'] .stat-number {
+    color: hsl(220 43% 11%);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  /* Dark Anchor Button (premium CTA weight) */
+  [data-theme='light'] .btn-anchor {
+    background: hsl(220 43% 11%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 14px rgba(17, 24, 39, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  [data-theme='light'] .btn-anchor:hover {
+    background: hsl(220 43% 18%);
+    box-shadow: 0 6px 20px rgba(17, 24, 39, 0.3);
+    transform: translateY(-1px);
+  }
+
+  /* Emerald CTA Button */
+  [data-theme='light'] .btn-emerald {
+    background: hsl(158 64% 35%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 14px hsl(158 64% 35% / 0.25);
+    transition: all 0.2s ease;
+  }
+
+  [data-theme='light'] .btn-emerald:hover {
+    background: hsl(158 64% 40%);
+    box-shadow: 0 6px 20px hsl(158 64% 35% / 0.35);
+    transform: translateY(-1px);
+  }
+
+  /* Borderless Table Rows */
+  [data-theme='light'] .table-premium tr {
+    border: none;
+    background: white;
+  }
+
+  [data-theme='light'] .table-premium tr:hover {
+    background: hsl(220 14% 98%);
+  }
+
+  /* Monochrome Data Points (precision financial tool look) */
+  [data-theme='light'] .data-price {
+    color: hsl(158 64% 32%);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Section Headers - Editorial Bold */
+  [data-theme='light'] .section-header {
+    color: hsl(220 43% 11%);
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* Subtle Dividers (barely visible) */
+  [data-theme='light'] .divider-subtle {
+    border-color: hsl(220 13% 93%);
+  }
+
+  /* Premium Badge Styling */
+  [data-theme='light'] .badge-premium {
+    background: hsl(220 14% 96%);
+    color: hsl(220 43% 11%);
+    border: none;
+    font-weight: 600;
+  }
+
+  [data-theme='light'] .badge-premium-success {
+    background: hsl(158 45% 94%);
+    color: hsl(158 64% 28%);
+  }
+
+  [data-theme='light'] .badge-premium-warning {
+    background: hsl(45 100% 94%);
+    color: hsl(45 92% 32%);
+  }
+
+  /* Light Mode Sidebar - Subtle Glass Effect */
+  [data-theme='light'] .sidebar-premium {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 4px 0 30px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Light Mode Header - Subtle Glass Effect */
+  [data-theme='light'] .header-premium {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 20px rgba(0, 0, 0, 0.02);
+  }
+
+  /* Premium Empty States */
+  [data-theme='light'] .empty-state {
+    background: hsl(220 14% 98%);
+    border: 1px dashed hsl(220 13% 88%);
+    color: hsl(220 9% 46%);
+  }
+
+  /* Stat Cards - Large Numbers with Editorial Feel */
+  [data-theme='light'] .stat-card-premium {
+    background: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+  }
+
+  [data-theme='light'] .stat-card-premium .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: hsl(220 43% 11%);
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  [data-theme='light'] .stat-card-premium .stat-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: hsl(220 9% 46%);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.5rem;
+  }
+
+  /* Property Cards - Gallery Style */
+  [data-theme='light'] .property-card-premium {
+    background: white;
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  [data-theme='light'] .property-card-premium:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-4px);
+  }
+
+  /* Light Mode Active Nav Item */
+  [data-theme='light'] .nav-item-active {
+    background: hsl(158 45% 95%);
+    color: hsl(158 64% 32%);
+    font-weight: 600;
+    border-left: 3px solid hsl(158 64% 35%);
+  }
+
+  /* Dropdown Menus - Premium */
+  [data-theme='light'] .dropdown-premium {
+    background: white;
+    border: 1px solid hsl(220 13% 93%);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
   }
 }
