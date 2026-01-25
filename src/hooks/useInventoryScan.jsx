@@ -1,6 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { inventoryScanService } from '@/services/inventoryScan';
 
+// Minimum animation duration for cached results (in ms)
+// This gives the "AI scanning" illusion even for instant cached responses
+const MIN_ANIMATION_DURATION_MS = 4000;
+
 /**
  * React hook for inventory scan functionality
  * Manages loading state, data, error handling, and progress simulation
@@ -14,6 +18,7 @@ export function useInventoryScan() {
   const [totalPhotos, setTotalPhotos] = useState(0);
   const progressIntervalRef = useRef(null);
   const photoIntervalRef = useRef(null);
+  const scanStartTimeRef = useRef(null);
 
   // Clean up intervals on unmount
   useEffect(() => {
@@ -30,33 +35,42 @@ export function useInventoryScan() {
   /**
    * Start progress simulation for long-running scan
    * @param {number} photoCount - Number of photos being scanned (for photo cycling)
+   * @param {boolean} isFastMode - If true, run faster animation for cached results
    */
-  const startProgressSimulation = useCallback((photoCount = 12) => {
+  const startProgressSimulation = useCallback((photoCount = 12, isFastMode = false) => {
     setProgress(0);
     setCurrentPhotoIndex(0);
     setTotalPhotos(Math.min(photoCount, 12)); // Max 12 photos analyzed
+    scanStartTimeRef.current = Date.now();
 
-    // Progress simulation
+    // Progress simulation - faster for cached results
+    const progressInterval = isFastMode ? 100 : 1000;
+    const progressIncrement = isFastMode ? 3 : 1;
+
     progressIntervalRef.current = setInterval(() => {
       setProgress((prev) => {
-        // Slow down as we approach 90% (never reach 100% until complete)
+        if (isFastMode) {
+          // Fast mode: quickly reach 90% in ~3 seconds
+          if (prev < 90) return prev + progressIncrement;
+          return prev;
+        }
+        // Normal mode: slow down as we approach 90%
         if (prev < 30) return prev + 2;
         if (prev < 60) return prev + 1;
         if (prev < 85) return prev + 0.5;
         if (prev < 95) return prev + 0.1;
         return prev;
       });
-    }, 1000);
+    }, progressInterval);
 
-    // Photo cycling - cycle through photos to show which one is being analyzed
-    // Photos are processed in batches of 2 with ~45s per photo
-    // We'll cycle every 3 seconds to give visual feedback
+    // Photo cycling - faster for cached results
+    const photoInterval = isFastMode ? 800 : 3000;
     photoIntervalRef.current = setInterval(() => {
       setCurrentPhotoIndex((prev) => {
         const maxIndex = Math.min(photoCount, 12) - 1;
-        return prev < maxIndex ? prev + 1 : prev;
+        return prev < maxIndex ? prev + 1 : 0; // Loop back for fast mode
       });
-    }, 3000);
+    }, photoInterval);
   }, []);
 
   /**
@@ -86,13 +100,32 @@ export function useInventoryScan() {
   const scanFromListing = useCallback(async (listing, forceRefresh = false, photoCount = 12) => {
     setLoading(true);
     setError(null);
-    startProgressSimulation(photoCount);
+    setData(null);
+
+    // Check if this listing likely has cached data (for faster animation)
+    const likelyHasCachedData = listing?.furniture_scan_date &&
+      Array.isArray(listing?.furniture_items_detected) &&
+      listing.furniture_items_detected.length > 0;
+
+    startProgressSimulation(photoCount, likelyHasCachedData);
 
     try {
       console.log('📦 Inventory scan starting for listing:', listing?.zpid || listing?.id);
       const result = await inventoryScanService.scanFromListing(listing, forceRefresh);
 
       console.log('📥 Inventory scan result:', result);
+
+      // Calculate how long the animation has been running
+      const elapsedTime = Date.now() - (scanStartTimeRef.current || Date.now());
+      const isCachedResult = result.data?.cached;
+
+      // For cached results, ensure minimum animation duration for the AI experience
+      if (isCachedResult && elapsedTime < MIN_ANIMATION_DURATION_MS) {
+        const remainingTime = MIN_ANIMATION_DURATION_MS - elapsedTime;
+        console.log(`⏳ Cached result - showing animation for ${remainingTime}ms more`);
+
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
 
       if (result.error) {
         console.error('❌ Inventory scan error:', result.error);
