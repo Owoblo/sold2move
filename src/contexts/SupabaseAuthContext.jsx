@@ -1,8 +1,34 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useToast } from '@/components/ui/use-toast';
 import { getSiteUrl } from '@/lib/customSupabaseClient';
 import { setSentryUser, addSentryBreadcrumb } from '@/lib/errorHandler';
+
+// Helper to notify admin of auth events (fire and forget)
+const notifyAdminAuth = async (event, user, provider = null) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-admin-auth`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        event,
+        userId: user?.id,
+        email: user?.email,
+        name: user?.user_metadata?.full_name || user?.user_metadata?.name,
+        provider: provider || user?.app_metadata?.provider || 'email',
+      }),
+    });
+    if (!response.ok) {
+      console.log('Admin notification sent (non-blocking)');
+    }
+  } catch (e) {
+    // Silent fail - don't block auth flow
+    console.log('Admin notification skipped');
+  }
+};
 
 const AuthContext = createContext(undefined);
 
@@ -28,6 +54,7 @@ export const AuthProvider = ({ children }) => {
   const user = session?.user ?? null;
   const [loading, setLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const lastNotifiedUserId = useRef(null); // Track to avoid duplicate notifications
 
   useEffect(() => {
     // Ensure session is fully loaded before setting loading to false
@@ -45,12 +72,24 @@ export const AuthProvider = ({ children }) => {
         // Set Sentry user context
         setSentryUser(session.user);
         addSentryBreadcrumb('User signed in', 'auth', { userId: session.user?.id });
+
+        // Notify admin of login/signup (avoid duplicate notifications)
+        if (session.user?.id && lastNotifiedUserId.current !== session.user.id) {
+          lastNotifiedUserId.current = session.user.id;
+          // Check if this is a new user (created within last 60 seconds)
+          const createdAt = new Date(session.user.created_at);
+          const now = new Date();
+          const isNewUser = (now - createdAt) < 60000; // 60 seconds
+          notifyAdminAuth(isNewUser ? 'signup' : 'login', session.user);
+        }
       } else if (event === 'SIGNED_OUT') {
         // Clear any stored intended destination
         localStorage.removeItem('intendedDestination');
         // Clear Sentry user context
         setSentryUser(null);
         addSentryBreadcrumb('User signed out', 'auth');
+        // Reset notification tracking so next login triggers notification
+        lastNotifiedUserId.current = null;
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Token refreshed successfully
         addSentryBreadcrumb('Token refreshed', 'auth');
