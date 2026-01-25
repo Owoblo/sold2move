@@ -629,7 +629,21 @@ const PropertyDetailPage = () => {
                     </h3>
                   </div>
                   <div className="p-6">
-                    {!inventoryScanService.canShowScanButton(listing) ? (
+                    {/* Empty property - no point scanning */}
+                    {listing.is_furnished === false ? (
+                      <div className="text-center py-8">
+                        <Package className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
+                        <p className="font-medium mb-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          Empty Property
+                        </p>
+                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                          This listing appears to be unfurnished.
+                        </p>
+                        <p className="text-sm mt-2" style={{ color: isLight ? '#059669' : '#00FF88' }}>
+                          Great lead - these homeowners need furniture moved!
+                        </p>
+                      </div>
+                    ) : !inventoryScanService.hasPhotos(listing) ? (
                       <div className="text-center py-8">
                         <Package className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
                         <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
@@ -646,14 +660,16 @@ const PropertyDetailPage = () => {
                           AI-Powered Inventory Detection
                         </p>
                         <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
-                          Analyze listing photos to detect furniture and estimate move size.
+                          {listing.is_furnished === true
+                            ? 'This furnished listing is ready for detailed inventory analysis.'
+                            : 'Analyze listing photos to detect furniture and estimate move size.'}
                         </p>
                         <Button
                           className="bg-teal text-deep-navy hover:bg-teal/90"
                           onClick={handleScanInventory}
                         >
                           <Package className="h-4 w-4 mr-2" />
-                          Start Inventory Scan
+                          {listing.is_furnished === true ? 'Scan Full Inventory' : 'Start Inventory Scan'}
                         </Button>
                       </div>
                     ) : inventoryError ? (

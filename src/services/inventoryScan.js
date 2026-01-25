@@ -86,12 +86,52 @@ class InventoryScanService {
 
   /**
    * Check if scan button should be shown for this listing
-   * Shows scan button for any listing that has photos
+   * Only shows for FURNISHED listings that have photos
+   * (No point scanning empty homes for inventory)
    * @param {Object} listing
    * @returns {boolean}
    */
   canShowScanButton(listing) {
-    return this.hasPhotos(listing);
+    // Must have photos
+    if (!this.hasPhotos(listing)) {
+      return false;
+    }
+
+    // Only show for furnished listings (already tagged by quick scan)
+    // If is_furnished is null/undefined, listing hasn't been quick-scanned yet
+    if (listing.is_furnished === false) {
+      return false; // Empty home - no inventory to scan
+    }
+
+    // Show button if furnished OR if not yet scanned (is_furnished is null)
+    return true;
+  }
+
+  /**
+   * Check if listing has been quick-scanned for furnish status
+   * @param {Object} listing
+   * @returns {boolean}
+   */
+  hasBeenQuickScanned(listing) {
+    return listing.is_furnished !== null && listing.is_furnished !== undefined;
+  }
+
+  /**
+   * Check if listing is tagged as furnished
+   * @param {Object} listing
+   * @returns {boolean}
+   */
+  isFurnished(listing) {
+    return listing.is_furnished === true;
+  }
+
+  /**
+   * Check if listing is tagged as empty/unfurnished
+   * @param {Object} listing
+   * @returns {boolean}
+   */
+  isEmpty(listing) {
+    return listing.is_furnished === false;
   }
 
   /**
