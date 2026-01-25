@@ -3,6 +3,7 @@ import React, { Suspense, lazy, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, CreditCard, Bell, Globe, Shield, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const ProfileSettings = lazy(() => import('@/components/dashboard/settings/ProfileSettings'));
 const BillingSettings = lazy(() => import('@/components/dashboard/settings/BillingSettings'));
@@ -18,12 +19,14 @@ const SupportTickets = lazy(() => import('@/components/dashboard/settings/Suppor
 
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-heading text-lightest-slate">Settings</h1>
-        <p className="text-slate">Manage your account, billing, and notification preferences.</p>
+        <h1 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-3xl font-bold font-heading">Settings</h1>
+        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Manage your account, billing, and notification preferences.</p>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8 max-w-6xl">
