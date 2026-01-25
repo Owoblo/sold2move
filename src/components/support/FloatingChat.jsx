@@ -166,6 +166,27 @@ const FloatingChat = () => {
       setMessages(prev => prev.map(m =>
         m.id === tempMessage.id ? data : m
       ));
+
+      // Forward message to admin email (fire and forget)
+      try {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forward-support-message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+            message: messageText,
+            messageId: data.id,
+          }),
+        });
+      } catch (e) {
+        // Silent fail - don't block chat
+        console.log('Email forwarding skipped');
+      }
     } catch (err) {
       console.error('Error sending message:', err);
       // Mark message as failed
