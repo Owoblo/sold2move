@@ -554,17 +554,19 @@ const DashboardPage = () => {
         </div>
 
         {/* This Week */}
-        <div className={cn(
-          "col-span-6 md:col-span-2 rounded-2xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", isLight ? "text-gray-500" : "text-slate")}>This Week</p>
+        <div
+          className="col-span-6 md:col-span-2 rounded-2xl p-4 transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
+          <p style={{ color: isLight ? '#6b7280' : '#94a3b8' }} className="text-xs font-medium uppercase tracking-wide mb-1">This Week</p>
           <div className="flex items-baseline gap-1">
-            <p className={cn("text-3xl font-bold tabular-nums tracking-tight", isLight ? "text-gray-900" : "text-lightest-slate")}>{monthlyStats.thisWeekLeads}</p>
+            <p style={{ color: isLight ? '#111827' : '#e2e8f0' }} className="text-3xl font-bold tabular-nums tracking-tight">{monthlyStats.thisWeekLeads}</p>
             {monthlyStats.weekOverWeekChange !== 0 && (
-              <span className={cn("text-xs font-semibold", monthlyStats.weekOverWeekChange > 0 ? (isLight ? "text-emerald-600" : "text-primary") : "text-red-500")}>
+              <span style={{ color: monthlyStats.weekOverWeekChange > 0 ? (isLight ? '#059669' : '#00FF88') : '#f87171' }} className="text-xs font-semibold">
                 {monthlyStats.weekOverWeekChange > 0 ? '+' : ''}{monthlyStats.weekOverWeekChange}%
               </span>
             )}
@@ -575,30 +577,34 @@ const DashboardPage = () => {
         </div>
 
         {/* This Month */}
-        <div className={cn(
-          "col-span-6 md:col-span-2 rounded-2xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", isLight ? "text-gray-500" : "text-slate")}>This Month</p>
-          <p className={cn("text-3xl font-bold tabular-nums tracking-tight", isLight ? "text-gray-900" : "text-lightest-slate")}>{monthlyStats.totalLeads}</p>
-          <p className={cn("text-xs mt-1", isLight ? "text-gray-500" : "text-slate")}>Total leads</p>
+        <div
+          className="col-span-6 md:col-span-2 rounded-2xl p-4 transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
+          <p style={{ color: isLight ? '#6b7280' : '#94a3b8' }} className="text-xs font-medium uppercase tracking-wide mb-1">This Month</p>
+          <p style={{ color: isLight ? '#111827' : '#e2e8f0' }} className="text-3xl font-bold tabular-nums tracking-tight">{monthlyStats.totalLeads}</p>
+          <p style={{ color: isLight ? '#6b7280' : '#94a3b8' }} className="text-xs mt-1">Total leads</p>
         </div>
 
         {/* Just Listed Feed - Tall card (spans 6 cols, full height) */}
-        <div className={cn(
-          "col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-gray-100" : "border-b border-white/[0.06]")}>
+        <div
+          className="col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom: isLight ? '1px solid #f3f4f6' : '1px solid rgba(255,255,255,0.06)' }}>
             <div>
-              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Just Listed</h3>
-              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>New opportunities in your areas</p>
+              <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold">Just Listed</h3>
+              <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">New opportunities in your areas</p>
             </div>
-            <span className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{todaysLeads.justListedCount}</span>
+            <span style={{ color: isLight ? '#059669' : '#00FF88' }} className="text-2xl font-mono font-bold tabular-nums">{todaysLeads.justListedCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -610,43 +616,45 @@ const DashboardPage = () => {
                 {todaysLeads.justListed.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className={cn(
-                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer",
-                      isLight
-                        ? "bg-gray-50/50 hover:bg-gray-100/80 rounded-xl"
-                        : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-                    )}
+                    className="group flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                    style={{
+                      backgroundColor: isLight ? '#f9fafb' : 'rgba(13, 15, 18, 0.6)',
+                      border: isLight ? 'none' : '1px solid rgba(255,255,255,0.04)'
+                    }}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                   >
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
+                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm font-medium truncate">{lead.lastcity}</p>
                         <StatusTag type={isHotLead(lead) ? 'hot' : 'new'} isLight={isLight} />
                       </div>
-                      <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
+                      <p style={{ color: isLight ? '#059669' : '#00FF88' }} className="font-mono text-sm font-semibold tabular-nums">{formatPrice(lead.unformattedprice)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", isLight ? "bg-slate-100" : "bg-charcoal-700/50")}>
-                  <Search className={cn("h-8 w-8", isLight ? "text-slate-400" : "text-slate")} />
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: isLight ? '#f1f5f9' : 'rgba(34, 39, 46, 0.5)' }}
+                >
+                  <Search style={{ color: isLight ? '#94a3b8' : '#64748b' }} className="h-8 w-8" />
                 </div>
-                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No new listings today</p>
-                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Check neighboring areas for more opportunities</p>
-                <Button asChild variant="outline" size="sm" className={cn(isLight ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-primary/30 text-primary hover:bg-primary/10")}>
+                <p style={{ color: isLight ? '#475569' : '#94a3b8' }} className="font-medium">No new listings today</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs mt-1 mb-4">Check neighboring areas for more opportunities</p>
+                <Button asChild variant="outline" size="sm" style={{ borderColor: isLight ? '#a7f3d0' : undefined, color: isLight ? '#047857' : undefined }}>
                   <Link to="/dashboard/settings">Expand Service Areas</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className={cn("w-full", isLight ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-primary hover:text-primary hover:bg-primary/10")}>
+            <Button asChild variant="ghost" style={{ color: isLight ? '#059669' : '#00FF88' }} className="w-full">
               <Link to="/dashboard/listings/just-listed">
                 View all listings
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -656,18 +664,20 @@ const DashboardPage = () => {
         </div>
 
         {/* Just Sold Feed */}
-        <div className={cn(
-          "col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <div className={cn("p-4 flex items-center justify-between", isLight ? "border-b border-gray-100" : "border-b border-white/[0.06]")}>
+        <div
+          className="col-span-12 lg:col-span-6 rounded-2xl overflow-hidden transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom: isLight ? '1px solid #f3f4f6' : '1px solid rgba(255,255,255,0.06)' }}>
             <div>
-              <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Recently Sold</h3>
-              <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>High-intent movers - act fast</p>
+              <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold">Recently Sold</h3>
+              <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">High-intent movers - act fast</p>
             </div>
-            <span className={cn("text-2xl font-mono font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{todaysLeads.soldCount}</span>
+            <span style={{ color: isLight ? '#059669' : '#00FF88' }} className="text-2xl font-mono font-bold tabular-nums">{todaysLeads.soldCount}</span>
           </div>
           <div className="p-3">
             {loading ? (
@@ -679,43 +689,45 @@ const DashboardPage = () => {
                 {todaysLeads.sold.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className={cn(
-                      "group flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer",
-                      isLight
-                        ? "bg-gray-50/50 hover:bg-gray-100/80 rounded-xl"
-                        : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-                    )}
+                    className="group flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer"
+                    style={{
+                      backgroundColor: isLight ? '#f9fafb' : 'rgba(13, 15, 18, 0.6)',
+                      border: isLight ? 'none' : '1px solid rgba(255,255,255,0.04)'
+                    }}
                     onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                   >
                     <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className={cn("text-sm font-medium truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
+                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm font-medium truncate">{lead.lastcity}</p>
                         <StatusTag type="sold" isLight={isLight} />
                       </div>
-                      <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
+                      <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">{lead.beds}bd • {lead.baths}ba • {lead.area ? `${lead.area.toLocaleString()} sqft` : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className={cn("font-mono text-sm font-semibold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</p>
+                      <p style={{ color: isLight ? '#059669' : '#00FF88' }} className="font-mono text-sm font-semibold tabular-nums">{formatPrice(lead.unformattedprice)}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="py-12 text-center">
-                <div className={cn("w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4", isLight ? "bg-slate-100" : "bg-charcoal-700/50")}>
-                  <Clock className={cn("h-8 w-8", isLight ? "text-slate-400" : "text-slate")} />
+                <div
+                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ backgroundColor: isLight ? '#f1f5f9' : 'rgba(34, 39, 46, 0.5)' }}
+                >
+                  <Clock style={{ color: isLight ? '#94a3b8' : '#64748b' }} className="h-8 w-8" />
                 </div>
-                <p className={cn("font-medium", isLight ? "text-slate-600" : "text-slate")}>No recent sales in your areas</p>
-                <p className={cn("text-xs mt-1 mb-4", isLight ? "text-slate-500" : "text-slate")}>Check back soon for new opportunities</p>
-                <Button asChild variant="outline" size="sm" className={cn(isLight ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-primary/30 text-primary hover:bg-primary/10")}>
+                <p style={{ color: isLight ? '#475569' : '#94a3b8' }} className="font-medium">No recent sales in your areas</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs mt-1 mb-4">Check back soon for new opportunities</p>
+                <Button asChild variant="outline" size="sm" style={{ borderColor: isLight ? '#a7f3d0' : undefined, color: isLight ? '#047857' : undefined }}>
                   <Link to="/dashboard/listings/sold">View Past Sales</Link>
                 </Button>
               </div>
             )}
           </div>
           <div className="p-3 pt-0">
-            <Button asChild variant="ghost" className={cn("w-full", isLight ? "text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" : "text-primary hover:text-primary hover:bg-primary/10")}>
+            <Button asChild variant="ghost" style={{ color: isLight ? '#059669' : '#00FF88' }} className="w-full">
               <Link to="/dashboard/listings/sold">
                 View all sold
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -725,72 +737,64 @@ const DashboardPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className={cn(
-          "col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
-          <h3 className={cn("font-semibold mb-3", isLight ? "text-slate-900" : "text-lightest-slate")}>Quick Actions</h3>
+        <div
+          className="col-span-12 md:col-span-6 lg:col-span-3 rounded-2xl p-4 transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
+          <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold mb-3">Quick Actions</h3>
           <div className="space-y-2">
             <button
               onClick={() => navigate('/dashboard/mailing')}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
-                isLight
-                  ? "bg-gray-50/80 hover:bg-gray-100 rounded-xl"
-                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-              )}
+              className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+              style={{ backgroundColor: isLight ? '#f9fafb' : 'rgba(13, 15, 18, 0.6)' }}
             >
-              <Mail className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
+              <Mail style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
               <div>
-                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Send Mail</p>
-                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Direct mail campaign</p>
+                <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm font-medium">Send Mail</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">Direct mail campaign</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/listings/just-listed')}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
-                isLight
-                  ? "bg-gray-50/80 hover:bg-gray-100 rounded-xl"
-                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-              )}
+              className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+              style={{ backgroundColor: isLight ? '#f9fafb' : 'rgba(13, 15, 18, 0.6)' }}
             >
-              <Download className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
+              <Download style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
               <div>
-                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Export Leads</p>
-                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Download CSV</p>
+                <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm font-medium">Export Leads</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">Download CSV</p>
               </div>
             </button>
             <button
               onClick={() => navigate('/dashboard/settings')}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-lg transition-all text-left",
-                isLight
-                  ? "bg-gray-50/80 hover:bg-gray-100 rounded-xl"
-                  : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-              )}
+              className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+              style={{ backgroundColor: isLight ? '#f9fafb' : 'rgba(13, 15, 18, 0.6)' }}
             >
-              <MapPin className={cn("h-5 w-5", isLight ? "text-emerald-600" : "text-primary")} />
+              <MapPin style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
               <div>
-                <p className={cn("text-sm font-medium", isLight ? "text-slate-900" : "text-lightest-slate")}>Service Areas</p>
-                <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>Manage cities</p>
+                <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm font-medium">Service Areas</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">Manage cities</p>
               </div>
             </button>
           </div>
         </div>
 
         {/* Service Areas */}
-        <div className={cn(
-          "col-span-12 md:col-span-6 lg:col-span-4 rounded-2xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
+        <div
+          className="col-span-12 md:col-span-6 lg:col-span-4 rounded-2xl p-4 transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
-            <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>Service Areas</h3>
-            <Link to="/dashboard/settings" className={cn("text-xs hover:underline", isLight ? "text-emerald-600" : "text-primary")}>Manage</Link>
+            <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold">Service Areas</h3>
+            <Link to="/dashboard/settings" style={{ color: isLight ? '#059669' : '#00FF88' }} className="text-xs hover:underline">Manage</Link>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -799,27 +803,32 @@ const DashboardPage = () => {
           ) : serviceAreaHealth.length > 0 ? (
             <div className="space-y-2">
               {serviceAreaHealth.slice(0, 4).map((area) => (
-                <div key={area.city} className={cn(
-                  "flex items-center justify-between p-2 rounded-lg",
-                  isLight ? "bg-slate-50 border border-slate-200" : "bg-charcoal-900/60 border border-white/[0.04]"
-                )}>
+                <div
+                  key={area.city}
+                  className="flex items-center justify-between p-2 rounded-lg"
+                  style={{
+                    backgroundColor: isLight ? '#f8fafc' : 'rgba(13, 15, 18, 0.6)',
+                    border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.04)'
+                  }}
+                >
                   <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      area.status === 'high' ? (isLight ? "bg-emerald-500" : "bg-primary shadow-badge-new") :
-                      area.status === 'moderate' ? (isLight ? "bg-amber-500" : "bg-amber-400 shadow-badge-hot") :
-                      (isLight ? "bg-slate-400" : "bg-slate")
-                    )} />
-                    <span className={cn("text-sm", isLight ? "text-slate-900" : "text-lightest-slate")}>{area.city}</span>
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{
+                        backgroundColor: area.status === 'high' ? (isLight ? '#10b981' : '#00FF88') :
+                          area.status === 'moderate' ? '#f59e0b' : (isLight ? '#94a3b8' : '#64748b')
+                      }}
+                    />
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm">{area.city}</span>
                   </div>
-                  <span className={cn("text-sm font-mono font-semibold tabular-nums", isLight ? "text-slate-500" : "text-slate")}>{area.leadsThisWeek} leads</span>
+                  <span style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm font-mono font-semibold tabular-nums">{area.leadsThisWeek} leads</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className={cn("text-sm mb-3", isLight ? "text-slate-500" : "text-slate")}>No service areas configured</p>
-              <Button asChild size="sm" className={cn(isLight ? "bg-slate-900 text-white hover:bg-slate-800" : "bg-primary text-primary-foreground hover:bg-primary/90")}>
+              <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm mb-3">No service areas configured</p>
+              <Button asChild size="sm" style={{ backgroundColor: isLight ? '#0f172a' : undefined, color: isLight ? '#ffffff' : undefined }}>
                 <Link to="/dashboard/settings">Add Areas</Link>
               </Button>
             </div>
@@ -827,15 +836,17 @@ const DashboardPage = () => {
         </div>
 
         {/* High Value Leads */}
-        <div className={cn(
-          "col-span-12 lg:col-span-5 rounded-2xl p-4 transition-all",
-          isLight
-            ? "bg-white border border-gray-200 shadow-sm hover:shadow-md"
-            : "bg-charcoal-800/80 border-luminous hover-glow"
-        )}>
+        <div
+          className="col-span-12 lg:col-span-5 rounded-2xl p-4 transition-all"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+          }}
+        >
           <div className="flex items-center gap-2 mb-3">
-            <Flame className={cn("h-5 w-5", isLight ? "text-amber-500" : "text-amber-400")} />
-            <h3 className={cn("font-semibold", isLight ? "text-slate-900" : "text-lightest-slate")}>High-Value Leads</h3>
+            <Flame style={{ color: isLight ? '#f59e0b' : '#fbbf24' }} className="h-5 w-5" />
+            <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold">High-Value Leads</h3>
           </div>
           {loading ? (
             <div className="space-y-2">
@@ -846,25 +857,24 @@ const DashboardPage = () => {
               {highValueLeads.slice(0, 4).map((lead) => (
                 <div
                   key={lead.id}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all",
-                    isLight
-                      ? "bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300"
-                      : "bg-charcoal-900/60 hover:bg-charcoal-700/60 border border-white/[0.04] hover:border-white/[0.08]"
-                  )}
+                  className="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all"
+                  style={{
+                    backgroundColor: isLight ? '#f8fafc' : 'rgba(13, 15, 18, 0.6)',
+                    border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.04)'
+                  }}
                   onClick={() => navigate(`/dashboard/listings/property/${lead.id}`)}
                 >
                   <PropertyThumbnail src={lead.imgsrc} alt={lead.addressstreet} isLight={isLight} />
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm truncate", isLight ? "text-slate-900" : "text-lightest-slate")}>{lead.lastcity}</p>
-                    <p className={cn("text-xs", isLight ? "text-slate-500" : "text-slate")}>{lead.beds}bd • {lead.baths}ba</p>
+                    <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-sm truncate">{lead.lastcity}</p>
+                    <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-xs">{lead.beds}bd • {lead.baths}ba</p>
                   </div>
-                  <span className={cn("font-mono text-sm font-bold tabular-nums", isLight ? "text-emerald-600" : "text-primary")}>{formatPrice(lead.unformattedprice)}</span>
+                  <span style={{ color: isLight ? '#059669' : '#00FF88' }} className="font-mono text-sm font-bold tabular-nums">{formatPrice(lead.unformattedprice)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className={cn("text-sm text-center py-6", isLight ? "text-slate-500" : "text-slate")}>No high-value leads this week</p>
+            <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm text-center py-6">No high-value leads this week</p>
           )}
         </div>
       </div>
