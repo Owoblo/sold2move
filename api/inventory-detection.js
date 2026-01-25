@@ -231,7 +231,8 @@ export default async function handler(req, res) {
     await updateScanRecord(scanId, mergedDetections, summary, interiorPhotos.length, totalCost, processingTime);
 
     // Also update the listing's furniture status based on inventory
-    await updateListingFurnitureStatus(zpid, mergedDetections);
+    // Pass the full photoUrls array so carousel photos are saved to the listing
+    await updateListingFurnitureStatus(zpid, mergedDetections, photoUrls);
 
     console.log(`✅ Scan complete: ${mergedDetections.length} unique items, ${summary.totalCubicFeet} cu ft`);
 
@@ -330,20 +331,28 @@ async function updateScanRecord(scanId, detections, summary, photosAnalyzed, cos
 /**
  * Update listing furniture status based on inventory
  */
-async function updateListingFurnitureStatus(zpid, detections) {
+async function updateListingFurnitureStatus(zpid, detections, photoUrls = []) {
   const isFurnished = detections.length > 0;
   const confidence = detections.length > 5 ? 0.95 : detections.length > 2 ? 0.8 : 0.6;
   const items = detections.slice(0, 10).map(d => d.label);
 
+  const updateData = {
+    is_furnished: isFurnished,
+    furniture_confidence: confidence,
+    furniture_scan_date: new Date().toISOString(),
+    furniture_scan_method: 'inventory-api',
+    furniture_items_detected: JSON.stringify(items)
+  };
+
+  // Save carousel photos if we have them and they're not just a single image
+  if (photoUrls && photoUrls.length > 1) {
+    // Format as array of URLs (the format expected by the frontend)
+    updateData.carouselphotos = JSON.stringify(photoUrls);
+  }
+
   await supabase
     .from('listings')
-    .update({
-      is_furnished: isFurnished,
-      furniture_confidence: confidence,
-      furniture_scan_date: new Date().toISOString(),
-      furniture_scan_method: 'inventory-api',
-      furniture_items_detected: JSON.stringify(items)
-    })
+    .update(updateData)
     .eq('zpid', zpid);
 }
 
