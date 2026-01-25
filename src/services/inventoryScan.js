@@ -59,7 +59,7 @@ class InventoryScanService {
   }
 
   /**
-   * Check if listing has carousel photos
+   * Check if listing has photos (carousel or single image)
    * @param {Object} listing
    * @returns {boolean}
    */
@@ -73,6 +73,11 @@ class InventoryScanService {
 
     // Check carouselPhotos (various casings)
     if (listing.carouselPhotos?.length > 0 || listing.carouselphotos?.length > 0) {
+      return true;
+    }
+
+    // Check single image fallback
+    if (listing.imgSrc || listing.imgsrc) {
       return true;
     }
 

@@ -129,7 +129,7 @@ export default async function handler(req, res) {
     // Fetch listing photos from database
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('zpid, address, city, carouselphotos')
+      .select('zpid, address, city, carouselphotos, imgsrc')
       .eq('zpid', zpid)
       .single();
 
@@ -157,20 +157,35 @@ export default async function handler(req, res) {
       }
     } catch (e) {
       console.error('Failed to parse carousel photos:', e.message);
-      return res.status(400).json({ error: 'Invalid photo data for listing' });
+      // Don't return error yet - try fallback to imgsrc
+    }
+
+    // Fallback to single image if no carousel photos
+    if (photoUrls.length === 0 && listing.imgsrc) {
+      console.log('📸 No carousel photos, using single imgsrc');
+      photoUrls = [listing.imgsrc];
     }
 
     if (!Array.isArray(photoUrls) || photoUrls.length === 0) {
       return res.status(400).json({ error: 'No photos available for this listing' });
     }
 
-    // Select interior photos (skip first 5 exterior shots)
-    const interiorPhotos = photoUrls.slice(SKIP_EXTERIOR_PHOTOS, SKIP_EXTERIOR_PHOTOS + MAX_PHOTOS);
+    // Select photos to analyze
+    // For carousel photos: skip first 5 exterior shots
+    // For single image: use the available image
+    let interiorPhotos;
+    if (photoUrls.length <= 5) {
+      // Not enough photos to skip, use all available
+      interiorPhotos = photoUrls.slice(0, MAX_PHOTOS);
+    } else {
+      // Skip exterior photos
+      interiorPhotos = photoUrls.slice(SKIP_EXTERIOR_PHOTOS, SKIP_EXTERIOR_PHOTOS + MAX_PHOTOS);
+    }
 
     if (interiorPhotos.length === 0) {
       return res.status(400).json({
-        error: 'Not enough interior photos',
-        detail: `Listing has ${photoUrls.length} photos total, need at least ${SKIP_EXTERIOR_PHOTOS + 1}`
+        error: 'No photos available to analyze',
+        detail: `Listing has ${photoUrls.length} photos total`
       });
     }
 
