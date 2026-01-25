@@ -110,15 +110,38 @@ export default async function handler(req, res) {
       const cachedScan = await getCachedScan(zpid);
       if (cachedScan) {
         console.log(`✅ Returning cached scan from ${cachedScan.scanned_at}`);
+
+        // Parse inventory_items if it's a string (double-encoded JSON)
+        let inventory = cachedScan.inventory_items;
+        if (typeof inventory === 'string') {
+          try {
+            inventory = JSON.parse(inventory);
+          } catch (e) {
+            console.error('Failed to parse cached inventory_items:', e.message);
+            inventory = [];
+          }
+        }
+
+        // Parse room_breakdown if it's a string
+        let roomBreakdown = cachedScan.room_breakdown;
+        if (typeof roomBreakdown === 'string') {
+          try {
+            roomBreakdown = JSON.parse(roomBreakdown);
+          } catch (e) {
+            console.error('Failed to parse cached room_breakdown:', e.message);
+            roomBreakdown = {};
+          }
+        }
+
         return res.status(200).json({
           cached: true,
           scan_id: cachedScan.scan_id,
           zpid: cachedScan.zpid,
-          inventory: cachedScan.inventory_items,
+          inventory: inventory,
           summary: {
             totalItems: cachedScan.total_items,
             totalCubicFeet: cachedScan.total_cubic_feet,
-            roomBreakdown: cachedScan.room_breakdown
+            roomBreakdown: roomBreakdown
           },
           photosAnalyzed: cachedScan.photos_analyzed,
           scannedAt: cachedScan.scanned_at
@@ -317,10 +340,11 @@ async function updateScanRecord(scanId, detections, summary, photosAnalyzed, cos
     .from('listing_inventory_scans')
     .update({
       status: 'completed',
-      inventory_items: JSON.stringify(detections),
+      // Store as JSONB directly (don't stringify - Supabase handles it)
+      inventory_items: detections,
       total_items: summary.totalItems,
       total_cubic_feet: summary.totalCubicFeet,
-      room_breakdown: JSON.stringify(summary.roomBreakdown),
+      room_breakdown: summary.roomBreakdown,
       photos_analyzed: photosAnalyzed,
       api_cost_usd: cost,
       processing_time_ms: processingTime
