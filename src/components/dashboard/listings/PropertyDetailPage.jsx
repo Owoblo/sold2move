@@ -53,6 +53,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useTheme } from '@/contexts/ThemeContext';
 import PageWrapper from '@/components/layout/PageWrapper';
 
 // Canadian provinces - homeowner lookup is not available for these
@@ -71,6 +72,8 @@ const PropertyDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -607,81 +610,102 @@ const PropertyDetailPage = () => {
           {/* Right Column - Key Information */}
           <div className="space-y-6">
             {/* Price and Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-3xl text-teal">{formatPrice(listing.unformattedprice)}</CardTitle>
-                <p className="text-lg text-lightest-slate font-medium">{listing.addressStreet}</p>
-                <p className="text-slate flex items-center">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6">
+                <h3 style={{ color: isLight ? '#059669' : '#00FF88' }} className="text-3xl font-bold">{formatPrice(listing.unformattedprice)}</h3>
+                <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-lg font-medium mt-1">{listing.addressStreet}</p>
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="flex items-center mt-1">
                   <MapPin className="mr-2 h-4 w-4" />
                   {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
                 </p>
-              </CardHeader>
-              <CardContent>
+              </div>
+              <div className="px-6 pb-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Price per Sq Ft:</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Price per Sq Ft:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
                       {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Property ID:</span>
-                    <span className="text-lightest-slate font-mono text-sm">{listing.id}</span>
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property ID:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono text-sm">{listing.id}</span>
                   </div>
                   {isAdmin && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate">Zillow ID:</span>
-                      <span className="text-lightest-slate font-mono text-sm">{listing.zpid || 'N/A'}</span>
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Zillow ID:</span>
+                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono text-sm">{listing.zpid || 'N/A'}</span>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
                   <Star className="h-5 w-5" />
                   Quick Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Total Area:</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total Area:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
                       {listing.area ? `${listing.area.toLocaleString()} sq ft` : 'N/A'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Bedrooms:</span>
-                    <span className="text-lightest-slate font-medium">{listing.beds || 'N/A'}</span>
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bedrooms:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.beds || 'N/A'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Bathrooms:</span>
-                    <span className="text-lightest-slate font-medium">{listing.baths || 'N/A'}</span>
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bathrooms:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.baths || 'N/A'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Property Type:</span>
-                    <Badge variant="outline" className="text-lightest-slate bg-teal/10 border-teal/30">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property Type:</span>
+                    <Badge variant="outline" style={{ color: isLight ? '#047857' : '#e2e8f0', backgroundColor: isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 255, 136, 0.1)', borderColor: isLight ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 255, 136, 0.3)' }}>
                       Just Listed
                     </Badge>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Furniture Status - Only show if listing has been scanned */}
             {listing.is_furnished !== null && listing.is_furnished !== undefined && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                  <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
                     <Sofa className="h-5 w-5" />
                     Furniture Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                  </h3>
+                </div>
+                <div className="p-6">
                   <div className="space-y-4">
                     {/* Status Badge */}
                     <div className="flex items-center justify-between">
@@ -749,86 +773,107 @@ const PropertyDetailPage = () => {
                       </p>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* Location Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
                   Location
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-teal mt-0.5" />
+                    <MapPin style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5 mt-0.5" />
                     <div>
-                      <p className="text-lightest-slate font-medium">{listing.addressStreet}</p>
-                      <p className="text-slate text-sm">
+                      <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.addressStreet}</p>
+                      <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">
                         {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
                       </p>
                     </div>
                   </div>
-                  
+
                   {schoolInfo.schoolDistrict && (
                     <div className="flex items-start gap-3">
                       <Users className="h-5 w-5 text-blue-500 mt-0.5" />
                       <div>
-                        <p className="text-lightest-slate font-medium">School District</p>
-                        <p className="text-slate text-sm">{schoolInfo.schoolDistrict}</p>
+                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">School District</p>
+                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">{schoolInfo.schoolDistrict}</p>
                       </div>
                     </div>
                   )}
-                  
+
                   {homeInfo.neighborhood && (
                     <div className="flex items-start gap-3">
                       <TreePine className="h-5 w-5 text-green-500 mt-0.5" />
                       <div>
-                        <p className="text-lightest-slate font-medium">Neighborhood</p>
-                        <p className="text-slate text-sm">{homeInfo.neighborhood}</p>
+                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">Neighborhood</p>
+                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">{homeInfo.neighborhood}</p>
                       </div>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Contact Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
                   <Phone className="h-5 w-5" />
                   Take Action
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full bg-teal text-deep-navy hover:bg-teal/90">
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
+                <Button className="w-full" style={{ backgroundColor: isLight ? '#059669' : '#00FF88', color: isLight ? '#ffffff' : '#0D0F12' }}>
                   <Phone className="h-4 w-4 mr-2" />
                   Contact Agent
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" style={{ borderColor: isLight ? '#e5e7eb' : undefined, color: isLight ? '#0f172a' : undefined }}>
                   <Mail className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full" style={{ borderColor: isLight ? '#e5e7eb' : undefined, color: isLight ? '#0f172a' : undefined }}>
                   <CalendarDays className="h-4 w-4 mr-2" />
                   Schedule Tour
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Homeowner Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserSearch className="h-5 w-5 text-teal" />
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                  <UserSearch style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
                   Homeowner Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
                 {isCanadianListing(listing) ? (
                   <div className="text-center py-4">
                     <MapPin className="h-8 w-8 text-slate mx-auto mb-2 opacity-50" />
@@ -878,19 +923,26 @@ const PropertyDetailPage = () => {
                     )}
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Inventory Scan - Only show for LA area listings with photos */}
             {inventoryScanService.canShowScanButton(listing) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-teal" />
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                  <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                    <Package style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
                     Inventory Scan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                  </h3>
+                </div>
+                <div className="p-6 space-y-3">
                   {!hasInventoryData && !inventoryLoading && !inventoryError && (
                     <>
                       <p className="text-sm text-slate mb-3">
@@ -927,8 +979,8 @@ const PropertyDetailPage = () => {
                       }}
                     />
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </div>
