@@ -258,6 +258,17 @@ module.exports = {
 					'0%, 100%': { boxShadow: '0 0 20px hsl(155 100% 50% / 0.2)' },
 					'50%': { boxShadow: '0 0 40px hsl(155 100% 50% / 0.4)' },
 				},
+				'scan-line': {
+					'0%': { top: '0%', opacity: 0 },
+					'5%': { opacity: 1 },
+					'95%': { opacity: 1 },
+					'100%': { top: '100%', opacity: 0 },
+				},
+				'detection-pop': {
+					'0%': { transform: 'translate(-50%, -50%) scale(0)', opacity: 0 },
+					'50%': { transform: 'translate(-50%, -50%) scale(1.3)', opacity: 1 },
+					'100%': { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -268,6 +279,8 @@ module.exports = {
 				'slide-in-from-bottom': 'slide-in-from-bottom 0.3s ease-out',
 				'scale-in': 'scale-in 0.2s ease-out',
 				'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
+				'scan-line': 'scan-line 2.5s ease-in-out infinite',
+				'detection-pop': 'detection-pop 0.4s ease-out forwards',
 			},
 		},
 	},

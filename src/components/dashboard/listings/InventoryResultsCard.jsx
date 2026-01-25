@@ -1,8 +1,6 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import {
   Accordion,
   AccordionContent,
@@ -48,32 +46,12 @@ const getRoomIconComponent = (room) => {
 
 /**
  * Display inventory scan results in a card format
+ * Note: Loading state is now handled by AIScanningOverlay in the parent component
  */
-const InventoryResultsCard = ({ data, loading, error, progress = 0, onRetry }) => {
+const InventoryResultsCard = ({ data, error, onRetry }) => {
   const { formatCubicFeet, getSizeBadgeVariant } = inventoryScanService;
   const { theme } = useTheme();
   const isLight = theme === 'light';
-
-  // Loading state with progress bar
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="flex items-center gap-2 mb-4">
-          <Package className="h-5 w-5 animate-bounce" style={{ color: isLight ? '#059669' : '#00FF88' }} />
-          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold">Analyzing Photos...</span>
-        </div>
-        <Progress value={progress} className="mb-4 h-2" />
-        <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
-          This typically takes 1-2 minutes. We're analyzing each photo to detect furniture and estimate volumes.
-        </p>
-        <div className="space-y-3">
-          <div className="h-4 rounded w-3/4" style={{ backgroundColor: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' }}></div>
-          <div className="h-4 rounded w-1/2" style={{ backgroundColor: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' }}></div>
-          <div className="h-4 rounded w-2/3" style={{ backgroundColor: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)' }}></div>
-        </div>
-      </div>
-    );
-  }
 
   // Error state
   if (error) {
@@ -100,8 +78,9 @@ const InventoryResultsCard = ({ data, loading, error, progress = 0, onRetry }) =
     return null;
   }
 
-  // Check if we have any inventory
-  const hasInventory = data.inventory && data.inventory.length > 0;
+  // Ensure inventory is an array
+  const inventoryItems = Array.isArray(data.inventory) ? data.inventory : [];
+  const hasInventory = inventoryItems.length > 0;
   const summary = data.summary || {};
   const roomBreakdown = summary.roomBreakdown || {};
 
@@ -121,7 +100,7 @@ const InventoryResultsCard = ({ data, loading, error, progress = 0, onRetry }) =
 
   // Group items by room
   const itemsByRoom = {};
-  data.inventory.forEach((item) => {
+  inventoryItems.forEach((item) => {
     const room = item.room || 'Other';
     if (!itemsByRoom[room]) {
       itemsByRoom[room] = [];

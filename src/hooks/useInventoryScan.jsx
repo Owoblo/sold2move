@@ -10,22 +10,33 @@ export function useInventoryScan() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [totalPhotos, setTotalPhotos] = useState(0);
   const progressIntervalRef = useRef(null);
+  const photoIntervalRef = useRef(null);
 
-  // Clean up progress interval on unmount
+  // Clean up intervals on unmount
   useEffect(() => {
     return () => {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
+      }
+      if (photoIntervalRef.current) {
+        clearInterval(photoIntervalRef.current);
       }
     };
   }, []);
 
   /**
    * Start progress simulation for long-running scan
+   * @param {number} photoCount - Number of photos being scanned (for photo cycling)
    */
-  const startProgressSimulation = useCallback(() => {
+  const startProgressSimulation = useCallback((photoCount = 12) => {
     setProgress(0);
+    setCurrentPhotoIndex(0);
+    setTotalPhotos(Math.min(photoCount, 12)); // Max 12 photos analyzed
+
+    // Progress simulation
     progressIntervalRef.current = setInterval(() => {
       setProgress((prev) => {
         // Slow down as we approach 90% (never reach 100% until complete)
@@ -36,28 +47,46 @@ export function useInventoryScan() {
         return prev;
       });
     }, 1000);
+
+    // Photo cycling - cycle through photos to show which one is being analyzed
+    // Photos are processed in batches of 2 with ~45s per photo
+    // We'll cycle every 3 seconds to give visual feedback
+    photoIntervalRef.current = setInterval(() => {
+      setCurrentPhotoIndex((prev) => {
+        const maxIndex = Math.min(photoCount, 12) - 1;
+        return prev < maxIndex ? prev + 1 : prev;
+      });
+    }, 3000);
   }, []);
 
   /**
-   * Stop progress simulation
+   * Stop progress simulation and photo cycling
    */
   const stopProgressSimulation = useCallback((success = true) => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
+    if (photoIntervalRef.current) {
+      clearInterval(photoIntervalRef.current);
+      photoIntervalRef.current = null;
+    }
     setProgress(success ? 100 : 0);
+    if (!success) {
+      setCurrentPhotoIndex(0);
+    }
   }, []);
 
   /**
    * Scan inventory for a listing
    * @param {Object} listing - Listing object with zpid
    * @param {boolean} [forceRefresh=false] - Force re-scan even if cached
+   * @param {number} [photoCount=12] - Number of photos (for progress animation)
    */
-  const scanFromListing = useCallback(async (listing, forceRefresh = false) => {
+  const scanFromListing = useCallback(async (listing, forceRefresh = false, photoCount = 12) => {
     setLoading(true);
     setError(null);
-    startProgressSimulation();
+    startProgressSimulation(photoCount);
 
     try {
       console.log('📦 Inventory scan starting for listing:', listing?.zpid || listing?.id);
@@ -119,6 +148,8 @@ export function useInventoryScan() {
     setData(null);
     setError(null);
     setProgress(0);
+    setCurrentPhotoIndex(0);
+    setTotalPhotos(0);
     stopProgressSimulation(false);
   }, [stopProgressSimulation]);
 
@@ -140,6 +171,8 @@ export function useInventoryScan() {
     data,
     error,
     progress,
+    currentPhotoIndex,
+    totalPhotos,
 
     // Computed
     hasData,

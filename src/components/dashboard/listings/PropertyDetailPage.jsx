@@ -51,6 +51,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import AIScanningOverlay from '@/components/ui/AIScanningOverlay';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -100,8 +102,12 @@ const PropertyDetailPage = () => {
     error: inventoryError,
     reset: resetInventory,
     hasData: hasInventoryData,
-    progress: inventoryProgress
+    progress: inventoryProgress,
+    currentPhotoIndex: inventoryPhotoIndex
   } = useInventoryScan();
+
+  // Tab state for content sections
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Check if user is admin
   const isAdmin = user?.email === 'johnowolabi80@gmail.com';
@@ -268,6 +274,18 @@ const PropertyDetailPage = () => {
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [isFullscreen, photos.length, currentImageIndex]);
 
+  // Auto-switch to inventory tab when scan completes
+  useEffect(() => {
+    if (hasInventoryData && !inventoryLoading) {
+      setActiveTab('inventory');
+    }
+  }, [hasInventoryData, inventoryLoading]);
+
+  // Handler for starting inventory scan with photo count
+  const handleScanInventory = () => {
+    scanInventory(listing, false, photos.length);
+  };
+
   if (loading) {
     return (
       <PageWrapper>
@@ -352,7 +370,7 @@ const PropertyDetailPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Images and Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image Gallery */}
+            {/* Image Gallery / AI Scanning Overlay */}
             <div
               className="rounded-2xl overflow-hidden"
               style={{
@@ -362,68 +380,89 @@ const PropertyDetailPage = () => {
               }}
             >
               <div className="p-0">
-                <div className="relative aspect-[4/3] max-w-[1000px] mx-auto rounded-lg overflow-hidden" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                  {selectedImage ? (
-                    <img 
-                      src={selectedImage} 
-                      alt="Property" 
-                      className="w-full h-full object-contain cursor-pointer transition-transform hover:scale-105" 
-                      loading="lazy"
-                      onClick={() => setIsFullscreen(true)}
-                      onError={(e) => {
-                        console.error('❌ Image failed to load:', selectedImage);
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
-                      <div className="text-center">
-                        <Home className="h-16 w-16 mx-auto mb-4" style={{ color: isLight ? '#94a3b8' : '#64748b' }} />
-                        <p>No Image Available</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Image Navigation */}
-                  {photos.length > 1 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
-                        onClick={prevImage}
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
-                        onClick={nextImage}
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                      
-                      {/* Image Counter */}
-                      <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
-                        {currentImageIndex + 1} / {photos.length}
-                      </div>
-                      
-                      {/* Fullscreen Button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                {/* Show AI Scanning Overlay when inventory scan is in progress */}
+                {inventoryLoading ? (
+                  <AIScanningOverlay
+                    photos={photos}
+                    currentPhotoIndex={inventoryPhotoIndex}
+                    progress={inventoryProgress}
+                    isLight={isLight}
+                  />
+                ) : (
+                  <div className="relative aspect-[4/3] max-w-[1000px] mx-auto rounded-lg overflow-hidden" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    {selectedImage ? (
+                      <img
+                        src={selectedImage}
+                        alt="Property"
+                        className="w-full h-full object-contain cursor-pointer transition-transform hover:scale-105"
+                        loading="lazy"
                         onClick={() => setIsFullscreen(true)}
+                        onError={(e) => {
+                          console.error('❌ Image failed to load:', selectedImage);
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                        <div className="text-center">
+                          <Home className="h-16 w-16 mx-auto mb-4" style={{ color: isLight ? '#94a3b8' : '#64748b' }} />
+                          <p>No Image Available</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image Navigation */}
+                    {photos.length > 1 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                          onClick={prevImage}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                          onClick={nextImage}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        {/* Image Counter */}
+                        <div className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm font-medium">
+                          {currentImageIndex + 1} / {photos.length}
+                        </div>
+
+                        {/* Fullscreen Button */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white border-white/20"
+                          onClick={() => setIsFullscreen(true)}
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Scan Inventory Button - shown on gallery when can scan */}
+                    {inventoryScanService.canShowScanButton(listing) && !hasInventoryData && !inventoryError && (
+                      <Button
+                        className="absolute bottom-4 left-4 bg-teal text-deep-navy hover:bg-teal/90 shadow-lg"
+                        onClick={handleScanInventory}
                       >
-                        <Maximize2 className="h-4 w-4" />
+                        <Package className="h-4 w-4 mr-2" />
+                        Scan Inventory with AI
                       </Button>
-                    </>
-                  )}
-                </div>
-                
-                {/* Thumbnail Strip */}
-                {photos.length > 1 && (
+                    )}
+                  </div>
+                )}
+
+                {/* Thumbnail Strip - hide during scanning */}
+                {photos.length > 1 && !inventoryLoading && (
                   <div className="p-4" style={{ backgroundColor: isLight ? '#f1f5f9' : 'rgba(22, 26, 31, 0.8)' }}>
                     <div className="flex space-x-3 overflow-x-auto scrollbar-hide">
                       {photos.map((photo, index) => (
@@ -454,165 +493,312 @@ const PropertyDetailPage = () => {
               </div>
             </div>
 
-            {/* Property Overview */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <Home className="h-5 w-5" />
-                  Property Overview
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <Bed className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
-                    <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.beds || 'N/A'}</p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bedrooms</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <Bath className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
-                    <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.baths || 'N/A'}</p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bathrooms</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <Ruler className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
-                    <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {listing.area ? `${(listing.area / 1000).toFixed(1)}k` : 'N/A'}
-                    </p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Sq Ft</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <DollarSign className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
-                    <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
-                    </p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Per Sq Ft</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Tabbed Content Section */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList
+                className="w-full grid grid-cols-4 h-12 p-1 rounded-xl"
+                style={{
+                  backgroundColor: isLight ? '#f1f5f9' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)'
+                }}
+              >
+                <TabsTrigger
+                  value="overview"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-sm font-medium"
+                  style={{
+                    color: activeTab === 'overview' ? (isLight ? '#0f172a' : '#e2e8f0') : (isLight ? '#64748b' : '#94a3b8'),
+                    backgroundColor: activeTab === 'overview' ? (isLight ? '#ffffff' : 'rgba(255,255,255,0.1)') : 'transparent'
+                  }}
+                >
+                  <Home className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger
+                  value="inventory"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-sm font-medium relative"
+                  style={{
+                    color: activeTab === 'inventory' ? (isLight ? '#0f172a' : '#e2e8f0') : (isLight ? '#64748b' : '#94a3b8'),
+                    backgroundColor: activeTab === 'inventory' ? (isLight ? '#ffffff' : 'rgba(255,255,255,0.1)') : 'transparent'
+                  }}
+                >
+                  <Package className="h-4 w-4 mr-1.5 hidden sm:inline" style={{ color: hasInventoryData ? (isLight ? '#059669' : '#00FF88') : undefined }} />
+                  Inventory
+                  {hasInventoryData && (
+                    <Badge className="ml-1.5 h-5 px-1.5 text-xs" style={{ backgroundColor: isLight ? '#059669' : '#00FF88', color: isLight ? '#ffffff' : '#0D0F12' }}>
+                      {inventoryData?.summary?.totalItems || 0}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="details"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-sm font-medium"
+                  style={{
+                    color: activeTab === 'details' ? (isLight ? '#0f172a' : '#e2e8f0') : (isLight ? '#64748b' : '#94a3b8'),
+                    backgroundColor: activeTab === 'details' ? (isLight ? '#ffffff' : 'rgba(255,255,255,0.1)') : 'transparent'
+                  }}
+                >
+                  <Info className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                  Details
+                </TabsTrigger>
+                <TabsTrigger
+                  value="market"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg text-sm font-medium"
+                  style={{
+                    color: activeTab === 'market' ? (isLight ? '#0f172a' : '#e2e8f0') : (isLight ? '#64748b' : '#94a3b8'),
+                    backgroundColor: activeTab === 'market' ? (isLight ? '#ffffff' : 'rgba(255,255,255,0.1)') : 'transparent'
+                  }}
+                >
+                  <TrendingUp className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                  Market
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Property Details */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <Info className="h-5 w-5" />
-                  Property Details
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property Type:</span>
-                      <Badge variant="outline" style={{ color: isLight ? '#047857' : '#e2e8f0', backgroundColor: isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 255, 136, 0.1)', borderColor: isLight ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 255, 136, 0.3)' }}>
-                        Just Listed
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Year Built:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.yearBuilt || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Lot Size:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.lotSize || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Parking:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.parkingFeatures || 'N/A'}
-                      </span>
-                    </div>
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="mt-4">
+                <div
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                    border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                    <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                      <Home className="h-5 w-5" />
+                      Property Overview
+                    </h3>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Heating:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.heating || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Cooling:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.cooling || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Flooring:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.flooring || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Roof:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                        {homeInfo.roof || 'N/A'}
-                      </span>
+                  <div className="p-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <Bed className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.beds || 'N/A'}</p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bedrooms</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <Bath className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.baths || 'N/A'}</p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bathrooms</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <Ruler className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {listing.area ? `${(listing.area / 1000).toFixed(1)}k` : 'N/A'}
+                        </p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Sq Ft</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <DollarSign className="mx-auto h-8 w-8 mb-2" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
+                        </p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Per Sq Ft</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
 
-            {/* Market Information */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Market Information
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <Clock className="mx-auto h-8 w-8 text-blue-500 mb-2" />
-                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {daysOnMarket || 'N/A'}
-                    </p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Days on Market</p>
+              {/* Inventory Tab Content */}
+              <TabsContent value="inventory" className="mt-4">
+                <div
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                    border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                    <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                      <Package className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                      AI Inventory Scan
+                      {inventoryData?.cached && (
+                        <Badge variant="outline" className="ml-2 text-xs">Cached</Badge>
+                      )}
+                    </h3>
                   </div>
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <CalendarDays className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
-                    </p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Last Updated</p>
-                  </div>
-                  <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <Building className="mx-auto h-8 w-8 text-purple-500 mb-2" />
-                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {homeInfo.homeStatus || 'N/A'}
-                    </p>
-                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Status</p>
+                  <div className="p-6">
+                    {!inventoryScanService.canShowScanButton(listing) ? (
+                      <div className="text-center py-8">
+                        <Package className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
+                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                          Inventory scan is not available for this listing.
+                        </p>
+                        <p className="text-sm mt-1" style={{ color: isLight ? '#94a3b8' : '#64748b' }}>
+                          This feature requires listing photos.
+                        </p>
+                      </div>
+                    ) : !hasInventoryData && !inventoryError ? (
+                      <div className="text-center py-8">
+                        <Package className="h-12 w-12 mx-auto mb-3" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <p className="font-medium mb-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          AI-Powered Inventory Detection
+                        </p>
+                        <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                          Analyze listing photos to detect furniture and estimate move size.
+                        </p>
+                        <Button
+                          className="bg-teal text-deep-navy hover:bg-teal/90"
+                          onClick={handleScanInventory}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Start Inventory Scan
+                        </Button>
+                      </div>
+                    ) : inventoryError ? (
+                      <div className="text-center py-8">
+                        <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-red-500" />
+                        <p className="font-medium mb-2 text-red-500">Scan Failed</p>
+                        <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                          {inventoryError.message || 'Could not analyze listing photos'}
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            resetInventory();
+                            handleScanInventory();
+                          }}
+                        >
+                          Try Again
+                        </Button>
+                      </div>
+                    ) : (
+                      <InventoryResultsCard
+                        data={inventoryData}
+                        loading={false}
+                        error={null}
+                        progress={100}
+                        onRetry={() => {
+                          resetInventory();
+                          handleScanInventory();
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
+              </TabsContent>
+
+              {/* Details Tab Content */}
+              <TabsContent value="details" className="mt-4">
+                <div
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                    border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                    <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                      <Info className="h-5 w-5" />
+                      Property Details
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property Type:</span>
+                          <Badge variant="outline" style={{ color: isLight ? '#047857' : '#e2e8f0', backgroundColor: isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 255, 136, 0.1)', borderColor: isLight ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 255, 136, 0.3)' }}>
+                            Just Listed
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Year Built:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.yearBuilt || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Lot Size:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.lotSize || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Parking:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.parkingFeatures || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Heating:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.heating || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Cooling:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.cooling || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Flooring:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.flooring || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Roof:</span>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
+                            {homeInfo.roof || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Market Tab Content */}
+              <TabsContent value="market" className="mt-4">
+                <div
+                  className="rounded-2xl overflow-hidden"
+                  style={{
+                    backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                    border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >
+                  <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                    <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Market Information
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <Clock className="mx-auto h-8 w-8 text-blue-500 mb-2" />
+                        <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {daysOnMarket || 'N/A'}
+                        </p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Days on Market</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <CalendarDays className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                        <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {listing.lastseenat ? new Date(listing.lastseenat).toLocaleDateString() : 'N/A'}
+                        </p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Last Updated</p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                        <Building className="mx-auto h-8 w-8 text-purple-500 mb-2" />
+                        <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {homeInfo.homeStatus || 'N/A'}
+                        </p>
+                        <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Status</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
 
             {/* Admin-only Zillow Link */}
             {isAdmin && listing.detailurl && (
@@ -960,63 +1146,6 @@ const PropertyDetailPage = () => {
                 )}
               </div>
             </div>
-
-            {/* Inventory Scan - Only show for LA area listings with photos */}
-            {inventoryScanService.canShowScanButton(listing) && (
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                  <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                    <Package style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5" />
-                    Inventory Scan
-                  </h3>
-                </div>
-                <div className="p-6 space-y-3">
-                  {!hasInventoryData && !inventoryLoading && !inventoryError && (
-                    <>
-                      <p className="text-sm text-slate mb-3">
-                        AI-powered scan to detect furniture and estimate move size from listing photos.
-                      </p>
-                      <Button
-                        className="w-full bg-teal text-deep-navy hover:bg-teal/90"
-                        onClick={() => scanInventory(listing)}
-                        disabled={inventoryLoading}
-                      >
-                        {inventoryLoading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Analyzing photos...
-                          </>
-                        ) : (
-                          <>
-                            <Package className="h-4 w-4 mr-2" />
-                            Scan Inventory
-                          </>
-                        )}
-                      </Button>
-                    </>
-                  )}
-                  {(hasInventoryData || inventoryLoading || inventoryError) && (
-                    <InventoryResultsCard
-                      data={inventoryData}
-                      loading={inventoryLoading}
-                      error={inventoryError}
-                      progress={inventoryProgress}
-                      onRetry={() => {
-                        resetInventory();
-                        scanInventory(listing);
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </motion.div>
