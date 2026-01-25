@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardContent 
-} from '@/components/ui/card';
+import { useTheme } from '@/contexts/ThemeContext';
 import { 
   Button 
 } from '@/components/ui/button';
@@ -58,6 +53,8 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { Link } from 'react-router-dom';
 
 const AccountHub = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const { profile, loading: profileLoading } = useProfile();
   const { user } = useAuth();
   
@@ -147,11 +144,11 @@ const AccountHub = () => {
         className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-lightest-slate flex items-center gap-3">
-            <User className="h-8 w-8 text-teal" />
+          <h1 className="text-3xl font-bold flex items-center gap-3" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+            <User className="h-8 w-8" style={{ color: isLight ? '#059669' : '#00FF88' }} />
             Account Hub
           </h1>
-          <p className="text-slate mt-1">
+          <p className="mt-1" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
             Welcome back, {profile?.company_name || session?.user?.email?.split('@')[0] || 'User'}!
           </p>
         </div>
@@ -175,65 +172,85 @@ const AccountHub = () => {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <Card className="bg-light-navy border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate">Credits Remaining</p>
-                <p className="text-2xl font-bold text-lightest-slate">
-                  {profile?.unlimited ? '∞' : profile?.credits_remaining || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-teal/10 rounded-full">
-                <Zap className="h-6 w-6 text-teal" />
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Credits Remaining</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                {profile?.unlimited ? '∞' : profile?.credits_remaining || 0}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 rounded-full" style={{ backgroundColor: isLight ? 'rgba(5, 150, 105, 0.1)' : 'rgba(0, 255, 136, 0.1)' }}>
+              <Zap className="h-6 w-6" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-light-navy border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate">Listings Revealed</p>
-                <p className="text-2xl font-bold text-lightest-slate">{stats.totalReveals}</p>
-              </div>
-              <div className="p-3 bg-blue-500/10 rounded-full">
-                <Eye className="h-6 w-6 text-blue-500" />
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Listings Revealed</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{stats.totalReveals}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-blue-500/10 rounded-full">
+              <Eye className="h-6 w-6 text-blue-500" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-light-navy border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate">Account Age</p>
-                <p className="text-2xl font-bold text-lightest-slate">{stats.accountAge} days</p>
-              </div>
-              <div className="p-3 bg-green-500/10 rounded-full">
-                <Calendar className="h-6 w-6 text-green-500" />
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Account Age</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{stats.accountAge} days</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-green-500/10 rounded-full">
+              <Calendar className="h-6 w-6 text-green-500" />
+            </div>
+          </div>
+        </div>
 
-        <Card className="bg-light-navy border-border">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-    <div>
-                <p className="text-sm text-slate">Service Areas</p>
-                <p className="text-2xl font-bold text-lightest-slate">
-                  {profile?.service_cities?.length || 1}
-                </p>
-              </div>
-              <div className="p-3 bg-purple-500/10 rounded-full">
-                <MapPin className="h-6 w-6 text-purple-500" />
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Service Areas</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                {profile?.service_cities?.length || 1}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-3 bg-purple-500/10 rounded-full">
+              <MapPin className="h-6 w-6 text-purple-500" />
+            </div>
+          </div>
+        </div>
       </motion.div>
 
       {/* Main Content Tabs */}
@@ -272,87 +289,108 @@ const AccountHub = () => {
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Account Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                  <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                     <User className="h-5 w-5" />
                     Account Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </h3>
+                </div>
+                <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Company Name</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Company Name</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {profile?.company_name || 'Not set'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Email</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Email</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {session?.user?.email}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Phone</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Phone</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {profile?.phone || 'Not set'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Primary City</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Primary City</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {profile?.city_name || 'Not set'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Account Type</span>
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Account Type</span>
                     <Badge className={accountStatus.color}>
                       {accountStatus.text}
                     </Badge>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Service Areas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                  <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                     <MapPin className="h-5 w-5" />
                     Service Areas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
+                  </h3>
+                </div>
+                <div className="p-6">
                   {profile?.service_cities && profile.service_cities.length > 0 ? (
                     <div className="space-y-2">
                       {profile.service_cities.map((city, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-teal rounded-full"></div>
-                          <span className="text-lightest-slate">{city}</span>
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isLight ? '#059669' : '#00FF88' }}></div>
+                          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{city}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="text-center py-4">
-                      <MapPin className="h-12 w-12 text-slate mx-auto mb-2" />
-                      <p className="text-slate">No service areas configured</p>
+                      <MapPin className="h-12 w-12 mx-auto mb-2" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
+                      <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>No service areas configured</p>
                       <Button asChild variant="outline" size="sm" className="mt-2">
                         <Link to="/dashboard/settings">Configure Areas</Link>
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                   <Target className="h-5 w-5" />
                   Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Button asChild variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
                     <Link to="/dashboard/listings">
@@ -379,100 +417,130 @@ const AccountHub = () => {
                     </Link>
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Activity Tab */}
           <TabsContent value="activity" className="space-y-6">
-      <Card>
-        <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                   <Activity className="h-5 w-5" />
                   Recent Activity
-                </CardTitle>
-        </CardHeader>
-        <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-3 bg-light-navy/30 rounded-lg">
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(22, 26, 31, 0.3)' }}
+                  >
                     <div className="p-2 bg-blue-500/10 rounded-full">
                       <Eye className="h-4 w-4 text-blue-500" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-lightest-slate font-medium">Listings Revealed</p>
-                      <p className="text-sm text-slate">{stats.totalReveals} listings revealed</p>
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Listings Revealed</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>{stats.totalReveals} listings revealed</p>
                     </div>
-                    <span className="text-xs text-slate">
+                    <span className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
                       {stats.lastActivity ? new Date(stats.lastActivity).toLocaleDateString() : 'N/A'}
                     </span>
                   </div>
-                  
-                  <div className="flex items-center gap-3 p-3 bg-light-navy/30 rounded-lg">
+
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(22, 26, 31, 0.3)' }}
+                  >
                     <div className="p-2 bg-green-500/10 rounded-full">
                       <Download className="h-4 w-4 text-green-500" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-lightest-slate font-medium">Data Exports</p>
-                      <p className="text-sm text-slate">{stats.totalExports} CSV files downloaded</p>
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Data Exports</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>{stats.totalExports} CSV files downloaded</p>
                     </div>
-                    <span className="text-xs text-slate">Recently</span>
+                    <span className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Recently</span>
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-light-navy/30 rounded-lg">
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-lg"
+                    style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(22, 26, 31, 0.3)' }}
+                  >
                     <div className="p-2 bg-purple-500/10 rounded-full">
                       <Zap className="h-4 w-4 text-purple-500" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-lightest-slate font-medium">Credits Used</p>
-                      <p className="text-sm text-slate">{stats.creditsUsed} credits consumed</p>
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Credits Used</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>{stats.creditsUsed} credits consumed</p>
                     </div>
-                    <span className="text-xs text-slate">Total</span>
+                    <span className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Billing Tab */}
           <TabsContent value="billing" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                  <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                     <CreditCard className="h-5 w-5" />
                     Current Plan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                  </h3>
+                </div>
+                <div className="p-6 space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Plan Type</span>
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Plan Type</span>
                     <Badge className={accountStatus.color}>
                       {profile?.unlimited ? 'Unlimited' : 'Pay-per-use'}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Credits Remaining</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Credits Remaining</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {profile?.unlimited ? 'Unlimited' : profile?.credits_remaining || 0}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate">Trial Status</span>
-                    <span className="text-lightest-slate font-medium">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Trial Status</span>
+                    <span className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                       {profile?.trial_granted ? 'Trial Used' : 'Available'}
                     </span>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                  <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                     <DollarSign className="h-5 w-5" />
                     Billing Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                  </h3>
+                </div>
+                <div className="p-6 space-y-3">
                   <Button asChild className="w-full">
                     <Link to="/dashboard/billing">
                       <CreditCard className="h-4 w-4 mr-2" />
@@ -491,27 +559,34 @@ const AccountHub = () => {
                       View Invoices
                     </Link>
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                   <Shield className="h-5 w-5" />
                   Account Security
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </h3>
+              </div>
+              <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="h-5 w-5 text-green-500" />
                     <div>
-                      <p className="text-lightest-slate font-medium">Email Verified</p>
-                      <p className="text-sm text-slate">Your email address is verified</p>
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Email Verified</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Your email address is verified</p>
                     </div>
                   </div>
                   <Badge variant="outline" className="text-green-500 border-green-500">
@@ -523,10 +598,10 @@ const AccountHub = () => {
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-blue-500" />
                     <div>
-                      <p className="text-lightest-slate font-medium">Last Login</p>
-                      <p className="text-sm text-slate">
-                        {session?.user?.last_sign_in_at ? 
-                          new Date(session.user.last_sign_in_at).toLocaleString() : 
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Last Login</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                        {session?.user?.last_sign_in_at ?
+                          new Date(session.user.last_sign_in_at).toLocaleString() :
                           'Unknown'
                         }
                       </p>
@@ -538,27 +613,34 @@ const AccountHub = () => {
                   <div className="flex items-center gap-3">
                     <Globe className="h-5 w-5 text-purple-500" />
                     <div>
-                      <p className="text-lightest-slate font-medium">Account Created</p>
-                      <p className="text-sm text-slate">
-                        {profile?.created_at ? 
-                          new Date(profile.created_at).toLocaleDateString() : 
+                      <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Account Created</p>
+                      <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                        {profile?.created_at ?
+                          new Date(profile.created_at).toLocaleDateString() :
                           'Unknown'
                         }
                       </p>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+                <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                   <Settings className="h-5 w-5" />
                   Security Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
                 <Button variant="outline" className="w-full">
                   <Shield className="h-4 w-4 mr-2" />
                   Change Password
@@ -571,8 +653,8 @@ const AccountHub = () => {
                   <FileText className="h-4 w-4 mr-2" />
                   Download Data
                 </Button>
-        </CardContent>
-      </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* Admin Support Tab */}

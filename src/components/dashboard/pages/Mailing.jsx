@@ -23,7 +23,7 @@ import {
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useWallet } from '@/hooks/useWallet';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +61,8 @@ const STATUS_CONFIG = {
 };
 
 const Mailing = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const { user } = useAuth();
   const { formattedBalance } = useWallet();
   const [campaigns, setCampaigns] = useState([]);
@@ -147,8 +149,8 @@ const Mailing = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mailing Campaigns</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Mailing Campaigns</h1>
+          <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
             Create and manage your direct mail campaigns
           </p>
         </div>
@@ -162,82 +164,108 @@ const Mailing = () => {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Campaigns</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <div className="p-3 rounded-full bg-primary/10">
-                <Mail className="h-5 w-5 text-primary" />
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total Campaigns</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{stats.total}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold">{stats.active}</p>
-              </div>
-              <div className="p-3 rounded-full bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-              </div>
+            <div className="p-3 rounded-full" style={{ backgroundColor: isLight ? 'rgba(5, 150, 105, 0.1)' : 'rgba(0, 255, 136, 0.1)' }}>
+              <Mail className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Recipients</p>
-                <p className="text-2xl font-bold">{stats.totalRecipients.toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-full bg-green-500/10">
-                <Users className="h-5 w-5 text-green-500" />
-              </div>
+          </div>
+        </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Active</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{stats.active}</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-bold">${stats.totalSpent.toFixed(2)}</p>
-              </div>
-              <div className="p-3 rounded-full bg-purple-500/10">
-                <DollarSign className="h-5 w-5 text-purple-500" />
-              </div>
+            <div className="p-3 rounded-full bg-blue-500/10">
+              <TrendingUp className="h-5 w-5 text-blue-500" />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total Recipients</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{stats.totalRecipients.toLocaleString()}</p>
+            </div>
+            <div className="p-3 rounded-full bg-green-500/10">
+              <Users className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+        </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total Spent</p>
+              <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>${stats.totalSpent.toFixed(2)}</p>
+            </div>
+            <div className="p-3 rounded-full bg-purple-500/10">
+              <DollarSign className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Wallet Banner */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-primary/10">
-                <DollarSign className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Wallet Balance</p>
-                <p className="text-xl font-bold text-primary">{formattedBalance}</p>
-              </div>
+      <div
+        className="rounded-2xl py-4 px-6"
+        style={{
+          background: isLight
+            ? 'linear-gradient(to right, rgba(5, 150, 105, 0.1), rgba(5, 150, 105, 0.05))'
+            : 'linear-gradient(to right, rgba(0, 255, 136, 0.1), rgba(0, 255, 136, 0.05))',
+          border: isLight ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid rgba(0, 255, 136, 0.2)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full" style={{ backgroundColor: isLight ? 'rgba(5, 150, 105, 0.1)' : 'rgba(0, 255, 136, 0.1)' }}>
+              <DollarSign className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
             </div>
-            <Link to="/dashboard/wallet">
-              <Button variant="outline" size="sm" className="gap-2">
-                Add Funds
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <div>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Wallet Balance</p>
+              <p className="text-xl font-bold" style={{ color: isLight ? '#059669' : '#00FF88' }}>{formattedBalance}</p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <Link to="/dashboard/wallet">
+            <Button variant="outline" size="sm" className="gap-2">
+              Add Funds
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {/* Filters */}
       <Card>

@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +18,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { getStripe } from '@/lib/stripeClient';
 import LoadingButton from '@/components/ui/LoadingButton';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   Palette,
   FileText,
@@ -655,6 +655,8 @@ const OrderWizard = ({ product, onClose, profile }) => {
 
 // Main Products page
 const Products = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const { products, loading, error } = useProducts();
   const { profile } = useProfile();
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -721,32 +723,39 @@ const Products = () => {
 
       {/* Hero Section */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-lightest-slate font-heading">Design Services</h1>
-        <p className="mt-2 text-lg text-slate">
+        <h1 className="text-4xl font-bold font-heading" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Design Services</h1>
+        <p className="mt-2 text-lg" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
           Professional custom designs for your direct mail campaigns. Stand out with branded postcards,
           letters, and handwritten cards.
         </p>
       </div>
 
       {/* Value Proposition */}
-      <Card className="bg-gradient-to-r from-teal/10 to-light-navy border-teal/20 mb-8">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="p-4 rounded-full bg-teal/20">
-              <Sparkles className="h-8 w-8 text-teal" />
-            </div>
-            <div className="text-center md:text-left">
-              <h2 className="text-xl font-semibold text-lightest-slate mb-1">
-                Professional Designs That Convert
-              </h2>
-              <p className="text-slate">
-                Our design team creates custom mailers tailored to your brand.
-                Get print-ready files delivered in 3-5 business days with 2 revision rounds included.
-              </p>
-            </div>
+      <div
+        className="rounded-2xl mb-8 p-6"
+        style={{
+          background: isLight
+            ? 'linear-gradient(to right, rgba(5, 150, 105, 0.1), #ffffff)'
+            : 'linear-gradient(to right, rgba(0, 255, 136, 0.1), rgba(22, 26, 31, 0.8))',
+          border: isLight ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid rgba(0, 255, 136, 0.2)',
+          boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+        }}
+      >
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          <div className="p-4 rounded-full" style={{ backgroundColor: isLight ? 'rgba(5, 150, 105, 0.2)' : 'rgba(0, 255, 136, 0.2)' }}>
+            <Sparkles className="h-8 w-8" style={{ color: isLight ? '#059669' : '#00FF88' }} />
           </div>
-        </CardContent>
-      </Card>
+          <div className="text-center md:text-left">
+            <h2 className="text-xl font-semibold mb-1" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+              Professional Designs That Convert
+            </h2>
+            <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+              Our design team creates custom mailers tailored to your brand.
+              Get print-ready files delivered in 3-5 business days with 2 revision rounds included.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

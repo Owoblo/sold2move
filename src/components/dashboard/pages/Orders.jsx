@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -9,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Helmet } from 'react-helmet-async';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { useOrders } from '@/hooks/useOrders';
+import { useTheme } from '@/contexts/ThemeContext';
 import {
   ShoppingCart,
   Package,
@@ -429,6 +429,8 @@ const EmptyState = () => {
 
 // Main Orders Page Component
 const Orders = () => {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const { orders, loading, error, refetch, orderCounts } = useOrders();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -519,8 +521,8 @@ const Orders = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-lightest-slate font-heading">Orders</h1>
-        <p className="mt-2 text-slate">
+        <h1 className="text-3xl font-bold font-heading" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Orders</h1>
+        <p className="mt-2" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
           Track your design service orders and download completed files.
         </p>
       </div>

@@ -24,8 +24,10 @@ const DatabaseCitySelector = ({
   // Fetch cities dynamically from database
   const { data: citiesData, isLoading: loading, error: fetchError } = useAvailableCities(countryCode);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside - use capture phase to catch clicks before they're stopped
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -33,9 +35,10 @@ const DatabaseCitySelector = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    // Use capture phase to ensure we get the event even if stopPropagation is called
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [isOpen]);
 
   // Transform cities data to expected format - memoized
   const cities = useMemo(() => citiesData || [], [citiesData]);
@@ -82,6 +85,13 @@ const DatabaseCitySelector = ({
     }
 
     onCitiesChange(newCities);
+
+    // Auto-close dropdown after selection if maxSelections is 1 (single-select mode)
+    // Or close after a brief delay to allow seeing the selection
+    if (maxSelections === 1) {
+      setIsOpen(false);
+      setSearchTerm('');
+    }
   }, [selectedCities, maxSelections, onCitiesChange]);
 
   // Remove a city from selection - memoized
@@ -369,15 +379,14 @@ const DatabaseCitySelector = ({
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-3 border-t border-lightest-navy/20 bg-deep-navy/30">
+          {/* Footer - Sticky with prominent Done button */}
+          <div className="p-3 border-t border-lightest-navy/20 bg-deep-navy/80 sticky bottom-0">
             <div className="flex items-center justify-between text-sm text-slate">
               <span>{selectedCities.length} of {maxSelections} selected</span>
               <Button
-                variant="outline"
                 size="sm"
                 onClick={handleClose}
-                className="border-teal text-teal hover:bg-teal/10"
+                className="bg-teal text-deep-navy hover:bg-teal/90 font-semibold px-6"
               >
                 Done
               </Button>

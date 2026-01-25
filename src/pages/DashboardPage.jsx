@@ -174,9 +174,14 @@ const DashboardPage = () => {
     recentDate.setDate(recentDate.getDate() - 7);
     const recentISO = recentDate.toISOString();
 
+    // For just listed, try today first, then fall back to last 3 days
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const threeDaysAgoISO = threeDaysAgo.toISOString();
+
     try {
-      // Fetch today's just listed from unified listings table - include imgsrc
-      const { data: justListedData, count: justListedCount } = await supabase
+      // First try to fetch today's just listed
+      let { data: justListedData, count: justListedCount } = await supabase
         .from('listings')
         .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
         .eq('status', 'just_listed')
@@ -184,6 +189,21 @@ const DashboardPage = () => {
         .gte('lastseenat', todayISO)
         .order('lastseenat', { ascending: false })
         .limit(6);
+
+      // If no results today, fetch from last 3 days
+      if (!justListedData || justListedData.length === 0) {
+        const fallbackResult = await supabase
+          .from('listings')
+          .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
+          .eq('status', 'just_listed')
+          .in('lastcity', cityNames)
+          .gte('lastseenat', threeDaysAgoISO)
+          .order('lastseenat', { ascending: false })
+          .limit(6);
+
+        justListedData = fallbackResult.data;
+        justListedCount = fallbackResult.count;
+      }
 
       // Fetch recent sold listings (last 7 days) - more useful than just today
       const { data: soldData, count: soldCount } = await supabase

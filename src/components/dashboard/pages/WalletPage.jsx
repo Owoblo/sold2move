@@ -13,13 +13,13 @@ import {
   Send
 } from 'lucide-react';
 import { useWallet } from '../../../hooks/useWallet';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Badge } from '../../ui/badge';
 import { Separator } from '../../ui/separator';
 import { useToast } from '../../ui/use-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const FUNDING_PRESETS = [
   { id: 'small', amount: 250, label: '$250', letters: '~125 letters' },
@@ -31,6 +31,8 @@ const FUNDING_PRESETS = [
 const COST_PER_LETTER = 2.00; // Average cost per mail piece
 
 export default function WalletPage() {
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const {
@@ -151,71 +153,94 @@ export default function WalletPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Wallet</h1>
+        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
           Fund your account to launch direct mail campaigns
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Balance Card */}
-        <Card className="md:col-span-1 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-primary/70">Available Balance</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div
+          className="md:col-span-1 rounded-2xl overflow-hidden"
+          style={{
+            background: isLight
+              ? 'linear-gradient(to bottom right, rgba(5, 150, 105, 0.1), rgba(5, 150, 105, 0.05), transparent)'
+              : 'linear-gradient(to bottom right, rgba(0, 255, 136, 0.1), rgba(0, 255, 136, 0.05), transparent)',
+            border: isLight ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid rgba(0, 255, 136, 0.2)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="p-6 pb-2">
+            <p className="text-sm" style={{ color: isLight ? 'rgba(5, 150, 105, 0.7)' : 'rgba(0, 255, 136, 0.7)' }}>Available Balance</p>
+          </div>
+          <div className="p-6 pt-0">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-primary/10">
-                <Wallet className="h-6 w-6 text-primary" />
+              <div className="p-3 rounded-full" style={{ backgroundColor: isLight ? 'rgba(5, 150, 105, 0.1)' : 'rgba(0, 255, 136, 0.1)' }}>
+                <Wallet className="h-6 w-6" style={{ color: isLight ? '#059669' : '#00FF88' }} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-primary">{formattedBalance}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-3xl font-bold" style={{ color: isLight ? '#059669' : '#00FF88' }}>{formattedBalance}</p>
+                <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
                   ~{getEstimatedLetters(balance)} letters
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Quick Stats */}
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Campaign Power</CardTitle>
-            <CardDescription>What you can do with your balance</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div
+          className="md:col-span-2 rounded-2xl overflow-hidden"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="p-6 pb-2">
+            <h3 className="text-lg font-semibold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Campaign Power</h3>
+            <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>What you can do with your balance</p>
+          </div>
+          <div className="p-6 pt-0">
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-foreground">{getEstimatedLetters(balance)}</p>
-                <p className="text-xs text-muted-foreground">Postcards</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{getEstimatedLetters(balance)}</p>
+                <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Postcards</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-foreground">{Math.floor(balance / 2.50)}</p>
-                <p className="text-xs text-muted-foreground">Letters</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{Math.floor(balance / 2.50)}</p>
+                <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Letters</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-foreground">{Math.floor(balance / 3.50)}</p>
-                <p className="text-xs text-muted-foreground">Handwritten</p>
+              <div className="text-center p-4 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                <p className="text-2xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{Math.floor(balance / 3.50)}</p>
+                <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Handwritten</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Add Funds */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+            <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
               <Plus className="h-5 w-5" />
               Add Funds
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
               Choose an amount to add to your wallet
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+            </p>
+          </div>
+          <div className="p-6 space-y-6">
             {/* Preset Amounts */}
             <div className="grid grid-cols-2 gap-3">
               {FUNDING_PRESETS.map((preset) => (
@@ -313,29 +338,36 @@ export default function WalletPage() {
               )}
             </Button>
 
-            <p className="text-xs text-center text-muted-foreground">
+            <p className="text-xs text-center" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
               Secure payment powered by Stripe
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Transaction History */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{
+            backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+          }}
+        >
+          <div className="p-6 border-b" style={{ borderColor: isLight ? '#e5e7eb' : 'rgba(255,255,255,0.08)' }}>
+            <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
               <Clock className="h-5 w-5" />
               Transaction History
-            </CardTitle>
-            <CardDescription>
+            </h3>
+            <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
               Recent wallet activity
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+          <div className="p-6">
             {transactions.length === 0 ? (
               <div className="text-center py-8">
-                <Wallet className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">No transactions yet</p>
-                <p className="text-sm text-muted-foreground/70">
+                <Wallet className="h-12 w-12 mx-auto mb-3" style={{ color: isLight ? '#94a3b8' : 'rgba(148,163,184,0.5)' }} />
+                <p style={{ color: isLight ? '#64748b' : '#94a3b8' }}>No transactions yet</p>
+                <p className="text-sm" style={{ color: isLight ? '#94a3b8' : 'rgba(148,163,184,0.7)' }}>
                   Add funds to get started with campaigns
                 </p>
               </div>
@@ -344,15 +376,18 @@ export default function WalletPage() {
                 {transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg transition-colors"
+                    style={{
+                      backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
+                    }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-background">
+                      <div className="p-2 rounded-full" style={{ backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)' }}>
                         {getTransactionIcon(tx.type)}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{tx.description || tx.type}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-medium text-sm" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{tx.description || tx.type}</p>
+                        <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
                           {new Date(tx.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -366,8 +401,12 @@ export default function WalletPage() {
                       <p className={`font-semibold ${
                         tx.type === 'deposit' || tx.type === 'refund' || tx.type === 'bonus'
                           ? 'text-green-500'
-                          : 'text-foreground'
-                      }`}>
+                          : ''
+                      }`} style={{
+                        color: tx.type === 'deposit' || tx.type === 'refund' || tx.type === 'bonus'
+                          ? undefined
+                          : isLight ? '#0f172a' : '#e2e8f0'
+                      }}>
                         {tx.type === 'deposit' || tx.type === 'refund' || tx.type === 'bonus' ? '+' : '-'}
                         ${Math.abs(tx.amount).toFixed(2)}
                       </p>
@@ -377,51 +416,63 @@ export default function WalletPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Info Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-muted/30">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-              <div>
-                <p className="font-medium">No Expiration</p>
-                <p className="text-sm text-muted-foreground">
-                  Funds never expire. Use them whenever you're ready.
-                </p>
-              </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+            <div>
+              <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>No Expiration</p>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                Funds never expire. Use them whenever you're ready.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/30">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Send className="h-5 w-5 text-blue-500 mt-0.5" />
-              <div>
-                <p className="font-medium">Campaign Ready</p>
-                <p className="text-sm text-muted-foreground">
-                  Launch campaigns instantly with your wallet balance.
-                </p>
-              </div>
+          </div>
+        </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <Send className="h-5 w-5 text-blue-500 mt-0.5" />
+            <div>
+              <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Campaign Ready</p>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                Launch campaigns instantly with your wallet balance.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-muted/30">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
-              <div>
-                <p className="font-medium">Transparent Pricing</p>
-                <p className="text-sm text-muted-foreground">
-                  ~$1.50-3.50 per piece depending on type.
-                </p>
-              </div>
+          </div>
+        </div>
+        <div
+          className="rounded-2xl p-6"
+          style={{
+            backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)',
+            border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+            <div>
+              <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>Transparent Pricing</p>
+              <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                ~$1.50-3.50 per piece depending on type.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
