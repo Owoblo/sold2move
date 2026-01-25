@@ -118,7 +118,7 @@ const PropertyDetailPage = () => {
         setLoading(true);
         const data = await fetchListingById(listingId);
         setListing(data);
-        
+
         // Process photos using the same logic as the component
         const processCarouselPhotos = (listing) => {
           if (listing?.carouselPhotosComposable?.photoData) {
@@ -127,22 +127,28 @@ const PropertyDetailPage = () => {
               url: baseUrl.replace('{photoKey}', photo.photoKey)
             }));
           }
-          
+
           if (listing?.carouselPhotos) {
             return listing.carouselPhotos;
           }
-          
+
           if (listing?.imgSrc) {
             return [{ url: listing.imgSrc }];
           }
-          
+
           return [];
         };
-        
+
         const photos = processCarouselPhotos(data);
-        
+
         if (photos.length > 0) {
           setSelectedImage(photos[0].url);
+        }
+
+        // Auto-fetch cached inventory data if listing has been scanned before
+        if (data?.furniture_scan_date && inventoryScanService.canShowScanButton(data)) {
+          console.log('📦 Auto-fetching cached inventory data...');
+          scanInventory(data, false, photos.length);
         }
 
       } catch (err) {
