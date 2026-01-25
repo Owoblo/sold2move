@@ -145,8 +145,11 @@ const PropertyDetailPage = () => {
           setSelectedImage(photos[0].url);
         }
 
-        // Auto-fetch cached inventory data if listing has been scanned before
-        if (data?.furniture_scan_date && inventoryScanService.canShowScanButton(data)) {
+        // Auto-fetch cached inventory data ONLY if listing has completed scan with items
+        // Check for furniture_items_detected to ensure there's actual cached data to fetch
+        if (data?.furniture_scan_date &&
+            Array.isArray(data?.furniture_items_detected) &&
+            data.furniture_items_detected.length > 0) {
           console.log('📦 Auto-fetching cached inventory data...');
           scanInventory(data, false, photos.length);
         }
