@@ -385,7 +385,7 @@ export async function fetchListingById(listingId) {
     // single() throws PGRST116 when no rows returned, maybeSingle() returns null
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected')
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected,carouselphotos,carousel_photos_composable')
       .eq('zpid', listingId)
       .maybeSingle();
 
@@ -442,6 +442,40 @@ export async function fetchListingById(listingId) {
           }
         }
         return null;
+      })(),
+      // Parse carousel photos (may be double-encoded JSON)
+      carouselPhotos: (() => {
+        if (!data.carouselphotos) return null;
+        try {
+          let photos = data.carouselphotos;
+          // Handle double-encoded JSON string
+          if (typeof photos === 'string') {
+            photos = JSON.parse(photos);
+            if (typeof photos === 'string') {
+              photos = JSON.parse(photos);
+            }
+          }
+          // Convert string array to object array with url property
+          if (Array.isArray(photos)) {
+            return photos.map(p => typeof p === 'string' ? { url: p } : p);
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      })(),
+      // Parse carousel photos composable format
+      carouselPhotosComposable: (() => {
+        if (!data.carousel_photos_composable) return null;
+        try {
+          let composable = data.carousel_photos_composable;
+          if (typeof composable === 'string') {
+            composable = JSON.parse(composable);
+          }
+          return composable;
+        } catch {
+          return null;
+        }
       })()
     };
   } catch (error) {

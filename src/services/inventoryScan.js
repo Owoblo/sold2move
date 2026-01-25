@@ -3,16 +3,6 @@
  * Handles API communication for AI-powered furniture/item detection from listing photos
  */
 
-const LA_AREA_CITIES = [
-  'los angeles',
-  'beverly hills',
-  'santa monica',
-  'pasadena',
-  'long beach',
-  'glendale',
-  'burbank'
-];
-
 class InventoryScanService {
   constructor() {
     this.apiUrl = '/api/inventory-detection';
@@ -90,30 +80,13 @@ class InventoryScanService {
   }
 
   /**
-   * Check if listing is in LA area
-   * @param {Object} listing
-   * @returns {boolean}
-   */
-  isInLAArea(listing) {
-    if (!listing) return false;
-
-    const city = (
-      listing.lastcity ||
-      listing.addresscity ||
-      listing.addressCity ||
-      ''
-    ).trim().toLowerCase();
-
-    return LA_AREA_CITIES.includes(city);
-  }
-
-  /**
    * Check if scan button should be shown for this listing
+   * Shows scan button for any listing that has photos
    * @param {Object} listing
    * @returns {boolean}
    */
   canShowScanButton(listing) {
-    return this.hasPhotos(listing) && this.isInLAArea(listing);
+    return this.hasPhotos(listing);
   }
 
   /**

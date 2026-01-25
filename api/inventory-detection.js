@@ -137,13 +137,26 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    // Parse carousel photos
+    // Parse carousel photos (may be double-encoded JSON string)
     let photoUrls = [];
     try {
-      photoUrls = typeof listing.carouselphotos === 'string'
-        ? JSON.parse(listing.carouselphotos)
-        : listing.carouselphotos;
+      let photos = listing.carouselphotos;
+
+      // Handle double-encoded JSON (string containing escaped JSON string)
+      if (typeof photos === 'string') {
+        photos = JSON.parse(photos);
+        // Check if still a string after first parse (double-encoded)
+        if (typeof photos === 'string') {
+          photos = JSON.parse(photos);
+        }
+      }
+
+      // Handle array of objects with url property vs array of strings
+      if (Array.isArray(photos)) {
+        photoUrls = photos.map(p => typeof p === 'string' ? p : p.url);
+      }
     } catch (e) {
+      console.error('Failed to parse carousel photos:', e.message);
       return res.status(400).json({ error: 'Invalid photo data for listing' });
     }
 
