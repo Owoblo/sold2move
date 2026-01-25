@@ -509,30 +509,43 @@ const DashboardPage = () => {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-4">
         {/* Hero Metric - Today's Leads (spans 4 cols, larger) */}
-        <div className={`col-span-12 md:col-span-4 rounded-2xl p-6 ${
-          isLight
-            ? 'bg-gradient-to-br from-emerald-50 to-white shadow-[0_4px_8px_rgb(0_0_0/0.02),0_12px_32px_rgb(0_0_0/0.06)]'
-            : 'bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 shadow-lg shadow-primary/10'
-        }`}>
+        <div
+          className="col-span-12 md:col-span-4 rounded-2xl p-6"
+          style={{
+            background: isLight
+              ? 'linear-gradient(to bottom right, #ecfdf5, #ffffff)'
+              : 'linear-gradient(to bottom right, rgba(0, 255, 136, 0.2), rgba(0, 255, 136, 0.05))',
+            border: isLight ? 'none' : '1px solid rgba(0, 255, 136, 0.3)',
+            boxShadow: isLight
+              ? '0 4px 8px rgba(0,0,0,0.02), 0 12px 32px rgba(0,0,0,0.06)'
+              : '0 10px 40px rgba(0, 255, 136, 0.1)'
+          }}
+        >
           <div className="flex items-start justify-between">
             <div>
-              <p className={`text-sm font-medium mb-1 ${isLight ? 'text-emerald-700' : 'text-primary'}`}>Today's Leads</p>
-              <p className={`text-hero-stat tabular-nums ${isLight ? 'text-slate-900' : 'text-lightest-slate'}`}>{totalTodaysLeads}</p>
-              <p className={`text-sm mt-2 ${isLight ? 'text-slate-500' : 'text-slate'}`}>New opportunities waiting</p>
+              <p style={{ color: isLight ? '#047857' : '#00FF88' }} className="text-sm font-medium mb-1">Today's Leads</p>
+              <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="text-hero-stat tabular-nums">{totalTodaysLeads}</p>
+              <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm mt-2">New opportunities waiting</p>
             </div>
-            <div className={`p-3 rounded-xl ${
-              isLight
-                ? 'bg-emerald-100 border border-emerald-200'
-                : 'bg-primary/20 shadow-glow-sm'
-            }`}>
-              <Sparkles className={`h-6 w-6 ${isLight ? 'text-emerald-600' : 'text-primary'}`} />
+            <div
+              className="p-3 rounded-xl"
+              style={{
+                backgroundColor: isLight ? '#d1fae5' : 'rgba(0, 255, 136, 0.2)',
+                border: isLight ? '1px solid #a7f3d0' : 'none'
+              }}
+            >
+              <Sparkles style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-6 w-6" />
             </div>
           </div>
-          <Button asChild className={`w-full mt-4 ${
-            isLight
-              ? 'bg-gray-900 text-white hover:bg-gray-800 shadow-[0_4px_14px_rgba(17,24,39,0.2)] hover:shadow-[0_6px_20px_rgba(17,24,39,0.3)] hover:-translate-y-0.5 transition-all'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow-sm hover:shadow-glow'
-          }`}>
+          <Button
+            asChild
+            className="w-full mt-4 transition-all"
+            style={{
+              backgroundColor: isLight ? '#111827' : undefined,
+              color: isLight ? '#ffffff' : undefined,
+              boxShadow: isLight ? '0 4px 14px rgba(17,24,39,0.2)' : undefined
+            }}
+          >
             <Link to="/dashboard/listings/just-listed">
               View All Leads
               <ArrowRight className="h-4 w-4 ml-2" />

@@ -30,11 +30,14 @@ const DashboardHeader = ({ isSidebarOpen, toggleSidebar }) => {
   };
 
   return (
-    <header className={`p-4 flex justify-between items-center transition-all ${
-      isLight
-        ? 'bg-white border-b border-black/[0.04] shadow-[0_1px_20px_rgba(0,0,0,0.02)]'
-        : 'bg-charcoal-800 border-b border-white/[0.06]'
-    }`}>
+    <header
+      className="p-4 flex justify-between items-center transition-all"
+      style={{
+        backgroundColor: isLight ? '#ffffff' : 'hsl(220, 12%, 10%)',
+        borderBottom: isLight ? '1px solid rgba(0,0,0,0.04)' : '1px solid rgba(255,255,255,0.06)',
+        boxShadow: isLight ? '0 1px 20px rgba(0,0,0,0.02)' : 'none'
+      }}
+    >
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

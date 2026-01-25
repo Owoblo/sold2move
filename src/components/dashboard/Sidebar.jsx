@@ -91,15 +91,16 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         ></div>
       )}
 
-      <aside className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
-        isLight
-          ? 'bg-white border-r border-black/[0.04] shadow-[4px_0_30px_rgba(0,0,0,0.03)]'
-          : 'bg-charcoal-800 border-r border-white/[0.06]'
-      } ${
-        isSidebarOpen
-          ? 'w-64 translate-x-0'
-          : 'w-16 -translate-x-48 lg:translate-x-0'
-      }`}>
+      <aside
+        className={`fixed top-0 left-0 z-40 h-screen transition-all duration-300 ${
+          isSidebarOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-48 lg:translate-x-0'
+        }`}
+        style={{
+          backgroundColor: isLight ? '#ffffff' : 'hsl(220, 12%, 10%)',
+          borderRight: isLight ? '1px solid rgba(0,0,0,0.04)' : '1px solid rgba(255,255,255,0.06)',
+          boxShadow: isLight ? '4px 0 30px rgba(0,0,0,0.03)' : 'none'
+        }}
+      >
         <div className="h-full px-3 py-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-6 px-2">
             <Link to="/" className="flex items-center group">
