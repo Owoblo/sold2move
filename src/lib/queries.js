@@ -385,7 +385,7 @@ export async function fetchListingById(listingId) {
     // single() throws PGRST116 when no rows returned, maybeSingle() returns null
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected,carouselphotos,carousel_photos_composable,listing_agent,agent_phone,agent_email')
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected,carouselphotos,carousel_photos_composable')
       .eq('zpid', listingId)
       .maybeSingle();
 
@@ -476,11 +476,7 @@ export async function fetchListingById(listingId) {
         } catch {
           return null;
         }
-      })(),
-      // Agent/Realtor information
-      listing_agent: data.listing_agent,
-      agent_phone: data.agent_phone,
-      agent_email: data.agent_email
+      })()
     };
   } catch (error) {
     throw error;
