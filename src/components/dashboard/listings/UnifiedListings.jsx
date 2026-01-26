@@ -581,7 +581,11 @@ const UnifiedListings = () => {
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate" />
             <Input
-              placeholder="Search address, city, or zip..."
+              placeholder={filters.city_name.length > 1
+                ? `Search in ${filters.city_name.length} cities...`
+                : filters.city_name.length === 1
+                  ? `Search in ${filters.city_name[0]}...`
+                  : "Search address, city, or zip..."}
               value={filters.searchTerm}
               onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
               className="pl-10 bg-light-navy/80 border-lightest-navy/20 h-10"

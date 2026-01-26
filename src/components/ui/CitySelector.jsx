@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, MapPin, Check, Plus, Search } from 'lucide-react';
+import { ChevronDown, MapPin, Check, Plus, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 import MultiCitySelector from './MultiCitySelector';
 
 const CitySelector = ({
@@ -9,7 +10,7 @@ const CitySelector = ({
   onCityChange,
   availableCities = [],
   className = "",
-  variant = "default", // "default", "minimal", or "multi"
+  variant = "default", // "default", "minimal", or "compact"
   selectedCities = [],
   onCitiesChange,
   showMultiCityOption = true
@@ -19,6 +20,8 @@ const CitySelector = ({
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
+  const { theme } = useTheme();
+  const isLight = theme === 'light';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -70,6 +73,156 @@ const CitySelector = ({
       onCitiesChange(selectedCities.length > 0 ? [] : [currentCity]);
     }
   };
+
+  // Compact variant - shows count when multiple cities selected
+  if (variant === "compact") {
+    const displayText = selectedCities.length > 1
+      ? `${selectedCities.length} cities`
+      : selectedCities.length === 1
+        ? selectedCities[0]
+        : currentCity;
+
+    return (
+      <div className={cn("relative inline-block", className)} ref={dropdownRef}>
+        <motion.button
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-all duration-200",
+            isLight
+              ? "bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+              : "bg-light-navy/50 border-lightest-navy/20 text-lightest-slate hover:border-teal/30 hover:bg-light-navy"
+          )}
+          whileTap={{ scale: 0.98 }}
+        >
+          <MapPin className="h-3.5 w-3.5 text-teal" />
+          <span className="font-medium">{displayText}</span>
+          <ChevronDown className={cn(
+            "h-3.5 w-3.5 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )} />
+        </motion.button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className={cn(
+                "absolute top-full left-0 mt-2 w-64 rounded-lg shadow-xl z-50 overflow-hidden",
+                isLight
+                  ? "bg-white border border-gray-200"
+                  : "bg-light-navy border border-lightest-navy/20"
+              )}
+            >
+              <div className="p-2">
+                {/* Search Input */}
+                <div className="mb-2 px-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search cities..."
+                      className={cn(
+                        "w-full pl-9 pr-3 py-2 text-sm rounded-md transition-all",
+                        isLight
+                          ? "bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal/50 focus:ring-1 focus:ring-teal/20"
+                          : "bg-deep-navy border border-slate/20 text-lightest-slate placeholder-slate/50 focus:border-teal/50 focus:ring-1 focus:ring-teal/20"
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Selected cities chips */}
+                {selectedCities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 px-2 mb-2 pb-2 border-b border-slate/20">
+                    {selectedCities.map((city) => (
+                      <span
+                        key={city}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full",
+                          isLight
+                            ? "bg-teal/10 text-teal border border-teal/20"
+                            : "bg-teal/20 text-teal"
+                        )}
+                      >
+                        {city}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onCitiesChange) {
+                              onCitiesChange(selectedCities.filter(c => c !== city));
+                            }
+                          }}
+                          className="hover:text-red-400 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="max-h-64 overflow-y-auto">
+                  {filteredCities.length > 0 ? (
+                    filteredCities.map((city) => {
+                      const isSelected = selectedCities.includes(city);
+                      return (
+                        <motion.button
+                          key={city}
+                          onClick={() => {
+                            if (onCitiesChange) {
+                              if (isSelected) {
+                                onCitiesChange(selectedCities.filter(c => c !== city));
+                              } else {
+                                onCitiesChange([...selectedCities, city]);
+                              }
+                            } else {
+                              handleCitySelect(city);
+                            }
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all duration-150",
+                            isSelected
+                              ? isLight
+                                ? "bg-teal/10 text-teal"
+                                : "bg-teal/20 text-teal"
+                              : isLight
+                                ? "text-gray-700 hover:bg-gray-100 hover:text-teal"
+                                : "text-lightest-slate hover:bg-lightest-navy/30 hover:text-teal"
+                          )}
+                          whileHover={{ x: 4 }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3" />
+                            <span>{city}</span>
+                          </div>
+                          {isSelected && (
+                            <Check className="h-3 w-3 text-teal" />
+                          )}
+                        </motion.button>
+                      );
+                    })
+                  ) : (
+                    <div className={cn(
+                      "px-3 py-4 text-sm text-center",
+                      isLight ? "text-gray-500" : "text-slate"
+                    )}>
+                      No cities found
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   if (variant === "minimal") {
     return (
