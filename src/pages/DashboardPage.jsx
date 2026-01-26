@@ -134,7 +134,7 @@ const DashboardPage = () => {
   const isLight = theme === 'light';
 
   // State for dashboard data
-  const [todaysLeads, setTodaysLeads] = useState({ justListed: [], sold: [], justListedCount: 0, soldCount: 0 });
+  const [todaysLeads, setTodaysLeads] = useState({ justListed: [], sold: [], justListedCount: 0, soldCount: 0, todayOnlyCount: 0 });
   const [highValueLeads, setHighValueLeads] = useState([]);
   const [weeklyTrend, setWeeklyTrend] = useState([]);
   const [monthlyStats, setMonthlyStats] = useState({
@@ -165,47 +165,50 @@ const DashboardPage = () => {
     const cityNames = getCityNames();
     if (cityNames.length === 0) return;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // Last 24 hours for "Today's Leads" count
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    const twentyFourHoursAgoISO = twentyFourHoursAgo.toISOString();
 
-    // For sold listings, show recent sales (last 7 days) to ensure there's always data
+    // For sold listings display, show recent sales (last 7 days) to ensure there's always data
     const recentDate = new Date();
     recentDate.setDate(recentDate.getDate() - 7);
     const recentISO = recentDate.toISOString();
 
-    // For just listed, try today first, then fall back to last 3 days
+    // For just listed display, show last 3 days to ensure there's data to show
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     const threeDaysAgoISO = threeDaysAgo.toISOString();
 
     try {
-      // First try to fetch today's just listed
-      let { data: justListedData, count: justListedCount } = await supabase
+      // Get the TRUE count for "Today's Leads" - last 24 hours only
+      const { count: todayJustListedCount } = await supabase
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'just_listed')
+        .in('lastcity', cityNames)
+        .gte('lastseenat', twentyFourHoursAgoISO);
+
+      const { count: todaySoldCount } = await supabase
+        .from('listings')
+        .select('zpid', { count: 'exact', head: true })
+        .eq('status', 'sold')
+        .in('lastcity', cityNames)
+        .gte('lastseenat', twentyFourHoursAgoISO);
+
+      const todayOnlyCount = (todayJustListedCount || 0) + (todaySoldCount || 0);
+
+      // Fetch just listed for display (last 3 days for better UX)
+      const { data: justListedData, count: justListedCount } = await supabase
         .from('listings')
         .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
         .eq('status', 'just_listed')
         .in('lastcity', cityNames)
-        .gte('lastseenat', todayISO)
+        .gte('lastseenat', threeDaysAgoISO)
         .order('lastseenat', { ascending: false })
         .limit(6);
 
-      // If no results today, fetch from last 3 days
-      if (!justListedData || justListedData.length === 0) {
-        const fallbackResult = await supabase
-          .from('listings')
-          .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
-          .eq('status', 'just_listed')
-          .in('lastcity', cityNames)
-          .gte('lastseenat', threeDaysAgoISO)
-          .order('lastseenat', { ascending: false })
-          .limit(6);
-
-        justListedData = fallbackResult.data;
-        justListedCount = fallbackResult.count;
-      }
-
-      // Fetch recent sold listings (last 7 days) - more useful than just today
+      // Fetch recent sold listings (last 7 days) for display
       const { data: soldData, count: soldCount } = await supabase
         .from('listings')
         .select('zpid, addressstreet, lastseenat, unformattedprice, beds, baths, area, lastcity, statustext, imgsrc', { count: 'exact' })
@@ -223,7 +226,8 @@ const DashboardPage = () => {
         justListed: mappedJustListed,
         sold: mappedSold,
         justListedCount: justListedCount || 0,
-        soldCount: soldCount || 0
+        soldCount: soldCount || 0,
+        todayOnlyCount
       });
     } catch (error) {
       console.error('Error fetching today\'s leads:', error);
@@ -464,7 +468,8 @@ const DashboardPage = () => {
     return lead.unformattedprice && lead.unformattedprice > 800000;
   };
 
-  const totalTodaysLeads = todaysLeads.justListedCount + todaysLeads.soldCount;
+  // Use the 24-hour count for "Today's Leads" hero metric
+  const totalTodaysLeads = todaysLeads.todayOnlyCount;
 
   // Loading state
   if (profileLoading) {
