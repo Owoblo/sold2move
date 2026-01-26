@@ -192,6 +192,14 @@ const PropertyDetailPage = () => {
   const priceHistory = listing?.hdpData?.priceHistory || [];
   const taxHistory = listing?.hdpData?.taxHistory || [];
   const schoolInfo = listing?.hdpData?.schoolInfo || {};
+  const attributionInfo = listing?.hdpData?.attributionInfo || {};
+
+  // Agent info from attributionInfo
+  const agentName = attributionInfo.agentName || null;
+  const agentPhone = attributionInfo.agentPhoneNumber || null;
+  const agentEmail = attributionInfo.agentEmail || null;
+  const brokerName = attributionInfo.brokerName || null;
+  const brokerPhone = attributionInfo.brokerPhoneNumber || null;
   
   // Calculate property metrics
   const pricePerSqft = listing?.area && listing?.unformattedprice 
@@ -937,6 +945,77 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
             </div>
+
+            {/* Listing Agent - Only show if we have agent info */}
+            {(agentName || agentPhone || brokerName) && (
+              <div
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
+                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                }}
+              >
+                <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                  <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
+                    <Phone className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                    Listing Agent
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {/* Agent Name */}
+                    {agentName && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.1)' }}>
+                          <Building className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        </div>
+                        <div>
+                          <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                            {agentName}
+                          </p>
+                          <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Listing Agent</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agent Phone */}
+                    {agentPhone && (
+                      <a
+                        href={`tel:${agentPhone}`}
+                        className="flex items-center gap-3 p-3 rounded-lg transition-colors hover:opacity-80"
+                        style={{
+                          backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)',
+                        }}
+                      >
+                        <Phone className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <div>
+                          <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                            {agentPhone}
+                          </p>
+                          <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Tap to call</p>
+                        </div>
+                      </a>
+                    )}
+
+                    {/* Broker Info */}
+                    {brokerName && (
+                      <div className="pt-3 border-t" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                        <p className="text-xs mb-1" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Brokerage</p>
+                        <p className="text-sm font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                          {brokerName}
+                        </p>
+                        {brokerPhone && (
+                          <a href={`tel:${brokerPhone}`} className="text-sm hover:underline" style={{ color: isLight ? '#059669' : '#00FF88' }}>
+                            {brokerPhone}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Homeowner Information */}
             <div

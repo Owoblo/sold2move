@@ -385,7 +385,7 @@ export async function fetchListingById(listingId) {
     // single() throws PGRST116 when no rows returned, maybeSingle() returns null
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected,carouselphotos,carousel_photos_composable')
+      .select('zpid,imgsrc,detailurl,addressstreet,lastcity,addresscity,addressstate,addresszipcode,price,unformattedprice,beds,baths,area,statustext,status,lastseenat,first_seen_at,last_updated_at,is_furnished,furniture_confidence,furniture_scan_date,furniture_items_detected,carouselphotos,carousel_photos_composable,hdp_data')
       .eq('zpid', listingId)
       .maybeSingle();
 
@@ -473,6 +473,19 @@ export async function fetchListingById(listingId) {
             composable = JSON.parse(composable);
           }
           return composable;
+        } catch {
+          return null;
+        }
+      })(),
+      // Parse hdp_data (contains rich property info including agent details)
+      hdpData: (() => {
+        if (!data.hdp_data) return null;
+        try {
+          let hdp = data.hdp_data;
+          if (typeof hdp === 'string') {
+            hdp = JSON.parse(hdp);
+          }
+          return hdp;
         } catch {
           return null;
         }
