@@ -15,14 +15,11 @@ import {
   Building,
   Home,
   Car,
-  TreePine,
   Wifi,
   Shield,
-  Star,
   TrendingUp,
   DollarSign,
   Clock,
-  Users,
   Phone,
   Mail,
   Share2,
@@ -871,202 +868,81 @@ const PropertyDetailPage = () => {
                   <MapPin className="mr-2 h-4 w-4" />
                   {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
                 </p>
-              </div>
-              <div className="px-6 pb-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Price per Sq Ft:</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                      {pricePerSqft ? `$${pricePerSqft}` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property ID:</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono text-sm">{listing.id}</span>
-                  </div>
-                  {isAdmin && (
-                    <div className="flex items-center justify-between">
-                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Zillow ID:</span>
-                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono text-sm">{listing.zpid || 'N/A'}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Quick Stats */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <Star className="h-5 w-5" />
-                  Quick Stats
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Total Area:</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">
-                      {listing.area ? `${listing.area.toLocaleString()} sq ft` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bedrooms:</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.beds || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Bathrooms:</span>
-                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.baths || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property Type:</span>
-                    <Badge variant="outline" style={{ color: isLight ? '#047857' : '#e2e8f0', backgroundColor: isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 255, 136, 0.1)', borderColor: isLight ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 255, 136, 0.3)' }}>
-                      Just Listed
+                {/* Furniture Status Badge - inline under address */}
+                {listing.is_furnished !== null && listing.is_furnished !== undefined && (
+                  <div className="mt-3">
+                    <Badge
+                      className="flex items-center gap-1.5 w-fit"
+                      style={{
+                        backgroundColor: listing.is_furnished
+                          ? (isLight ? 'rgba(139, 92, 246, 0.1)' : 'rgba(139, 92, 246, 0.2)')
+                          : (isLight ? 'rgba(100, 116, 139, 0.1)' : 'rgba(100, 116, 139, 0.2)'),
+                        color: listing.is_furnished
+                          ? (isLight ? '#7c3aed' : '#a78bfa')
+                          : (isLight ? '#64748b' : '#94a3b8'),
+                        borderColor: listing.is_furnished
+                          ? (isLight ? 'rgba(139, 92, 246, 0.3)' : 'rgba(139, 92, 246, 0.4)')
+                          : (isLight ? 'rgba(100, 116, 139, 0.3)' : 'rgba(100, 116, 139, 0.4)')
+                      }}
+                    >
+                      {listing.is_furnished ? (
+                        <>
+                          <Sofa className="h-3.5 w-3.5" />
+                          Furnished
+                        </>
+                      ) : (
+                        <>
+                          <Package className="h-3.5 w-3.5" />
+                          Empty
+                        </>
+                      )}
+                      {listing.furniture_confidence && (
+                        <span className="ml-1 opacity-70">
+                          ({Math.round(listing.furniture_confidence * 100)}%)
+                        </span>
+                      )}
                     </Badge>
                   </div>
-                </div>
+                )}
               </div>
-            </div>
 
-            {/* Furniture Status - Only show if listing has been scanned */}
-            {listing.is_furnished !== null && listing.is_furnished !== undefined && (
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                  border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                  <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                    <Sofa className="h-5 w-5" />
-                    Furniture Status
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {/* Status Badge */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate">Status:</span>
-                      <Badge
-                        variant={listing.is_furnished ? 'furnished' : 'empty'}
-                        className="flex items-center gap-1"
-                      >
-                        {listing.is_furnished ? (
-                          <>
-                            <Sofa className="h-3 w-3" />
-                            Furnished
-                          </>
-                        ) : (
-                          <>
-                            <Package className="h-3 w-3" />
-                            Empty
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-
-                    {/* Confidence Score */}
-                    {listing.furniture_confidence && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate">AI Confidence:</span>
-                        <span className="text-lightest-slate font-medium">
-                          {Math.round(listing.furniture_confidence * 100)}%
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Scan Date */}
-                    {listing.furniture_scan_date && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate">Scanned:</span>
-                        <span className="text-lightest-slate font-medium">
-                          {new Date(listing.furniture_scan_date).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Detected Items */}
-                    {Array.isArray(listing.furniture_items_detected) && listing.furniture_items_detected.length > 0 && (
-                      <div className="space-y-2">
-                        <span className="text-slate text-sm">Detected Items:</span>
-                        <div className="flex flex-wrap gap-2 items-center">
-                          {listing.furniture_items_detected.map((item, index) => (
-                            <Badge key={index} variant="outline" className="text-xs capitalize bg-charcoal-700/50">
-                              {item}
-                            </Badge>
-                          ))}
-                          <span className="text-xs text-slate/70 italic">+ many others</span>
-                        </div>
-                        <p className="text-[10px] text-slate/50 italic">
-                          Note: Only 4-5 photos are scanned. Actual inventory may vary.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Empty property note */}
-                    {listing.is_furnished === false && (
-                      <p className="text-xs text-slate italic border-t border-white/[0.08] pt-3 mt-3">
-                        Empty properties are great leads - these homeowners need furniture moved!
-                      </p>
-                    )}
+              {/* Quick property stats - compact grid */}
+              <div className="px-6 pb-4">
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.beds || '-'}</p>
+                    <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Beds</p>
+                  </div>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.baths || '-'}</p>
+                    <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Baths</p>
+                  </div>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                      {listing.area ? `${(listing.area / 1000).toFixed(1)}k` : '-'}
+                    </p>
+                    <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Sq Ft</p>
+                  </div>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-lg font-bold" style={{ color: isLight ? '#059669' : '#00FF88' }}>
+                      {pricePerSqft ? `$${pricePerSqft}` : '-'}
+                    </p>
+                    <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>$/sqft</p>
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* Location Features */}
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: isLight ? '#ffffff' : 'rgba(22, 26, 31, 0.8)',
-                border: isLight ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.08)',
-                boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-              }}
-            >
-              <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
-                <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Location
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <MapPin style={{ color: isLight ? '#059669' : '#00FF88' }} className="h-5 w-5 mt-0.5" />
-                    <div>
-                      <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">{listing.addressStreet}</p>
-                      <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">
-                        {listing.addresscity}, {listing.addressstate} {listing.addresszipcode}
-                      </p>
-                    </div>
+              <div className="px-6 pb-6 pt-2 border-t" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Property ID:</span>
+                    <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono">{listing.id}</span>
                   </div>
-
-                  {schoolInfo.schoolDistrict && (
-                    <div className="flex items-start gap-3">
-                      <Users className="h-5 w-5 text-blue-500 mt-0.5" />
-                      <div>
-                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">School District</p>
-                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">{schoolInfo.schoolDistrict}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {homeInfo.neighborhood && (
-                    <div className="flex items-start gap-3">
-                      <TreePine className="h-5 w-5 text-green-500 mt-0.5" />
-                      <div>
-                        <p style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-medium">Neighborhood</p>
-                        <p style={{ color: isLight ? '#64748b' : '#94a3b8' }} className="text-sm">{homeInfo.neighborhood}</p>
-                      </div>
+                  {isAdmin && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Zillow ID:</span>
+                      <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-mono">{listing.zpid || 'N/A'}</span>
                     </div>
                   )}
                 </div>
