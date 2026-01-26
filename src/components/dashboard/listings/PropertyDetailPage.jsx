@@ -938,7 +938,7 @@ const PropertyDetailPage = () => {
               </div>
             </div>
 
-            {/* Contact Actions */}
+            {/* Realtor Info */}
             <div
               className="rounded-2xl overflow-hidden"
               style={{
@@ -949,23 +949,74 @@ const PropertyDetailPage = () => {
             >
               <div className="p-6 border-b" style={{ borderColor: isLight ? '#f3f4f6' : 'rgba(255,255,255,0.06)' }}>
                 <h3 style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} className="font-semibold flex items-center gap-2">
-                  <Phone className="h-5 w-5" />
-                  Take Action
+                  <Phone className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                  Listing Agent
                 </h3>
               </div>
-              <div className="p-6 space-y-3">
-                <Button className="w-full" style={{ backgroundColor: isLight ? '#059669' : '#00FF88', color: isLight ? '#ffffff' : '#0D0F12' }}>
-                  <Phone className="h-4 w-4 mr-2" />
-                  Contact Agent
-                </Button>
-                <Button variant="outline" className="w-full" style={{ borderColor: isLight ? '#e5e7eb' : undefined, color: isLight ? '#0f172a' : undefined }}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Message
-                </Button>
-                <Button variant="outline" className="w-full" style={{ borderColor: isLight ? '#e5e7eb' : undefined, color: isLight ? '#0f172a' : undefined }}>
-                  <CalendarDays className="h-4 w-4 mr-2" />
-                  Schedule Tour
-                </Button>
+              <div className="p-6">
+                {listing.listing_agent || listing.agent_phone || listing.agent_email ? (
+                  <div className="space-y-4">
+                    {/* Agent Name */}
+                    {listing.listing_agent && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.1)' }}>
+                          <Building className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        </div>
+                        <div>
+                          <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                            {listing.listing_agent}
+                          </p>
+                          <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Listing Agent</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agent Phone */}
+                    {listing.agent_phone && (
+                      <a
+                        href={`tel:${listing.agent_phone}`}
+                        className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                        style={{
+                          backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)',
+                        }}
+                      >
+                        <Phone className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <div>
+                          <p className="font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                            {listing.agent_phone}
+                          </p>
+                          <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Tap to call</p>
+                        </div>
+                      </a>
+                    )}
+
+                    {/* Agent Email */}
+                    {listing.agent_email && (
+                      <a
+                        href={`mailto:${listing.agent_email}`}
+                        className="flex items-center gap-3 p-3 rounded-lg transition-colors"
+                        style={{
+                          backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)',
+                        }}
+                      >
+                        <Mail className="h-5 w-5" style={{ color: isLight ? '#059669' : '#00FF88' }} />
+                        <div>
+                          <p className="font-medium text-sm break-all" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                            {listing.agent_email}
+                          </p>
+                          <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Tap to email</p>
+                        </div>
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Phone className="h-8 w-8 mx-auto mb-2 opacity-30" style={{ color: isLight ? '#64748b' : '#94a3b8' }} />
+                    <p className="text-sm" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+                      No agent information available
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
