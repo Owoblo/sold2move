@@ -192,14 +192,12 @@ const PropertyDetailPage = () => {
   const priceHistory = listing?.hdpData?.priceHistory || [];
   const taxHistory = listing?.hdpData?.taxHistory || [];
   const schoolInfo = listing?.hdpData?.schoolInfo || {};
-  const attributionInfo = listing?.hdpData?.attributionInfo || {};
 
-  // Agent info from attributionInfo
-  const agentName = attributionInfo.agentName || null;
-  const agentPhone = attributionInfo.agentPhoneNumber || null;
-  const agentEmail = attributionInfo.agentEmail || null;
-  const brokerName = attributionInfo.brokerName || null;
-  const brokerPhone = attributionInfo.brokerPhoneNumber || null;
+  // Agent info directly from hdpData (it's the attributionInfo structure)
+  const agentName = listing?.hdpData?.agentName || null;
+  const agentPhone = listing?.hdpData?.agentPhone || null;
+  const agentEmail = listing?.hdpData?.agentEmail || null;
+  const brokerName = listing?.hdpData?.brokerageName || null;
   
   // Calculate property metrics
   const pricePerSqft = listing?.area && listing?.unformattedprice 
@@ -1005,11 +1003,6 @@ const PropertyDetailPage = () => {
                         <p className="text-sm font-medium" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
                           {brokerName}
                         </p>
-                        {brokerPhone && (
-                          <a href={`tel:${brokerPhone}`} className="text-sm hover:underline" style={{ color: isLight ? '#059669' : '#00FF88' }}>
-                            {brokerPhone}
-                          </a>
-                        )}
                       </div>
                     )}
                   </div>
