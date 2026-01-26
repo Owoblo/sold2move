@@ -332,21 +332,28 @@ const UnifiedListings = () => {
     trackAction('listing_view', { listingId, page: currentPage, type: activeTab });
   };
 
-  // Helper to check if address starts with a number (valid property, not empty lot)
-  const isValidPropertyAddress = (address) => {
-    if (!address) return false;
-    return /^\d/.test(address.trim());
+  // Helper to check if this is a valid residential property (not empty lot/land)
+  const isValidResidentialProperty = (listing) => {
+    const address = listing.addressStreet || listing.addressstreet || '';
+    const beds = listing.beds;
+    const baths = listing.baths;
+
+    // Must have address starting with a number
+    if (!address || !/^\d/.test(address.trim())) return false;
+
+    // Must have actual bed and bath counts (not null, undefined, or 0)
+    if (!beds || beds <= 0) return false;
+    if (!baths || baths <= 0) return false;
+
+    return true;
   };
 
   // Sort and filter listings client-side
   const sortedListings = useMemo(() => {
     if (!currentData?.data) return [];
 
-    // Filter out empty lots/land (addresses that don't start with a number)
-    const filtered = currentData.data.filter(listing => {
-      const address = listing.addressStreet || listing.addressstreet || '';
-      return isValidPropertyAddress(address);
-    });
+    // Filter out empty lots/land and properties without beds/baths
+    const filtered = currentData.data.filter(listing => isValidResidentialProperty(listing));
 
     const sorted = [...filtered].sort((a, b) => {
       let aValue, bValue;
