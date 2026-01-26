@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog';
-import { User, Loader2, UserSearch, MapPinOff } from 'lucide-react';
+import { User, Loader2, UserSearch } from 'lucide-react';
 import { useHomeownerLookup } from '@/hooks/useHomeownerLookup';
 import HomeownerInfoCard from './HomeownerInfoCard';
 import toast from '@/lib/toast';
@@ -45,32 +45,10 @@ const HomeownerLookupButton = ({
   // Check if this is a Canadian listing
   const isCanadian = isCanadianListing(listing);
 
-  // For Canadian listings, show a disabled button with explanation
+  // For Canadian listings, don't show the homeowner lookup button
+  // (the View button is already available for viewing listing details)
   if (isCanadian) {
-    if (compact) {
-      return (
-        <Button
-          variant={variant}
-          size="sm"
-          disabled
-          className={`h-8 w-8 p-0 opacity-50 cursor-not-allowed ${className}`}
-          title="Homeowner info not available for Canadian listings"
-        >
-          <MapPinOff className="h-4 w-4" />
-        </Button>
-      );
-    }
-    return (
-      <Button
-        variant={variant}
-        disabled
-        className={`opacity-50 cursor-not-allowed ${className}`}
-        title="Homeowner info not available for Canadian listings"
-      >
-        <MapPinOff className="h-4 w-4 mr-2" />
-        Not Available in Canada
-      </Button>
-    );
+    return null;
   }
 
   const handleLookup = async (e) => {
