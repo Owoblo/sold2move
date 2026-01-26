@@ -42,6 +42,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAnalytics } from '@/services/analytics.jsx';
 import { useJustListedEnhanced, useSoldListingsEnhanced, useActiveListingsEnhanced } from '@/hooks/useListingsEnhanced';
 import CitySelector from '@/components/ui/CitySelector';
+import { useAvailableCities } from '@/hooks/useAvailableCities';
 import { hasActiveFilters, clearAllFilters } from '@/utils/filterUtils';
 import { isFurnitureFilterAvailable, FURNITURE_STATUS_OPTIONS } from '@/constants/furnitureFilter';
 
@@ -128,6 +129,10 @@ const UnifiedListings = () => {
   const { profile, loading: profileLoading } = useProfile();
   const [currentPage, setCurrentPage] = useState(1);
   const [initialCitiesSet, setInitialCitiesSet] = useState(false);
+
+  // Fetch available cities from database to ensure exact name matching
+  const { data: availableCitiesData } = useAvailableCities(profile?.country_code || null);
+  const availableCityNames = availableCitiesData?.map(c => c.city) || [];
   const [selectedListings, setSelectedListings] = useState(new Set());
   const [isFilterBarSticky, setIsFilterBarSticky] = useState(false);
   const filterBarRef = useRef(null);
@@ -192,17 +197,37 @@ const UnifiedListings = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Set initial cities from profile
+  // Set initial cities from profile - match against available cities from database
   useEffect(() => {
-    if (!initialCitiesSet && !profileLoading && profile) {
+    if (!initialCitiesSet && !profileLoading && profile && availableCityNames.length > 0) {
       let cityNames = [];
       if (profile.service_cities && profile.service_cities.length > 0) {
+        // Map user's service cities to actual database city names
         cityNames = profile.service_cities.map(cityState => {
           const [cityName] = cityState.split(', ');
-          return cityName;
+          // Find exact match first
+          let match = availableCityNames.find(c => c === cityName);
+          // If no exact match, try case-insensitive match
+          if (!match) {
+            match = availableCityNames.find(c => c.toLowerCase() === cityName.toLowerCase());
+          }
+          // If still no match, try partial match (e.g., "St. Louis" vs "Saint Louis")
+          if (!match) {
+            const normalized = cityName.toLowerCase().replace(/st\./gi, 'saint').replace(/\s+/g, ' ').trim();
+            match = availableCityNames.find(c => {
+              const normalizedDb = c.toLowerCase().replace(/st\./gi, 'saint').replace(/\s+/g, ' ').trim();
+              return normalizedDb === normalized || c.toLowerCase().includes(cityName.toLowerCase()) || cityName.toLowerCase().includes(c.toLowerCase());
+            });
+          }
+          return match || cityName;
         });
       } else if (profile.city_name) {
-        cityNames = [profile.city_name];
+        // Same matching logic for single city
+        let match = availableCityNames.find(c => c === profile.city_name);
+        if (!match) {
+          match = availableCityNames.find(c => c.toLowerCase() === profile.city_name.toLowerCase());
+        }
+        cityNames = [match || profile.city_name];
       }
 
       if (cityNames.length > 0) {
@@ -210,7 +235,7 @@ const UnifiedListings = () => {
       }
       setInitialCitiesSet(true);
     }
-  }, [profile, profileLoading, initialCitiesSet]);
+  }, [profile, profileLoading, initialCitiesSet, availableCityNames]);
 
   // Update active tab when URL changes
   useEffect(() => {
@@ -412,7 +437,28 @@ const UnifiedListings = () => {
   };
 
   const clearFilters = () => {
-    const defaultCities = profile?.service_cities?.map(c => c.split(', ')[0]) || (profile?.city_name ? [profile.city_name] : []);
+    // Match profile cities against available database cities
+    let defaultCities = [];
+    if (profile?.service_cities?.length > 0) {
+      defaultCities = profile.service_cities.map(cityState => {
+        const [cityName] = cityState.split(', ');
+        let match = availableCityNames.find(c => c === cityName);
+        if (!match) match = availableCityNames.find(c => c.toLowerCase() === cityName.toLowerCase());
+        if (!match) {
+          const normalized = cityName.toLowerCase().replace(/st\./gi, 'saint').replace(/\s+/g, ' ').trim();
+          match = availableCityNames.find(c => {
+            const normalizedDb = c.toLowerCase().replace(/st\./gi, 'saint').replace(/\s+/g, ' ').trim();
+            return normalizedDb === normalized;
+          });
+        }
+        return match || cityName;
+      });
+    } else if (profile?.city_name) {
+      let match = availableCityNames.find(c => c === profile.city_name);
+      if (!match) match = availableCityNames.find(c => c.toLowerCase() === profile.city_name.toLowerCase());
+      defaultCities = [match || profile.city_name];
+    }
+
     setFilters({
       city_name: defaultCities,
       searchTerm: '',
@@ -606,6 +652,7 @@ const UnifiedListings = () => {
             onCityChange={(city) => handleCitiesChange([city])}
             selectedCities={filters.city_name}
             onCitiesChange={handleCitiesChange}
+            availableCities={availableCityNames}
             variant="compact"
             showMultiCityOption={true}
           />
