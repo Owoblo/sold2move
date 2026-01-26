@@ -27,7 +27,6 @@ import {
   Package
 } from 'lucide-react';
 import HomeownerLookupButton from './HomeownerLookupButton';
-import InventoryScanButton from './InventoryScanButton';
 import { Helmet } from 'react-helmet-async';
 import { useProfile } from '@/hooks/useProfile';
 import { Pagination } from '@/components/ui/pagination';
@@ -333,11 +332,23 @@ const UnifiedListings = () => {
     trackAction('listing_view', { listingId, page: currentPage, type: activeTab });
   };
 
-  // Sort listings client-side
+  // Helper to check if address starts with a number (valid property, not empty lot)
+  const isValidPropertyAddress = (address) => {
+    if (!address) return false;
+    return /^\d/.test(address.trim());
+  };
+
+  // Sort and filter listings client-side
   const sortedListings = useMemo(() => {
     if (!currentData?.data) return [];
 
-    const sorted = [...currentData.data].sort((a, b) => {
+    // Filter out empty lots/land (addresses that don't start with a number)
+    const filtered = currentData.data.filter(listing => {
+      const address = listing.addressStreet || listing.addressstreet || '';
+      return isValidPropertyAddress(address);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
       let aValue, bValue;
 
       switch (sortBy) {
@@ -1062,7 +1073,6 @@ const UnifiedListings = () => {
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
                               <HomeownerLookupButton listing={listing} compact={false} />
-                              <InventoryScanButton listing={listing} compact={false} />
                               <Button
                                 onClick={(e) => {
                                   e.stopPropagation();
