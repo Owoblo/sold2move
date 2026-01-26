@@ -40,7 +40,7 @@ const HomeownerLookupButton = ({
   variant = 'outline'
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { lookupFromListing, loading, data, error, reset, hasData } = useHomeownerLookup();
+  const { lookupFromListing, loading, data, error, noDataFound, reset, hasData } = useHomeownerLookup();
 
   // Check if this is a Canadian listing
   const isCanadian = isCanadianListing(listing);
@@ -144,6 +144,7 @@ const HomeownerLookupButton = ({
                 data={data}
                 loading={loading}
                 error={error}
+                noDataFound={noDataFound}
                 onRetry={handleRetry}
               />
             </div>
@@ -191,6 +192,7 @@ const HomeownerLookupButton = ({
               data={data}
               loading={loading}
               error={error}
+              noDataFound={noDataFound}
               onRetry={handleRetry}
             />
           </div>

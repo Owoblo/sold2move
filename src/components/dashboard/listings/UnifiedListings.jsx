@@ -479,8 +479,9 @@ const UnifiedListings = () => {
     return PROPERTY_TYPE_COLORS[type] || PROPERTY_TYPE_COLORS.default;
   };
 
-  // Loading state
-  if (profileLoading) {
+  // Loading state - wait for profile AND initial cities to be set
+  // This prevents the "No Properties Found" flash on login
+  if (profileLoading || !initialCitiesSet) {
     return (
       <div className="space-y-4">
         <SkeletonLoader className="h-16 w-full" />

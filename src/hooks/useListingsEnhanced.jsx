@@ -21,6 +21,11 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
   const { toast } = useToast();
   const { profile } = useProfile();
 
+  // Check if we have valid city filters (either from filters or profile)
+  const hasValidCityFilter = (filters.city_name && filters.city_name.length > 0) ||
+    (profile?.service_cities?.length > 0) ||
+    (profile?.city_name);
+
   return useQuery({
     queryKey: listingKeys.justListed(filters, page),
     queryFn: async () => {
@@ -37,11 +42,11 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         // If no city filter is provided, use profile's service_cities (user markets)
         // This ensures users only see listings from their selected markets
         let finalCityFilter = cityFilter;
-        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+        if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.service_cities?.length > 0) {
           // Extract city names from "City, State" format
           finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
           console.log('Using service_cities as filter:', finalCityFilter);
-        } else if (!finalCityFilter && profile?.city_name) {
+        } else if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.city_name) {
           // Fallback to primary city if service_cities not set
           finalCityFilter = [profile.city_name];
           console.log('Using city_name as filter:', finalCityFilter);
@@ -88,7 +93,9 @@ export const useJustListedEnhanced = (filters = {}, page = 1, pageSize = 20) => 
         throw error;
       }
     },
-    enabled: true, // Always enabled - let the query handle empty filters gracefully
+    // Wait for profile to load AND ensure we have valid city filters before executing
+    // This prevents the "no properties found" flash on initial load
+    enabled: !!profile && hasValidCityFilter,
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {
@@ -111,6 +118,11 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
   const { toast } = useToast();
   const { profile } = useProfile();
 
+  // Check if we have valid city filters (either from filters or profile)
+  const hasValidCityFilter = (filters.city_name && filters.city_name.length > 0) ||
+    (profile?.service_cities?.length > 0) ||
+    (profile?.city_name);
+
   return useQuery({
     queryKey: listingKeys.soldListings(filters, page),
     queryFn: async () => {
@@ -127,11 +139,11 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
         // If no city filter is provided, use profile's service_cities (user markets)
         // This ensures users only see listings from their selected markets
         let finalCityFilter = cityFilter;
-        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+        if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.service_cities?.length > 0) {
           // Extract city names from "City, State" format
           finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
           console.log('Using service_cities as filter:', finalCityFilter);
-        } else if (!finalCityFilter && profile?.city_name) {
+        } else if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.city_name) {
           // Fallback to primary city if service_cities not set
           finalCityFilter = [profile.city_name];
           console.log('Using city_name as filter:', finalCityFilter);
@@ -178,7 +190,8 @@ export const useSoldListingsEnhanced = (filters = {}, page = 1, pageSize = 20) =
         throw error;
       }
     },
-    enabled: true, // Always enabled - let the query handle empty filters gracefully
+    // Wait for profile to load AND ensure we have valid city filters before executing
+    enabled: !!profile && hasValidCityFilter,
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {
@@ -200,6 +213,11 @@ export const useActiveListingsEnhanced = (filters = {}, page = 1, pageSize = 20)
   const { toast } = useToast();
   const { profile } = useProfile();
 
+  // Check if we have valid city filters (either from filters or profile)
+  const hasValidCityFilter = (filters.city_name && filters.city_name.length > 0) ||
+    (profile?.service_cities?.length > 0) ||
+    (profile?.city_name);
+
   return useQuery({
     queryKey: listingKeys.activeListings(filters, page),
     queryFn: async () => {
@@ -213,9 +231,9 @@ export const useActiveListingsEnhanced = (filters = {}, page = 1, pageSize = 20)
 
         // If no city filter is provided, use profile's service_cities (user markets)
         let finalCityFilter = cityFilter;
-        if (!finalCityFilter && profile?.service_cities?.length > 0) {
+        if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.service_cities?.length > 0) {
           finalCityFilter = profile.service_cities.map(c => c.split(', ')[0]);
-        } else if (!finalCityFilter && profile?.city_name) {
+        } else if ((!finalCityFilter || finalCityFilter.length === 0) && profile?.city_name) {
           finalCityFilter = [profile.city_name];
         }
 
@@ -249,7 +267,8 @@ export const useActiveListingsEnhanced = (filters = {}, page = 1, pageSize = 20)
         throw error;
       }
     },
-    enabled: true,
+    // Wait for profile to load AND ensure we have valid city filters before executing
+    enabled: !!profile && hasValidCityFilter,
     staleTime: 2 * 60 * 1000, // 2 minutes
     keepPreviousData: true,
     retry: (failureCount, error) => {

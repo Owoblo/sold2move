@@ -87,6 +87,7 @@ const PropertyDetailPage = () => {
     loading: homeownerLoading,
     data: homeownerData,
     error: homeownerError,
+    noDataFound: homeownerNoDataFound,
     reset: resetHomeowner,
     hasData: hasHomeownerData
   } = useHomeownerLookup();
@@ -1062,11 +1063,12 @@ const PropertyDetailPage = () => {
                         </Button>
                       </>
                     )}
-                    {(hasHomeownerData || homeownerLoading || homeownerError) && (
+                    {(hasHomeownerData || homeownerLoading || homeownerError || homeownerNoDataFound) && (
                       <HomeownerInfoCard
                         data={homeownerData}
                         loading={homeownerLoading}
                         error={homeownerError}
+                        noDataFound={homeownerNoDataFound}
                         onRetry={() => {
                           resetHomeowner();
                           lookupFromListing(listing);

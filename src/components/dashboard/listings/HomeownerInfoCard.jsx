@@ -22,7 +22,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 /**
  * Display homeowner contact information in a card format
  */
-const HomeownerInfoCard = ({ data, loading, error, onRetry }) => {
+const HomeownerInfoCard = ({ data, loading, error, noDataFound, onRetry }) => {
   const { formatPhoneNumber, getScoreColor, getPhoneTypeBadge } = homeownerLookupService;
   const { theme } = useTheme();
   const isLight = theme === 'light';
@@ -54,7 +54,7 @@ const HomeownerInfoCard = ({ data, loading, error, onRetry }) => {
     );
   }
 
-  // Error state
+  // Error state - actual API/network errors
   if (error) {
     return (
       <div>
@@ -63,8 +63,33 @@ const HomeownerInfoCard = ({ data, loading, error, onRetry }) => {
           <span className="font-semibold">Lookup Failed</span>
         </div>
         <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
-          {error.message || 'Could not retrieve homeowner information'}
+          {error.message || 'Could not retrieve homeowner information. Please check your connection and try again.'}
         </p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            Try Again
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // No data found state - API worked but no homeowner data exists for this property
+  if (noDataFound) {
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-4" style={{ color: isLight ? '#f59e0b' : '#fbbf24' }}>
+          <User className="h-5 w-5" />
+          <span className="font-semibold">No Homeowner Data Available</span>
+        </div>
+        <p className="text-sm mb-4" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+          We couldn't find homeowner contact information for this property. This can happen if:
+        </p>
+        <ul className="text-sm mb-4 list-disc list-inside space-y-1" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>
+          <li>The property is owned by a trust or LLC</li>
+          <li>The owner's information is not publicly available</li>
+          <li>This is a newly sold property and records haven't been updated</li>
+        </ul>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry}>
             Try Again
