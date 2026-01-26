@@ -897,11 +897,6 @@ const PropertyDetailPage = () => {
                           Empty
                         </>
                       )}
-                      {listing.furniture_confidence && (
-                        <span className="ml-1 opacity-70">
-                          ({Math.round(listing.furniture_confidence * 100)}%)
-                        </span>
-                      )}
                     </Badge>
                   </div>
                 )}
@@ -909,26 +904,20 @@ const PropertyDetailPage = () => {
 
               {/* Quick property stats - compact grid */}
               <div className="px-6 pb-4">
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.beds || '-'}</p>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.beds || '-'}</p>
                     <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Beds</p>
                   </div>
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.baths || '-'}</p>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>{listing.baths || '-'}</p>
                     <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Baths</p>
                   </div>
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <p className="text-lg font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
-                      {listing.area ? `${(listing.area / 1000).toFixed(1)}k` : '-'}
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-xl font-bold" style={{ color: isLight ? '#0f172a' : '#e2e8f0' }}>
+                      {listing.area ? listing.area.toLocaleString() : '-'}
                     </p>
                     <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>Sq Ft</p>
-                  </div>
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)' }}>
-                    <p className="text-lg font-bold" style={{ color: isLight ? '#059669' : '#00FF88' }}>
-                      {pricePerSqft ? `$${pricePerSqft}` : '-'}
-                    </p>
-                    <p className="text-xs" style={{ color: isLight ? '#64748b' : '#94a3b8' }}>$/sqft</p>
                   </div>
                 </div>
               </div>
