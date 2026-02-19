@@ -10,8 +10,8 @@
  * 5. Check for Day 7 follow-ups (sent Day 3 >= 4 days ago)
  * 6. Respect daily rate limit (configurable, default 50/day)
  *
- * Triggered by: Supabase pg_cron scheduled job (daily)
- * Can also be triggered manually for testing
+ * All emails include a magic link that auto-authenticates the contact
+ * and shows them real leads in their city — no signup required.
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -54,6 +54,7 @@ interface OutreachContact {
   primary_city: string;
   primary_state: string | null;
   status: string;
+  magic_token: string;
 }
 
 interface Listing {
@@ -81,6 +82,22 @@ interface OutreachSequence {
   contact?: OutreachContact;
 }
 
+/**
+ * Build the magic link URL for a contact
+ */
+function buildMagicLinkUrl(magicToken: string): string {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  return `${supabaseUrl}/functions/v1/outreach-magic-link?token=${magicToken}`;
+}
+
+/**
+ * Build the unsubscribe URL for a contact
+ */
+function buildUnsubscribeUrl(contactId: string): string {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  return `${supabaseUrl}/functions/v1/outreach-unsubscribe?id=${contactId}`;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -99,19 +116,17 @@ Deno.serve(async (req) => {
 
     if (testEmail) {
       const variant = testVariant || selectEmailVariant();
-      console.log(`🧪 Test mode: sending [${variant}] to ${testEmail}`);
-      return await sendTestEmail(testEmail, testCity || 'Atlanta', testState || 'GA', variant);
+      console.log(`Test mode: sending [${variant}] to ${testEmail}`);
+      return await sendTestEmail(testEmail, testCity || 'Toronto', testState || 'ON', variant);
     }
 
-    console.log('🚀 Starting outreach emails job...');
+    console.log('Starting outreach emails job...');
 
     // Create Supabase client with service role
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
-
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
 
     // Check today's email count for rate limiting
     const today = new Date().toISOString().split('T')[0];
@@ -125,7 +140,7 @@ Deno.serve(async (req) => {
     const remainingQuota = DAILY_EMAIL_LIMIT - emailsSentToday;
 
     if (remainingQuota <= 0) {
-      console.log('⚠️ Daily email limit reached, skipping');
+      console.log('Daily email limit reached, skipping');
       return new Response(JSON.stringify({
         success: true,
         message: 'Daily limit reached',
@@ -137,7 +152,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`📊 Emails sent today: ${emailsSentToday}/${DAILY_EMAIL_LIMIT}`);
+    console.log(`Emails sent today: ${emailsSentToday}/${DAILY_EMAIL_LIMIT}`);
 
     const results = {
       day1Sent: 0,
@@ -154,33 +169,33 @@ Deno.serve(async (req) => {
     // PHASE 1: Send Day 7 follow-ups (highest priority - final email)
     // =========================================================================
     if (emailBudget > 0) {
-      const day7Results = await sendDay7Emails(supabase, siteUrl, emailBudget);
+      const day7Results = await sendDay7Emails(supabase, emailBudget);
       results.day7Sent = day7Results.sent;
       results.errors += day7Results.errors;
       emailBudget -= day7Results.sent;
-      console.log(`📧 Day 7 emails sent: ${day7Results.sent}`);
+      console.log(`Day 7 emails sent: ${day7Results.sent}`);
     }
 
     // =========================================================================
     // PHASE 2: Send Day 3 follow-ups
     // =========================================================================
     if (emailBudget > 0) {
-      const day3Results = await sendDay3Emails(supabase, siteUrl, emailBudget);
+      const day3Results = await sendDay3Emails(supabase, emailBudget);
       results.day3Sent = day3Results.sent;
       results.errors += day3Results.errors;
       emailBudget -= day3Results.sent;
-      console.log(`📧 Day 3 emails sent: ${day3Results.sent}`);
+      console.log(`Day 3 emails sent: ${day3Results.sent}`);
     }
 
     // =========================================================================
     // PHASE 3: Create new sequences and send Day 1 emails
     // =========================================================================
     if (emailBudget > 0) {
-      const day1Results = await createAndSendDay1Emails(supabase, siteUrl, emailBudget);
+      const day1Results = await createAndSendDay1Emails(supabase, emailBudget);
       results.day1Sent = day1Results.sent;
       results.errors += day1Results.errors;
       results.skipped = day1Results.skipped;
-      console.log(`📧 Day 1 emails sent: ${day1Results.sent}`);
+      console.log(`Day 1 emails sent: ${day1Results.sent}`);
     }
 
     // Update daily stats
@@ -192,7 +207,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`\n✅ Outreach emails job completed:`, results);
+    console.log(`Outreach emails job completed:`, results);
 
     return new Response(JSON.stringify({
       success: true,
@@ -207,7 +222,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('❌ Outreach emails job error:', error);
+    console.error('Outreach emails job error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -219,11 +234,10 @@ Deno.serve(async (req) => {
 });
 
 /**
- * Send Day 7 emails - Final follow up with value proposition
+ * Send Day 7 emails - "Last note — is [Company] still looking for leads?"
  */
 async function sendDay7Emails(
   supabase: ReturnType<typeof createClient>,
-  siteUrl: string,
   budget: number
 ): Promise<{ sent: number; errors: number }> {
   const results = { sent: 0, errors: 0 };
@@ -257,9 +271,10 @@ async function sendDay7Emails(
         .from('listings')
         .select('*', { count: 'exact', head: true })
         .eq('lastcity', seq.listing_city)
-        .eq('status', 'sold');
+        .in('status', ['sold', 'just_listed']);
 
-      const unsubscribeUrl = `${siteUrl}/api/outreach-unsubscribe?id=${seq.contact.id}`;
+      const unsubscribeUrl = buildUnsubscribeUrl(seq.contact.id);
+      const magicLinkUrl = buildMagicLinkUrl(seq.contact.magic_token);
 
       // Use same variant as Day 1 for consistency
       const variant = seq.email_variant || 'html';
@@ -268,24 +283,20 @@ async function sendDay7Emails(
 
       if (variant === 'plaintext') {
         emailContent = buildOutreachDay7EmailPlaintext(
-          count || 0,
-          seq.listing_city,
-          seq.contact.company_name,
-          unsubscribeUrl
+          count || 0, seq.listing_city, seq.contact.company_name,
+          unsubscribeUrl, magicLinkUrl
         );
         isPlainText = true;
       } else {
         emailContent = buildOutreachDay7Email(
-          count || 0,
-          seq.listing_city,
-          seq.contact.company_name,
-          unsubscribeUrl
+          count || 0, seq.listing_city, seq.contact.company_name,
+          unsubscribeUrl, magicLinkUrl
         );
       }
 
       const emailResult = await sendEmail({
         to: seq.contact.email,
-        subject: `${count || 'New'} move leads waiting in ${seq.listing_city}`,
+        subject: `Still looking for leads in ${seq.listing_city}?`,
         ...(isPlainText ? { text: emailContent } : { html: emailContent }),
         from: OUTREACH_FROM,
         tags: [
@@ -302,12 +313,12 @@ async function sendDay7Emails(
           .update({
             day_7_sent_at: new Date().toISOString(),
             day_7_email_id: emailResult.messageId,
-            status: 'completed', // Sequence is done after Day 7
+            status: 'completed',
           })
           .eq('id', seq.id);
 
         results.sent++;
-        console.log(`  ✅ Day 7 [${variant}] sent to ${seq.contact.company_name}`);
+        console.log(`  Day 7 [${variant}] sent to ${seq.contact.company_name}`);
       } else {
         results.errors++;
       }
@@ -321,11 +332,10 @@ async function sendDay7Emails(
 }
 
 /**
- * Send Day 3 emails - Follow up with new listings
+ * Send Day 3 emails - "X new homes just sold in [City]"
  */
 async function sendDay3Emails(
   supabase: ReturnType<typeof createClient>,
-  siteUrl: string,
   budget: number
 ): Promise<{ sent: number; errors: number }> {
   const results = { sent: 0, errors: 0 };
@@ -379,7 +389,8 @@ async function sendDay3Emails(
         imgSrc: l.imgsrc,
       }));
 
-      const unsubscribeUrl = `${siteUrl}/api/outreach-unsubscribe?id=${seq.contact.id}`;
+      const unsubscribeUrl = buildUnsubscribeUrl(seq.contact.id);
+      const magicLinkUrl = buildMagicLinkUrl(seq.contact.magic_token);
 
       // Use same variant as Day 1 for consistency
       const variant = seq.email_variant || 'html';
@@ -388,24 +399,20 @@ async function sendDay3Emails(
 
       if (variant === 'plaintext') {
         emailContent = buildOutreachDay3EmailPlaintext(
-          listings,
-          seq.contact.company_name,
-          seq.listing_city,
-          unsubscribeUrl
+          listings, seq.contact.company_name, seq.listing_city,
+          unsubscribeUrl, magicLinkUrl
         );
         isPlainText = true;
       } else {
         emailContent = buildOutreachDay3Email(
-          listings,
-          seq.contact.company_name,
-          seq.listing_city,
-          unsubscribeUrl
+          listings, seq.contact.company_name, seq.listing_city,
+          unsubscribeUrl, magicLinkUrl
         );
       }
 
       const emailResult = await sendEmail({
         to: seq.contact.email,
-        subject: `${listings.length} new move leads in ${seq.listing_city}`,
+        subject: `${listings.length} new homes just sold in ${seq.listing_city}`,
         ...(isPlainText ? { text: emailContent } : { html: emailContent }),
         from: OUTREACH_FROM,
         tags: [
@@ -440,18 +447,18 @@ async function sendDay3Emails(
 
 /**
  * Create new sequences and send Day 1 emails
+ * "Moving leads in [City] — free for your company"
  */
 async function createAndSendDay1Emails(
   supabase: ReturnType<typeof createClient>,
-  siteUrl: string,
   budget: number
 ): Promise<{ sent: number; errors: number; skipped: number }> {
   const results = { sent: 0, errors: 0, skipped: 0 };
 
-  // Get active contacts
+  // Get active contacts (include magic_token)
   const { data: contacts, error: contactsError } = await supabase
     .from('outreach_contacts')
-    .select('*')
+    .select('id, company_name, email, primary_city, primary_state, status, magic_token')
     .eq('status', 'active');
 
   if (contactsError) {
@@ -480,11 +487,9 @@ async function createAndSendDay1Emails(
   const cutoffDate = new Date();
   cutoffDate.setHours(cutoffDate.getHours() - 48);
 
-  // Get the list of city+state combos we have contacts for
   const contactCities = [...new Set((contacts as OutreachContact[]).map(c => c.primary_city))];
   const contactStates = [...new Set((contacts as OutreachContact[]).map(c => c.primary_state).filter(Boolean))];
-  console.log(`🏙️ Contact cities:`, contactCities);
-  console.log(`🗺️ Contact states:`, contactStates);
+  console.log(`Contact cities: ${contactCities.length}, Contact states: ${contactStates.length}`);
 
   const { data: recentListings, error: listingsError } = await supabase
     .from('listings')
@@ -492,8 +497,8 @@ async function createAndSendDay1Emails(
     .eq('status', 'sold')
     .gte('lastseenat', cutoffDate.toISOString())
     .neq('contenttype', 'LOT')
-    .in('lastcity', contactCities) // Only get listings from cities with contacts
-    .in('addressstate', contactStates) // Only US states that match contacts
+    .in('lastcity', contactCities)
+    .in('addressstate', contactStates)
     .order('lastseenat', { ascending: false })
     .limit(500);
 
@@ -507,8 +512,14 @@ async function createAndSendDay1Emails(
     return results;
   }
 
-  console.log(`📋 Found ${recentListings.length} listings in ${contactCities.length} target cities`);
-  console.log(`👥 Processing ${contacts.length} active contacts`);
+  console.log(`Found ${recentListings.length} listings in target cities`);
+
+  // Pre-compute listing counts per city+state for the email template
+  const cityListingCounts = new Map<string, number>();
+  for (const listing of recentListings as Listing[]) {
+    const key = `${listing.lastcity}|${listing.addressstate}`;
+    cityListingCounts.set(key, (cityListingCounts.get(key) || 0) + 1);
+  }
 
   // For each listing, find matching contacts and create sequences
   for (const listing of recentListings as Listing[]) {
@@ -518,6 +529,9 @@ async function createAndSendDay1Emails(
     const listingState = listing.addressstate?.toUpperCase().trim() || '';
     const key = `${listingCity}|${listingState}`;
     const matchingContacts = cityStateContactsMap.get(key) || [];
+
+    // Get total listing count for this city (for the email)
+    const totalInCity = cityListingCounts.get(`${listing.lastcity}|${listing.addressstate}`) || 1;
 
     for (const contact of matchingContacts) {
       if (results.sent >= budget) break;
@@ -546,7 +560,8 @@ async function createAndSendDay1Emails(
           imgSrc: listing.imgsrc || undefined,
         };
 
-        const unsubscribeUrl = `${siteUrl}/api/outreach-unsubscribe?id=${contact.id}`;
+        const unsubscribeUrl = buildUnsubscribeUrl(contact.id);
+        const magicLinkUrl = buildMagicLinkUrl(contact.magic_token);
 
         // A/B test: 50% HTML, 50% plain text
         const variant = selectEmailVariant();
@@ -556,22 +571,20 @@ async function createAndSendDay1Emails(
 
         if (variant === 'plaintext') {
           emailContent = buildOutreachDay1EmailPlaintext(
-            outreachListing,
-            contact.company_name,
-            unsubscribeUrl
+            outreachListing, contact.company_name, unsubscribeUrl,
+            magicLinkUrl, totalInCity
           );
           isPlainText = true;
         } else {
           emailContent = buildOutreachDay1Email(
-            outreachListing,
-            contact.company_name,
-            unsubscribeUrl
+            outreachListing, contact.company_name, unsubscribeUrl,
+            magicLinkUrl, totalInCity
           );
         }
 
         const emailResult = await sendEmail({
           to: contact.email,
-          subject: `Can you help my client in ${listing.lastcity}, ${listing.addressstate}?`,
+          subject: `Moving leads in ${listing.lastcity} — free for ${contact.company_name}`,
           ...(isPlainText ? { text: emailContent } : { html: emailContent }),
           from: OUTREACH_FROM,
           tags: [
@@ -602,10 +615,10 @@ async function createAndSendDay1Emails(
             });
 
           results.sent++;
-          console.log(`  ✅ Day 1 [${variant}] sent to ${contact.company_name} for ${listing.addressstreet}`);
+          console.log(`  Day 1 [${variant}] sent to ${contact.company_name} for ${listing.addressstreet}`);
         } else {
           results.errors++;
-          console.error(`  ❌ Failed to send to ${contact.email}: ${emailResult.error}`);
+          console.error(`  Failed to send to ${contact.email}: ${emailResult.error}`);
         }
       } catch (err) {
         console.error(`Error creating sequence for ${contact.email}:`, err);
@@ -626,43 +639,36 @@ async function sendTestEmail(
   state: string,
   variant: EmailVariant
 ): Promise<Response> {
-  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
-
-  // Create a sample listing for testing
   const testListing: OutreachListing = {
-    address: '123 Test Street',
+    address: '123 Maple Drive',
     city: city,
     state: state,
     price: '$425,000',
     beds: 3,
     baths: 2,
-    imgSrc: 'https://photos.zillowstatic.com/fp/placeholder.jpg',
   };
 
-  const unsubscribeUrl = `${siteUrl}/api/outreach-unsubscribe?id=test`;
+  const unsubscribeUrl = buildUnsubscribeUrl('test-id');
+  // Use a real-looking magic link for testing
+  const magicLinkUrl = buildMagicLinkUrl('00000000-0000-0000-0000-000000000000');
 
-  // Build email based on variant
   let emailContent: string;
   let isPlainText = false;
 
   if (variant === 'plaintext') {
     emailContent = buildOutreachDay1EmailPlaintext(
-      testListing,
-      'Test Moving Company',
-      unsubscribeUrl
+      testListing, 'Test Moving Company', unsubscribeUrl, magicLinkUrl, 14
     );
     isPlainText = true;
   } else {
     emailContent = buildOutreachDay1Email(
-      testListing,
-      'Test Moving Company',
-      unsubscribeUrl
+      testListing, 'Test Moving Company', unsubscribeUrl, magicLinkUrl, 14
     );
   }
 
   const emailResult = await sendEmail({
     to: toEmail,
-    subject: `Can you help my client in ${city}, ${state}?`,
+    subject: `Moving leads in ${city} — free for Test Moving Company`,
     ...(isPlainText ? { text: emailContent } : { html: emailContent }),
     from: OUTREACH_FROM,
     tags: [
