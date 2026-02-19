@@ -880,6 +880,341 @@ export function buildTrialStartedEmail(planName: string, trialEndDate: string, t
 // Order/Product Templates
 // ============================================================================
 
+// ============================================================================
+// B2B Outreach Templates (Lead Offer Emails)
+// ============================================================================
+
+export interface OutreachListing {
+  address: string;
+  city: string;
+  state: string;
+  price: string;
+  beds?: number;
+  baths?: number;
+  imgSrc?: string;
+}
+
+// Outreach sender persona
+const OUTREACH_SENDER = {
+  name: 'Sarah Mitchell',
+  title: 'Partner Success Manager',
+  email: 'sarah@sold2move.com',
+};
+
+/**
+ * Build Day 1 outreach email - First contact with a new lead offer
+ * Plain text style - looks like a personal email, not a marketing blast
+ */
+export function buildOutreachDay1Email(
+  listing: OutreachListing,
+  companyName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(listing.city)}`;
+
+  const propertyDetails = [
+    listing.beds ? `${listing.beds} bed` : null,
+    listing.baths ? `${listing.baths} bath` : null,
+  ].filter(Boolean).join(' / ');
+
+  // Plain text style email - looks personal, not like marketing
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 20px; color: #333333; font-size: 15px; line-height: 1.6;">
+  <div style="max-width: 600px; margin: 0 auto;">
+
+    <p>Hello,</p>
+
+    <p>I work for a company called Sold2Move, connecting moving companies with homeowners who need to relocate. A new client in <strong>${listing.city}, ${listing.state}</strong> came to Sold2Move to <strong>find a Moving Company</strong>.</p>
+
+    <p style="margin: 24px 0;"><strong>${listing.address}, ${listing.city}, ${listing.state}</strong></p>
+
+    <ul style="list-style: none; padding: 0; margin: 0 0 24px 0; color: #555;">
+      <li style="margin-bottom: 8px;">• Sale Price: <strong>${listing.price}</strong></li>
+      ${propertyDetails ? `<li style="margin-bottom: 8px;">• Property: <strong>${propertyDetails}</strong></li>` : ''}
+      <li style="margin-bottom: 8px;">• Move Timeline: <strong>Next 30-60 days</strong></li>
+    </ul>
+
+    <p>I found your business online, and think you'd be a good fit for what this homeowner needs – can you help? You can contact them <strong>for free</strong> if you're interested:</p>
+
+    <div style="margin: 28px 0;">
+      <a href="${signupUrl}" style="display: inline-block; background-color: #0066FF; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Contact This Homeowner →</a>
+    </div>
+
+    <p>If this isn't a good match or you have any questions, please let me know – my contact details are below.</p>
+
+    <p style="margin-top: 32px;">Kind regards,</p>
+
+    <p style="margin: 4px 0;"><strong>${OUTREACH_SENDER.name}</strong></p>
+    <p style="margin: 4px 0; color: #666;">${OUTREACH_SENDER.title}</p>
+    <p style="margin: 4px 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none;">${OUTREACH_SENDER.email}</a></p>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+    <p style="font-size: 12px; color: #999;">
+      You're receiving this because ${companyName} serves the ${listing.city} area.<br>
+      <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe</a>
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Get the outreach sender info for use in email "from" field
+ */
+export function getOutreachSender() {
+  return OUTREACH_SENDER;
+}
+
+/**
+ * Build Day 1 outreach email - PLAIN TEXT version for A/B testing
+ * This is actual plain text, not HTML - better deliverability
+ */
+export function buildOutreachDay1EmailPlaintext(
+  listing: OutreachListing,
+  companyName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(listing.city)}`;
+
+  const propertyDetails = [
+    listing.beds ? `${listing.beds} bed` : null,
+    listing.baths ? `${listing.baths} bath` : null,
+  ].filter(Boolean).join(' / ');
+
+  return `Hello,
+
+I work for a company called Sold2Move, connecting moving companies with homeowners who need to relocate. A new client in ${listing.city}, ${listing.state} came to Sold2Move to find a Moving Company.
+
+${listing.address}, ${listing.city}, ${listing.state}
+
+• Sale Price: ${listing.price}
+${propertyDetails ? `• Property: ${propertyDetails}` : ''}
+• Move Timeline: Next 30-60 days
+
+I found your business online, and think you'd be a good fit for what this homeowner needs – can you help? You can contact them for free if you're interested:
+
+${signupUrl}
+
+If this isn't a good match or you have any questions, please let me know.
+
+Kind regards,
+${OUTREACH_SENDER.name}
+${OUTREACH_SENDER.title}
+${OUTREACH_SENDER.email}
+
+---
+You're receiving this because ${companyName} serves the ${listing.city} area.
+Unsubscribe: ${unsubscribeUrl}`.trim();
+}
+
+/**
+ * Build Day 3 outreach email - PLAIN TEXT version
+ */
+export function buildOutreachDay3EmailPlaintext(
+  listings: OutreachListing[],
+  companyName: string,
+  cityName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(cityName)}`;
+
+  const listingItems = listings.slice(0, 3).map(listing =>
+    `• ${listing.address}, ${listing.city}, ${listing.state} - ${listing.price}`
+  ).join('\n');
+
+  return `Hi again,
+
+Just following up – we've found ${listings.length} more homeowner${listings.length !== 1 ? 's' : ''} in ${cityName} who just sold and will need moving services:
+
+${listingItems}
+
+These homeowners need to move within the next 30-60 days. Want their contact info so you can reach out first?
+
+${signupUrl}
+
+Best,
+${OUTREACH_SENDER.name}
+
+---
+You're receiving this because ${companyName} serves the ${cityName} area.
+Unsubscribe: ${unsubscribeUrl}`.trim();
+}
+
+/**
+ * Build Day 7 outreach email - PLAIN TEXT version
+ */
+export function buildOutreachDay7EmailPlaintext(
+  totalLeadsInCity: number,
+  cityName: string,
+  companyName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(cityName)}`;
+
+  return `Hi,
+
+Quick follow up – we've now tracked ${totalLeadsInCity} homeowners who recently sold their homes in ${cityName} and will need moving services.
+
+With Sold2Move, you get:
+• Real-time alerts when homes sell in your service area
+• Homeowner contact info (name, phone, email)
+• Property details and estimated move timeline
+• No long-term contracts – pay as you go
+
+Ready to stop chasing leads and let them come to you?
+
+${signupUrl}
+
+Let me know if you have any questions – happy to help.
+
+Best,
+${OUTREACH_SENDER.name}
+${OUTREACH_SENDER.title}
+${OUTREACH_SENDER.email}
+
+---
+You're receiving this because ${companyName} serves the ${cityName} area. This is our final email.
+Unsubscribe: ${unsubscribeUrl}`.trim();
+}
+
+/**
+ * Build Day 3 outreach email - Follow up with new listings
+ * Plain text style - personal follow-up
+ */
+export function buildOutreachDay3Email(
+  listings: OutreachListing[],
+  companyName: string,
+  cityName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(cityName)}`;
+
+  const listingItems = listings.slice(0, 3).map(listing => `
+    <li style="margin-bottom: 12px;">
+      <strong>${listing.address}</strong><br>
+      <span style="color: #666;">${listing.city}, ${listing.state} • ${listing.price}</span>
+    </li>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 20px; color: #333333; font-size: 15px; line-height: 1.6;">
+  <div style="max-width: 600px; margin: 0 auto;">
+
+    <p>Hi again,</p>
+
+    <p>Just following up – we've found <strong>${listings.length} more homeowner${listings.length !== 1 ? 's' : ''}</strong> in ${cityName} who just sold and will need moving services:</p>
+
+    <ul style="padding-left: 20px; margin: 20px 0;">
+      ${listingItems}
+    </ul>
+
+    <p>These homeowners need to move within the next 30-60 days. Want their contact info so you can reach out first?</p>
+
+    <div style="margin: 28px 0;">
+      <a href="${signupUrl}" style="display: inline-block; background-color: #0066FF; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Get These Leads Free →</a>
+    </div>
+
+    <p style="margin-top: 32px;">Best,</p>
+    <p style="margin: 4px 0;"><strong>${OUTREACH_SENDER.name}</strong></p>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+    <p style="font-size: 12px; color: #999;">
+      You're receiving this because ${companyName} serves the ${cityName} area.<br>
+      <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe</a>
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Build Day 7 outreach email - Final follow up with value prop
+ * Plain text style - final personal email
+ */
+export function buildOutreachDay7Email(
+  totalLeadsInCity: number,
+  cityName: string,
+  companyName: string,
+  unsubscribeUrl: string
+): string {
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  const signupUrl = `${siteUrl}/signup?ref=outreach&city=${encodeURIComponent(cityName)}`;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; margin: 0; padding: 20px; color: #333333; font-size: 15px; line-height: 1.6;">
+  <div style="max-width: 600px; margin: 0 auto;">
+
+    <p>Hi,</p>
+
+    <p>Quick follow up – we've now tracked <strong>${totalLeadsInCity} homeowners</strong> who recently sold their homes in ${cityName} and will need moving services.</p>
+
+    <p>With Sold2Move, you get:</p>
+    <ul style="padding-left: 20px; margin: 16px 0;">
+      <li style="margin-bottom: 6px;">Real-time alerts when homes sell in your service area</li>
+      <li style="margin-bottom: 6px;">Homeowner contact info (name, phone, email)</li>
+      <li style="margin-bottom: 6px;">Property details and estimated move timeline</li>
+      <li style="margin-bottom: 6px;">No long-term contracts – pay as you go</li>
+    </ul>
+
+    <p>Ready to stop chasing leads and let them come to you?</p>
+
+    <div style="margin: 28px 0;">
+      <a href="${signupUrl}" style="display: inline-block; background-color: #0066FF; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Start Free Trial →</a>
+    </div>
+
+    <p>Let me know if you have any questions – happy to help.</p>
+
+    <p style="margin-top: 32px;">Best,</p>
+    <p style="margin: 4px 0;"><strong>${OUTREACH_SENDER.name}</strong></p>
+    <p style="margin: 4px 0; color: #666;">${OUTREACH_SENDER.title}</p>
+    <p style="margin: 4px 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none;">${OUTREACH_SENDER.email}</a></p>
+
+    <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
+
+    <p style="font-size: 12px; color: #999;">
+      You're receiving this because ${companyName} serves the ${cityName} area. This is our final email.<br>
+      <a href="${unsubscribeUrl}" style="color: #999;">Unsubscribe</a>
+    </p>
+
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+// ============================================================================
+// Order/Product Templates
+// ============================================================================
+
 /**
  * Build order confirmation email (for design services/products)
  */

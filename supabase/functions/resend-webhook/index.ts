@@ -33,6 +33,84 @@ interface ResendWebhookPayload {
   };
 }
 
+/**
+ * Update outreach sequence tracking when opens/clicks happen
+ */
+async function updateOutreachSequenceTracking(
+  supabase: ReturnType<typeof createClient>,
+  emailId: string,
+  eventType: string
+): Promise<void> {
+  try {
+    // Find the sequence by email ID (could be day_1, day_3, or day_7)
+    const { data: sequences } = await supabase
+      .from('outreach_sequences')
+      .select('id, opened, clicked')
+      .or(`day_1_email_id.eq.${emailId},day_3_email_id.eq.${emailId},day_7_email_id.eq.${emailId}`);
+
+    if (!sequences?.length) return;
+
+    for (const seq of sequences) {
+      const updates: Record<string, boolean> = {};
+
+      if (eventType === 'email.opened' && !seq.opened) {
+        updates.opened = true;
+        // Also increment daily stats
+        await supabase.rpc('increment_outreach_daily_stat', {
+          stat_name: 'emails_opened',
+          increment_by: 1,
+        });
+      }
+
+      if (eventType === 'email.clicked' && !seq.clicked) {
+        updates.clicked = true;
+        // Also increment daily stats
+        await supabase.rpc('increment_outreach_daily_stat', {
+          stat_name: 'emails_clicked',
+          increment_by: 1,
+        });
+      }
+
+      if (eventType === 'email.bounced') {
+        // Mark sequence and contact as bounced
+        await supabase
+          .from('outreach_sequences')
+          .update({ status: 'bounced' })
+          .eq('id', seq.id);
+
+        // Get contact_id and update contact status
+        const { data: seqData } = await supabase
+          .from('outreach_sequences')
+          .select('contact_id')
+          .eq('id', seq.id)
+          .single();
+
+        if (seqData) {
+          await supabase
+            .from('outreach_contacts')
+            .update({ status: 'bounced' })
+            .eq('id', seqData.contact_id);
+        }
+
+        await supabase.rpc('increment_outreach_daily_stat', {
+          stat_name: 'emails_bounced',
+          increment_by: 1,
+        });
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await supabase
+          .from('outreach_sequences')
+          .update(updates)
+          .eq('id', seq.id);
+        console.log(`📊 Updated outreach sequence ${seq.id}: ${JSON.stringify(updates)}`);
+      }
+    }
+  } catch (err) {
+    console.error('Error updating outreach sequence tracking:', err);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -101,6 +179,12 @@ Deno.serve(async (req) => {
       // Don't throw - we still want to return 200 to Resend
     } else {
       console.log(`✅ Email event recorded: ${eventType} for ${emailId}`);
+    }
+
+    // Check if this is an outreach email and update sequence tracking
+    const isOutreachEmail = tags.some(t => t.name === 'type' && t.value === 'outreach');
+    if (isOutreachEmail) {
+      await updateOutreachSequenceTracking(supabase, emailId, eventType);
     }
 
     // Return 200 to acknowledge receipt

@@ -7,7 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 export interface SendEmailParams {
   to: string | string[];
   subject: string;
-  html: string;
+  html?: string;
+  text?: string;  // Plain text alternative for A/B testing
   replyTo?: string;
   from?: string;
   tags?: { name: string; value: string }[];
@@ -83,6 +84,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     to,
     subject,
     html,
+    text,
     replyTo,
     from = 'Sold2Move <noreply@sold2move.com>',
     tags = [],
@@ -106,7 +108,8 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         from,
         to: recipients,
         subject,
-        html,
+        // Send either text or html (text for plain text A/B variant)
+        ...(text ? { text } : { html }),
         ...(replyTo && { reply_to: replyTo }),
         headers: {
           'X-Entity-Ref-ID': entityRefId,
