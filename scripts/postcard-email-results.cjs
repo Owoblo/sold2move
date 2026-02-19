@@ -17,7 +17,8 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const RECIPIENT = process.env.POSTCARD_EMAIL_TO || 'business@starmovers.ca';
-const FROM = process.env.POSTCARD_EMAIL_FROM || 'Sold2Move Pipeline <noreply@sold2move.com>';
+const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
+const REPLY_TO = 'business@starmovers.ca';
 
 function sendEmail(subject, html, attachments) {
   return new Promise((resolve, reject) => {
@@ -30,8 +31,10 @@ function sendEmail(subject, html, attachments) {
     const body = JSON.stringify({
       from: FROM,
       to: [RECIPIENT],
+      reply_to: REPLY_TO,
       subject,
       html,
+      text: html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
       attachments,
     });
 
