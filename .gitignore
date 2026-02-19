@@ -15,6 +15,9 @@ build/
 .env.*.local
 !.env.example
 
+# pipeline intermediate data
+scripts/.pipeline/
+
 # misc
 .DS_Store
 .vscode/

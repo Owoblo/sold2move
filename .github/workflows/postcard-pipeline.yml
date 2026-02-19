@@ -1,0 +1,114 @@
+name: Windsor Postcard Pipeline
+
+on:
+  schedule:
+    # Run every 2 days at 8 AM EST (1 PM UTC)
+    - cron: '0 13 */2 * *'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub Actions tab
+    inputs:
+      from_date:
+        description: 'Start date (YYYY-MM-DD), default: 2 days ago'
+        required: false
+      to_date:
+        description: 'End date (YYYY-MM-DD), default: today'
+        required: false
+      skip_photos:
+        description: 'Skip photo fetching'
+        type: boolean
+        default: false
+      skip_furniture:
+        description: 'Skip furniture check'
+        type: boolean
+        default: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Calculate date range
+        id: dates
+        run: |
+          if [ -n "${{ github.event.inputs.from_date }}" ]; then
+            echo "from=${{ github.event.inputs.from_date }}" >> $GITHUB_OUTPUT
+          else
+            echo "from=$(date -d '2 days ago' +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ github.event.inputs.to_date }}" ]; then
+            echo "to=${{ github.event.inputs.to_date }}" >> $GITHUB_OUTPUT
+          else
+            echo "to=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build pipeline flags
+        id: flags
+        run: |
+          FLAGS="--include-unscanned"
+          if [ "${{ github.event.inputs.skip_photos }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-photos"
+          fi
+          if [ "${{ github.event.inputs.skip_furniture }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-furniture"
+          fi
+          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
+
+      - name: Run postcard pipeline
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+        run: |
+          node scripts/windsor-postcard-pipeline.cjs \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find output files
+        id: files
+        run: |
+          CSV=$(ls -t Windsor_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Windsor_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No output files generated (likely no listings in date range)"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email results
+        if: steps.files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          POSTCARD_EMAIL_TO: business@starmovers.ca
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.files.outputs.csv }}" \
+            "${{ steps.files.outputs.pdf }}"
+
+      - name: Upload artifacts
+        if: steps.files.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: postcards-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
+          path: |
+            Windsor_Postcards_*.csv
+            Windsor_Postcards_*.pdf
+          retention-days: 30
