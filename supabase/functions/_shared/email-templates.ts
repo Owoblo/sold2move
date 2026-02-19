@@ -899,6 +899,7 @@ const OUTREACH_SENDER = {
   name: 'Sarah Mitchell',
   title: 'Sold2Move',
   email: 'sarah@sold2move.com',
+  avatar: 'https://idbyrtwdeeruiutoukct.supabase.co/storage/v1/object/public/company-assets/sarah-avatar.jpg',
 };
 
 /**
@@ -951,9 +952,18 @@ export function buildOutreachDay1Email(
 
     <p>No signup needed — just click and you'll see every recent listing in ${listing.city}.</p>
 
-    <p style="margin-top: 32px;">Best,</p>
-    <p style="margin: 4px 0;"><strong>${OUTREACH_SENDER.name}</strong></p>
-    <p style="margin: 4px 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none;">${OUTREACH_SENDER.email}</a></p>
+    <table style="margin-top: 32px; border: none;" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align: top; padding-right: 12px;">
+          <img src="${OUTREACH_SENDER.avatar}" alt="${OUTREACH_SENDER.name}" width="48" height="48" style="border-radius: 50%; display: block;" />
+        </td>
+        <td style="vertical-align: top;">
+          <p style="margin: 0; font-weight: 600;">${OUTREACH_SENDER.name}</p>
+          <p style="margin: 2px 0 0; color: #666; font-size: 13px;">${OUTREACH_SENDER.title}</p>
+          <p style="margin: 2px 0 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none; font-size: 13px;">${OUTREACH_SENDER.email}</a></p>
+        </td>
+      </tr>
+    </table>
 
     <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 
@@ -1043,7 +1053,18 @@ export function buildOutreachDay3Email(
       <a href="${magicLinkUrl}" style="display: inline-block; background-color: #0066FF; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">View All ${cityName} Leads</a>
     </div>
 
-    <p style="margin-top: 32px;">— ${OUTREACH_SENDER.name}</p>
+    <table style="margin-top: 32px; border: none;" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align: top; padding-right: 12px;">
+          <img src="${OUTREACH_SENDER.avatar}" alt="${OUTREACH_SENDER.name}" width="48" height="48" style="border-radius: 50%; display: block;" />
+        </td>
+        <td style="vertical-align: top;">
+          <p style="margin: 0; font-weight: 600;">${OUTREACH_SENDER.name}</p>
+          <p style="margin: 2px 0 0; color: #666; font-size: 13px;">${OUTREACH_SENDER.title}</p>
+          <p style="margin: 2px 0 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none; font-size: 13px;">${OUTREACH_SENDER.email}</a></p>
+        </td>
+      </tr>
+    </table>
 
     <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 
@@ -1124,9 +1145,18 @@ export function buildOutreachDay7Email(
 
     <p>Either way, I won't email again. Hope this was useful.</p>
 
-    <p style="margin-top: 32px;">All the best,</p>
-    <p style="margin: 4px 0;"><strong>${OUTREACH_SENDER.name}</strong></p>
-    <p style="margin: 4px 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none;">${OUTREACH_SENDER.email}</a></p>
+    <table style="margin-top: 32px; border: none;" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="vertical-align: top; padding-right: 12px;">
+          <img src="${OUTREACH_SENDER.avatar}" alt="${OUTREACH_SENDER.name}" width="48" height="48" style="border-radius: 50%; display: block;" />
+        </td>
+        <td style="vertical-align: top;">
+          <p style="margin: 0; font-weight: 600;">${OUTREACH_SENDER.name}</p>
+          <p style="margin: 2px 0 0; color: #666; font-size: 13px;">${OUTREACH_SENDER.title}</p>
+          <p style="margin: 2px 0 0;"><a href="mailto:${OUTREACH_SENDER.email}" style="color: #0066FF; text-decoration: none; font-size: 13px;">${OUTREACH_SENDER.email}</a></p>
+        </td>
+      </tr>
+    </table>
 
     <hr style="border: none; border-top: 1px solid #eee; margin: 32px 0;">
 

@@ -67,6 +67,7 @@ interface Listing {
   beds: number | null;
   baths: number | null;
   imgsrc: string | null;
+  status: string;
 }
 
 interface OutreachSequence {
@@ -242,21 +243,46 @@ async function sendDay7Emails(
 ): Promise<{ sent: number; errors: number }> {
   const results = { sent: 0, errors: 0 };
 
-  // Find sequences where Day 3 was sent >= 4 days ago and Day 7 not sent
-  const cutoff = new Date();
-  cutoff.setHours(cutoff.getHours() - DAY_7_DELAY_HOURS);
+  // Find sequences ready for Day 7:
+  // Path A: Day 3 was sent >= 4 days ago (normal flow)
+  // Path B: Day 1 was sent >= 7 days ago but Day 3 was skipped (fallback)
+  const day3Cutoff = new Date();
+  day3Cutoff.setHours(day3Cutoff.getHours() - DAY_7_DELAY_HOURS);
+  const day1Cutoff = new Date();
+  day1Cutoff.setHours(day1Cutoff.getHours() - 168); // 7 days from Day 1
 
-  const { data: sequences, error } = await supabase
+  // Path A: Normal Day 3 → Day 7 flow
+  const { data: seqPathA } = await supabase
     .from('outreach_sequences')
-    .select(`
-      *,
-      contact:outreach_contacts(*)
-    `)
+    .select(`*, contact:outreach_contacts(*)`)
     .eq('status', 'active')
     .not('day_3_sent_at', 'is', null)
     .is('day_7_sent_at', null)
-    .lte('day_3_sent_at', cutoff.toISOString())
+    .lte('day_3_sent_at', day3Cutoff.toISOString())
     .limit(budget);
+
+  // Path B: Day 3 was skipped, but 7+ days since Day 1
+  const { data: seqPathB } = await supabase
+    .from('outreach_sequences')
+    .select(`*, contact:outreach_contacts(*)`)
+    .eq('status', 'active')
+    .is('day_3_sent_at', null)
+    .is('day_7_sent_at', null)
+    .not('day_1_sent_at', 'is', null)
+    .lte('day_1_sent_at', day1Cutoff.toISOString())
+    .limit(budget);
+
+  // Combine and deduplicate
+  const seenIds = new Set<string>();
+  const sequences: typeof seqPathA = [];
+  for (const seq of [...(seqPathA || []), ...(seqPathB || [])]) {
+    if (!seenIds.has(seq.id)) {
+      seenIds.add(seq.id);
+      sequences.push(seq);
+    }
+  }
+
+  const error = null;
 
   if (error || !sequences?.length) {
     return results;
@@ -364,18 +390,18 @@ async function sendDay3Emails(
     if (!seq.contact || seq.contact.status !== 'active') continue;
 
     try {
-      // Get recent listings in this city (different from original)
+      // Get recent listings in this city (sold + just_listed, excluding original)
       const { data: recentListings } = await supabase
         .from('listings')
         .select('zpid,addressstreet,lastcity,addressstate,price,beds,baths,imgsrc')
         .eq('lastcity', seq.listing_city)
-        .eq('status', 'sold')
+        .in('status', ['sold', 'just_listed'])
         .neq('zpid', seq.listing_id)
         .order('lastseenat', { ascending: false })
         .limit(5);
 
       if (!recentListings?.length) {
-        // No new listings, skip Day 3
+        // No listings at all in this city — skip Day 3
         continue;
       }
 
@@ -483,7 +509,7 @@ async function createAndSendDay1Emails(
     cityStateContactsMap.get(key)!.push(contact);
   }
 
-  // Get recently sold listings (last 48 hours) filtered to contact cities
+  // Get recent sold + just_listed in last 48 hours, filtered to contact cities
   const cutoffDate = new Date();
   cutoffDate.setHours(cutoffDate.getHours() - 48);
 
@@ -493,8 +519,8 @@ async function createAndSendDay1Emails(
 
   const { data: recentListings, error: listingsError } = await supabase
     .from('listings')
-    .select('zpid,addressstreet,lastcity,addressstate,addresszipcode,price,beds,baths,imgsrc')
-    .eq('status', 'sold')
+    .select('zpid,addressstreet,lastcity,addressstate,addresszipcode,price,beds,baths,imgsrc,status')
+    .in('status', ['sold', 'just_listed'])
     .gte('lastseenat', cutoffDate.toISOString())
     .neq('contenttype', 'LOT')
     .in('lastcity', contactCities)
@@ -508,7 +534,7 @@ async function createAndSendDay1Emails(
   }
 
   if (!recentListings?.length) {
-    console.log('No recent sold listings found. Cutoff:', cutoffDate.toISOString());
+    console.log('No recent listings found. Cutoff:', cutoffDate.toISOString());
     return results;
   }
 
