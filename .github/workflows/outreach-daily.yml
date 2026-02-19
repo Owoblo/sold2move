@@ -1,0 +1,30 @@
+name: Daily Outreach Emails
+
+on:
+  schedule:
+    # 9 AM EST = 2 PM UTC
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-outreach:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger outreach email engine
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/send-outreach-emails" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | head -n -1)
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Edge function returned HTTP $http_code"
+            exit 1
+          fi

@@ -1,60 +1,53 @@
 #!/usr/bin/env node
 /**
- * Import outreach contacts from CSV file
- * Usage: node scripts/import-outreach-contacts.js <csv-file>
+ * Import outreach contacts from all_leads CSV file into Supabase.
+ * Usage: node scripts/import-outreach-contacts.cjs <csv-file>
  *
- * Or call the edge function directly with curl:
- * curl -X POST https://your-project.supabase.co/functions/v1/import-outreach-contacts \
- *   -H "Authorization: Bearer YOUR_ANON_KEY" \
- *   -H "Content-Type: text/csv" \
- *   --data-binary @contacts.csv
+ * Filters: only rows with Email Status = "likely" and valid email addresses.
+ * Normalizes US state names to abbreviations; Canadian provinces pass through.
+ * Upserts to outreach_contacts on conflict by email.
  */
 
 const fs = require('fs');
-const path = require('path');
+const { getSupabase } = require('./postcard-lib.cjs');
 
-// Sample contacts if no file provided
-const SAMPLE_CONTACTS = `Company Name,Primary City/Region Serviced,Contact Email
-"J&D Moving Company, LLC","Newark, NJ",jdmovingcompanyllc@gmail.com
-Brier Moving Company LLC,"Brier, WA",briermoving@gmail.com
-Columbia Self Storage,"Columbia, MO",info@columbiaselfstorage.com
-Vanguard Moving Services,"Danbury, CT",info@vanguardmoving.com
-Martin County Movers,"Stuart, FL",martincountymovers@gmail.com
-Stark Moving and Storage Inc.,"Boston, MA",info@starkmovingstorage.com
-What's The Move NC,"Raleigh/Charlotte, NC",whatsthemovenc@gmail.com
-Two Men and a Truck,"Tuscaloosa, AL",info0111@twomen.com
-A & M Friendly Movers,"York, PA",amfriendlymovers@gmail.com
-Moyer Move Management,"Gaithersburg, MD",info@moyermovemanagement.com
-Noah's Ark Moving & Storage,"Bronx, NY",info@noahsarkinc.com
-"Moving On Birmingham, LLC","Birmingham, AL",movingonbham@gmail.com
-Desert Moving Co. & Storage,"Indio, CA",info@desertmoving.com
-Division 1 Moving & Storage,"Jacksonville, FL",info@division1moving.com
-1st Class Moving & Storage,"Orlando, FL / Baltimore, MD",move@1stclassmovinginc.com
-A-1 Moving & Storage,"Jupiter, FL",info@a1moving.com
-All Star Moving LLC,"Memphis, TN",allstarmoving901@gmail.com
-Pink Transfer Moving,"Monrovia, CA",info@pinktransfer.com
-Sunrise Moving and Storage,"Atlanta, GA",info@sunrisemoving.com
-Amazing Moves Moving,"Denver, CO",info@amazingmoves.com
-Mighty Moving & Storage,"Los Angeles, CA",info@mightymoving.com
-QuickSwitch Movers,"Clarksville, TN",quickswitchmovers@gmail.com
-Yarnall Moving and Storage,"Sarasota, FL",info@yarnall.com
-Southern Moving & Storage,"Wilmington, NC",southernmovingnc@gmail.com
-Good Stuff Moving,"St. Paul, MN",info@goodstuffmoving.com
-United Van Lines,"Fenton, MO (National HQ)",social@unitedvanlines.com
-North American Van Lines,"Fort Wayne, IN (National HQ)",custserv@navl.com
-Atlanta Moving Packing (AMPM),"Atlanta, GA",ampmmoving@gmail.com
-Raleigh Moving Company,"Raleigh, NC",raleighmoving@gmail.com
-Sinatra Movers Company,"Philadelphia, PA",sinatramovers@gmail.com
-G Metz Moving & Storage,"Cranston, RI",info@gmetzmoving.com
-Alexander's Mobility Services,"Tustin, CA",info@alexanders.net
-Mayflower Moving,"Fenton, MO (National HQ)",info@mayflower.com
-Camelback Moving,"Phoenix, AZ",info@camelbackmoving.com
-Strongman Movers LLC,"Dallas, TX",strongmanmoversllc@gmail.com
-Sea Cure Moving,"Forked River, NJ",info@seacuremoving.com
-Arnoff Moving & Storage,"Poughkeepsie, NY",info@arnoff.com
-San Diego Moving Company,"San Diego, CA",info@sandiegomoving.com
-Uplift Movers,"Richmond, TX",upliftmovers@gmail.com
-Dircks Moving & Logistics,"Phoenix, AZ",info@dircks.com`;
+// US state name → abbreviation map
+const US_STATES = {
+  'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
+  'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
+  'florida': 'FL', 'georgia': 'GA', 'hawaii': 'HI', 'idaho': 'ID',
+  'illinois': 'IL', 'indiana': 'IN', 'iowa': 'IA', 'kansas': 'KS',
+  'kentucky': 'KY', 'louisiana': 'LA', 'maine': 'ME', 'maryland': 'MD',
+  'massachusetts': 'MA', 'michigan': 'MI', 'minnesota': 'MN', 'mississippi': 'MS',
+  'missouri': 'MO', 'montana': 'MT', 'nebraska': 'NE', 'nevada': 'NV',
+  'new hampshire': 'NH', 'new jersey': 'NJ', 'new mexico': 'NM', 'new york': 'NY',
+  'north carolina': 'NC', 'north dakota': 'ND', 'ohio': 'OH', 'oklahoma': 'OK',
+  'oregon': 'OR', 'pennsylvania': 'PA', 'rhode island': 'RI', 'south carolina': 'SC',
+  'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
+  'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
+  'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC',
+};
+
+/**
+ * Normalize a state/province value to its abbreviation.
+ * Canadian provinces (ON, AB, BC, etc.) are already abbreviated — pass through.
+ * US full names get mapped to 2-letter codes.
+ */
+function normalizeState(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Already a 2-letter abbreviation — return uppercased
+  if (trimmed.length <= 3) return trimmed.toUpperCase();
+
+  // Try US state lookup
+  const abbr = US_STATES[trimmed.toLowerCase()];
+  if (abbr) return abbr;
+
+  // Unknown — return as-is
+  return trimmed;
+}
 
 /**
  * Parse CSV line handling quoted values
@@ -66,7 +59,6 @@ function parseCSVLine(line) {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-
     if (char === '"') {
       if (inQuotes && line[i + 1] === '"') {
         current += '"';
@@ -87,116 +79,161 @@ function parseCSVLine(line) {
 }
 
 /**
- * Parse city/state from various formats
+ * Validate email format (basic check)
  */
-function parseCityState(input) {
-  const cleanInput = input.replace(/[()]/g, ',');
-
-  if (cleanInput.includes(',')) {
-    const parts = cleanInput.split(',').map(p => p.trim());
-    return {
-      city: parts[0],
-      state: parts[1] || null,
-    };
-  }
-
-  if (input.includes('/')) {
-    const parts = input.split('/').map(p => p.trim());
-    if (parts[1] && parts[1].length <= 3) {
-      return { city: parts[0], state: parts[1] };
-    }
-    return { city: parts[0], state: null };
-  }
-
-  return { city: input, state: null };
+function isValidEmail(str) {
+  if (!str) return false;
+  // Reject if it looks like a URL or has no @
+  if (str.startsWith('http') || !str.includes('@')) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str);
 }
 
 /**
- * Parse CSV text into contact objects
+ * Parse CSV and return filtered contact objects
  */
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n');
-  if (lines.length < 2) return [];
+  if (lines.length < 2) return { contacts: [], skipped: { pending: 0, badEmail: 0, blank: 0 } };
 
-  const header = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+  const header = parseCSVLine(lines[0]).map(h => h.trim());
 
-  const companyIdx = header.findIndex(h =>
-    h.includes('company') || h.includes('name') || h === 'business'
-  );
-  const cityIdx = header.findIndex(h =>
-    h.includes('city') || h.includes('region') || h.includes('area') || h.includes('location')
-  );
-  const emailIdx = header.findIndex(h =>
-    h.includes('email') || h.includes('mail')
-  );
-
-  if (companyIdx === -1 || emailIdx === -1) {
-    console.error('CSV missing required columns. Found:', header);
-    return [];
-  }
+  // Build column index map
+  const col = {};
+  header.forEach((h, i) => { col[h] = i; });
 
   const contacts = [];
+  const skipped = { pending: 0, badEmail: 0, blank: 0 };
 
   for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    if (values.length <= Math.max(companyIdx, cityIdx, emailIdx)) continue;
+    const line = lines[i].trim();
+    if (!line) { skipped.blank++; continue; }
 
-    const company = values[companyIdx]?.trim();
-    const cityRegion = values[cityIdx >= 0 ? cityIdx : 0]?.trim() || '';
-    const email = values[emailIdx]?.trim().toLowerCase();
+    const values = parseCSVLine(line);
 
-    if (!company || !email) continue;
+    const emailStatus = (values[col['Email Status']] || '').trim().toLowerCase();
+    if (emailStatus !== 'likely') {
+      skipped.pending++;
+      continue;
+    }
 
-    const { city, state } = parseCityState(cityRegion);
+    const email = (values[col['Email']] || '').trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      skipped.badEmail++;
+      continue;
+    }
+
+    const companyName = (values[col['Company Name']] || '').trim();
+    const city = (values[col['City']] || '').trim();
+    const state = normalizeState(values[col['State/Province']]);
+    const country = (values[col['Country']] || '').trim();
+    const website = (values[col['Website']] || '').trim();
+    const domain = (values[col['Domain']] || '').trim();
+    const tier = (values[col['Tier']] || '').trim();
+    const priority = parseInt(values[col['Priority']] || '0', 10) || 0;
+    const source = (values[col['Source']] || '').trim();
 
     contacts.push({
-      company_name: company,
+      company_name: companyName,
+      email,
       primary_city: city || 'Unknown',
       primary_state: state,
-      email,
-      source: 'csv_import',
+      source: source || 'csv_import',
       status: 'active',
+      metadata: {
+        tier,
+        priority,
+        country,
+        website: website || undefined,
+        domain: domain || undefined,
+        original_source: source || undefined,
+      },
     });
   }
 
-  return contacts;
+  return { contacts, skipped };
 }
 
-/**
- * Main function
- */
 async function main() {
   const csvFile = process.argv[2];
-  let csvText;
-
-  if (csvFile) {
-    csvText = fs.readFileSync(csvFile, 'utf-8');
-    console.log(`Reading contacts from: ${csvFile}`);
-  } else {
-    csvText = SAMPLE_CONTACTS;
-    console.log('Using sample contacts (no file provided)');
+  if (!csvFile) {
+    console.error('Usage: node scripts/import-outreach-contacts.cjs <csv-file>');
+    process.exit(1);
   }
 
-  const contacts = parseCSV(csvText);
-  console.log(`Parsed ${contacts.length} contacts\n`);
+  console.log(`Reading contacts from: ${csvFile}`);
+  const csvText = fs.readFileSync(csvFile, 'utf-8');
 
-  // Output as JSON for easy copy/paste or piping to curl
-  console.log('--- JSON OUTPUT (for API import) ---');
-  console.log(JSON.stringify(contacts, null, 2));
+  const { contacts: rawContacts, skipped } = parseCSV(csvText);
 
-  console.log('\n--- SUMMARY ---');
-  const cities = [...new Set(contacts.map(c => c.primary_city))];
-  console.log(`Total contacts: ${contacts.length}`);
-  console.log(`Unique cities: ${cities.length}`);
-  console.log(`Cities: ${cities.slice(0, 10).join(', ')}${cities.length > 10 ? '...' : ''}`);
+  // Deduplicate by email (keep first occurrence — higher priority rows come first in CSV)
+  const seen = new Set();
+  const contacts = rawContacts.filter(c => {
+    if (seen.has(c.email)) return false;
+    seen.add(c.email);
+    return true;
+  });
+  const dupes = rawContacts.length - contacts.length;
 
-  // Output SQL for direct database insert
-  console.log('\n--- SQL INSERT (for direct DB import) ---');
-  console.log(`INSERT INTO outreach_contacts (company_name, email, primary_city, primary_state, source, status) VALUES`);
-  const values = contacts.map(c =>
-    `  ('${c.company_name.replace(/'/g, "''")}', '${c.email}', '${c.primary_city.replace(/'/g, "''")}', ${c.primary_state ? `'${c.primary_state}'` : 'NULL'}, 'csv_import', 'active')`
-  );
-  console.log(values.join(',\n') + '\nON CONFLICT (email) DO UPDATE SET company_name = EXCLUDED.company_name, primary_city = EXCLUDED.primary_city, primary_state = EXCLUDED.primary_state;');
+  console.log(`\n--- FILTERING ---`);
+  console.log(`Valid contacts (email_status=likely): ${rawContacts.length}`);
+  console.log(`Duplicates removed: ${dupes}`);
+  console.log(`Unique contacts to import: ${contacts.length}`);
+  console.log(`Skipped (pending/other status): ${skipped.pending}`);
+  console.log(`Skipped (bad/missing email): ${skipped.badEmail}`);
+  console.log(`Skipped (blank lines): ${skipped.blank}`);
+
+  if (contacts.length === 0) {
+    console.log('No valid contacts to import.');
+    return;
+  }
+
+  // Show state normalization summary
+  const states = {};
+  contacts.forEach(c => {
+    const s = c.primary_state || 'NULL';
+    states[s] = (states[s] || 0) + 1;
+  });
+  console.log(`\n--- STATE DISTRIBUTION ---`);
+  Object.entries(states).sort((a, b) => b[1] - a[1]).forEach(([s, n]) => {
+    console.log(`  ${s}: ${n}`);
+  });
+
+  // Upsert to Supabase in batches
+  const supabase = getSupabase();
+  const BATCH_SIZE = 50;
+  let upserted = 0;
+  let errors = 0;
+
+  console.log(`\n--- UPSERTING TO SUPABASE ---`);
+  for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
+    const batch = contacts.slice(i, i + BATCH_SIZE);
+    const { data, error } = await supabase
+      .from('outreach_contacts')
+      .upsert(batch, { onConflict: 'email' })
+      .select('id');
+
+    if (error) {
+      console.error(`Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, error.message);
+      errors += batch.length;
+    } else {
+      upserted += data.length;
+      process.stdout.write(`  Upserted ${upserted}/${contacts.length}\r`);
+    }
+  }
+
+  console.log(`\n\n--- RESULT ---`);
+  console.log(`Successfully upserted: ${upserted}`);
+  if (errors > 0) console.log(`Errors: ${errors}`);
+
+  // Verify total count
+  const { count } = await supabase
+    .from('outreach_contacts')
+    .select('*', { count: 'exact', head: true });
+
+  console.log(`Total contacts in outreach_contacts: ${count}`);
 }
 
-main().catch(console.error);
+main().catch(err => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});
