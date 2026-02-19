@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/leads",
+      "destination": "https://idbyrtwdeeruiutoukct.supabase.co/functions/v1/outreach-magic-link"
+    },
+    {
+      "source": "/unsubscribe",
+      "destination": "https://idbyrtwdeeruiutoukct.supabase.co/functions/v1/outreach-unsubscribe"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

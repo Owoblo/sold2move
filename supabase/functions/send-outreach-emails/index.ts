@@ -83,19 +83,19 @@ interface OutreachSequence {
 }
 
 /**
- * Build the magic link URL for a contact
+ * Build the magic link URL for a contact (uses custom domain for clean emails)
  */
 function buildMagicLinkUrl(magicToken: string): string {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  return `${supabaseUrl}/functions/v1/outreach-magic-link?token=${magicToken}`;
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  return `${siteUrl}/leads?token=${magicToken}`;
 }
 
 /**
- * Build the unsubscribe URL for a contact
+ * Build the unsubscribe URL for a contact (uses custom domain for clean emails)
  */
 function buildUnsubscribeUrl(contactId: string): string {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  return `${supabaseUrl}/functions/v1/outreach-unsubscribe?id=${contactId}`;
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://sold2move.com';
+  return `${siteUrl}/unsubscribe?id=${contactId}`;
 }
 
 Deno.serve(async (req) => {
