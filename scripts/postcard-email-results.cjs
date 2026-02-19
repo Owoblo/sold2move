@@ -16,7 +16,10 @@ const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const RECIPIENT = process.env.POSTCARD_EMAIL_TO || 'business@starmovers.ca';
+const RECIPIENTS = [
+  'business@starmovers.ca',
+  'printinkshop@gmail.com',
+];
 const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
 const REPLY_TO = 'business@starmovers.ca';
 
@@ -30,7 +33,7 @@ function sendEmail(subject, html, attachments) {
 
     const body = JSON.stringify({
       from: FROM,
-      to: [RECIPIENT],
+      to: RECIPIENTS,
       reply_to: REPLY_TO,
       subject,
       html,
@@ -199,7 +202,7 @@ async function main() {
     </div>
   `;
 
-  console.log(`Sending postcard results to ${RECIPIENT}...`);
+  console.log(`Sending postcard results to ${RECIPIENTS.join(', ')}...`);
   console.log(`  CSV: ${csvName} (${recordCount} records)`);
   console.log(`  PDF: ${pdfName}`);
 

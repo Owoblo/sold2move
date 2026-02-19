@@ -97,7 +97,6 @@ jobs:
         if: steps.files.outputs.found == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          POSTCARD_EMAIL_TO: business@starmovers.ca
         run: |
           node scripts/postcard-email-results.cjs \
             "${{ steps.files.outputs.csv }}" \
