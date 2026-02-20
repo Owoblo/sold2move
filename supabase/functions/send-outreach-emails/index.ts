@@ -3,12 +3,12 @@
  * Automated B2B lead offer emails to moving companies
  *
  * Flow:
- * 1. Find new sold listings in the last 24-48 hours
- * 2. Match listings to moving company contacts by city
+ * 1. Find new sold/just_listed listings in the last 48 hours
+ * 2. Match listings to moving company contacts by city+state
  * 3. Create new sequences and send Day 1 emails
  * 4. Check for Day 3 follow-ups (sent Day 1 >= 3 days ago)
  * 5. Check for Day 7 follow-ups (sent Day 3 >= 4 days ago)
- * 6. Respect daily rate limit (configurable, default 50/day)
+ * 6. Respect daily rate limit (configurable, default 200/day)
  *
  * All emails include a magic link that auto-authenticates the contact
  * and shows them real leads in their city — no signup required.
@@ -41,9 +41,10 @@ function selectEmailVariant(): EmailVariant {
 // Get the personal sender for outreach emails
 const OUTREACH_SENDER = getOutreachSender();
 const OUTREACH_FROM = `${OUTREACH_SENDER.name} <${OUTREACH_SENDER.email}>`;
+const OUTREACH_REPLY_TO = 'jay@sold2move.com';
 
 // Configuration
-const DAILY_EMAIL_LIMIT = 50; // Max emails per day for deliverability
+const DAILY_EMAIL_LIMIT = 200; // Max emails per day
 const DAY_3_DELAY_HOURS = 72; // 3 days
 const DAY_7_DELAY_HOURS = 96; // 4 days after Day 3 (7 days total from Day 1)
 
@@ -58,7 +59,7 @@ interface OutreachContact {
 }
 
 interface Listing {
-  zpid: string;
+  zpid: number;
   addressstreet: string;
   lastcity: string;
   addressstate: string;
@@ -196,7 +197,7 @@ Deno.serve(async (req) => {
       results.day1Sent = day1Results.sent;
       results.errors += day1Results.errors;
       results.skipped = day1Results.skipped;
-      console.log(`Day 1 emails sent: ${day1Results.sent}`);
+      console.log(`Day 1 emails sent: ${day1Results.sent}, errors: ${day1Results.errors}, skipped: ${day1Results.skipped}`);
     }
 
     // Update daily stats
@@ -282,9 +283,7 @@ async function sendDay7Emails(
     }
   }
 
-  const error = null;
-
-  if (error || !sequences?.length) {
+  if (!sequences?.length) {
     return results;
   }
 
@@ -325,6 +324,7 @@ async function sendDay7Emails(
         subject: `Still looking for leads in ${seq.listing_city}?`,
         ...(isPlainText ? { text: emailContent } : { html: emailContent }),
         from: OUTREACH_FROM,
+        replyTo: OUTREACH_REPLY_TO,
         tags: [
           { name: 'type', value: 'outreach' },
           { name: 'day', value: '7' },
@@ -347,6 +347,7 @@ async function sendDay7Emails(
         console.log(`  Day 7 [${variant}] sent to ${seq.contact.company_name}`);
       } else {
         results.errors++;
+        console.error(`  Day 7 failed for ${seq.contact.email}: ${emailResult.error}`);
       }
     } catch (err) {
       console.error(`Error sending Day 7 to ${seq.contact.email}:`, err);
@@ -441,6 +442,7 @@ async function sendDay3Emails(
         subject: `${listings.length} new homes just sold in ${seq.listing_city}`,
         ...(isPlainText ? { text: emailContent } : { html: emailContent }),
         from: OUTREACH_FROM,
+        replyTo: OUTREACH_REPLY_TO,
         tags: [
           { name: 'type', value: 'outreach' },
           { name: 'day', value: '3' },
@@ -461,6 +463,7 @@ async function sendDay3Emails(
         results.sent++;
       } else {
         results.errors++;
+        console.error(`  Day 3 failed for ${seq.contact.email}: ${emailResult.error}`);
       }
     } catch (err) {
       console.error(`Error sending Day 3 to ${seq.contact.email}:`, err);
@@ -474,6 +477,9 @@ async function sendDay3Emails(
 /**
  * Create new sequences and send Day 1 emails
  * "Moving leads in [City] — free for your company"
+ *
+ * Strategy: query all recent listings (no city filter to avoid large .in() issues),
+ * then match against contacts in-memory by city+state.
  */
 async function createAndSendDay1Emails(
   supabase: ReturnType<typeof createClient>,
@@ -497,6 +503,8 @@ async function createAndSendDay1Emails(
     return results;
   }
 
+  console.log(`Found ${contacts.length} active contacts`);
+
   // Build a map of city+state -> contacts for accurate matching
   const cityStateContactsMap = new Map<string, OutreachContact[]>();
   for (const contact of contacts as OutreachContact[]) {
@@ -509,13 +517,12 @@ async function createAndSendDay1Emails(
     cityStateContactsMap.get(key)!.push(contact);
   }
 
-  // Get recent sold + just_listed in last 48 hours, filtered to contact cities
+  console.log(`Contact city+state pairs: ${cityStateContactsMap.size}`);
+
+  // Get recent sold + just_listed in last 48 hours
+  // Query WITHOUT city filter to avoid large .in() PostgREST issues
   const cutoffDate = new Date();
   cutoffDate.setHours(cutoffDate.getHours() - 48);
-
-  const contactCities = [...new Set((contacts as OutreachContact[]).map(c => c.primary_city))];
-  const contactStates = [...new Set((contacts as OutreachContact[]).map(c => c.primary_state).filter(Boolean))];
-  console.log(`Contact cities: ${contactCities.length}, Contact states: ${contactStates.length}`);
 
   const { data: recentListings, error: listingsError } = await supabase
     .from('listings')
@@ -523,13 +530,11 @@ async function createAndSendDay1Emails(
     .in('status', ['sold', 'just_listed'])
     .gte('lastseenat', cutoffDate.toISOString())
     .neq('contenttype', 'LOT')
-    .in('lastcity', contactCities)
-    .in('addressstate', contactStates)
     .order('lastseenat', { ascending: false })
-    .limit(500);
+    .limit(2000);
 
   if (listingsError) {
-    console.error('Listings query error:', listingsError);
+    console.error('Listings query error:', JSON.stringify(listingsError));
     return results;
   }
 
@@ -538,17 +543,49 @@ async function createAndSendDay1Emails(
     return results;
   }
 
-  console.log(`Found ${recentListings.length} listings in target cities`);
+  console.log(`Found ${recentListings.length} recent listings total`);
+
+  // Filter to only listings that match a contact's city+state (in-memory matching)
+  const matchedListings = (recentListings as Listing[]).filter(listing => {
+    const city = listing.lastcity?.toLowerCase().trim() || '';
+    const state = listing.addressstate?.toUpperCase().trim() || '';
+    const key = `${city}|${state}`;
+    return cityStateContactsMap.has(key);
+  });
+
+  console.log(`Listings matching contact cities: ${matchedListings.length}`);
+
+  if (!matchedListings.length) {
+    console.log('No listings match any contact city+state pair');
+    return results;
+  }
 
   // Pre-compute listing counts per city+state for the email template
   const cityListingCounts = new Map<string, number>();
-  for (const listing of recentListings as Listing[]) {
+  for (const listing of matchedListings) {
     const key = `${listing.lastcity}|${listing.addressstate}`;
     cityListingCounts.set(key, (cityListingCounts.get(key) || 0) + 1);
   }
 
+  // Get existing sequences to check duplicates in bulk (much faster than per-pair queries)
+  const { data: existingSequences, error: seqError } = await supabase
+    .from('outreach_sequences')
+    .select('contact_id, listing_id');
+
+  if (seqError) {
+    console.error('Existing sequences query error:', JSON.stringify(seqError));
+    return results;
+  }
+
+  // Build a set of existing contact+listing pairs for O(1) lookup
+  const existingPairs = new Set<string>();
+  for (const seq of existingSequences || []) {
+    existingPairs.add(`${seq.contact_id}|${seq.listing_id}`);
+  }
+  console.log(`Existing sequence pairs: ${existingPairs.size}`);
+
   // For each listing, find matching contacts and create sequences
-  for (const listing of recentListings as Listing[]) {
+  for (const listing of matchedListings) {
     if (results.sent >= budget) break;
 
     const listingCity = listing.lastcity.toLowerCase().trim();
@@ -559,18 +596,15 @@ async function createAndSendDay1Emails(
     // Get total listing count for this city (for the email)
     const totalInCity = cityListingCounts.get(`${listing.lastcity}|${listing.addressstate}`) || 1;
 
+    // Convert zpid to string for consistency with listing_id text column
+    const zpidStr = String(listing.zpid);
+
     for (const contact of matchingContacts) {
       if (results.sent >= budget) break;
 
-      // Check if sequence already exists
-      const { data: existingSeq } = await supabase
-        .from('outreach_sequences')
-        .select('id')
-        .eq('contact_id', contact.id)
-        .eq('listing_id', listing.zpid)
-        .single();
-
-      if (existingSeq) {
+      // Check if sequence already exists (O(1) lookup instead of DB query per pair)
+      const pairKey = `${contact.id}|${zpidStr}`;
+      if (existingPairs.has(pairKey)) {
         results.skipped++;
         continue;
       }
@@ -613,6 +647,7 @@ async function createAndSendDay1Emails(
           subject: `Moving leads in ${listing.lastcity} — free for ${contact.company_name}`,
           ...(isPlainText ? { text: emailContent } : { html: emailContent }),
           from: OUTREACH_FROM,
+          replyTo: OUTREACH_REPLY_TO,
           tags: [
             { name: 'type', value: 'outreach' },
             { name: 'day', value: '1' },
@@ -623,11 +658,11 @@ async function createAndSendDay1Emails(
 
         if (emailResult.success) {
           // Create the sequence record with A/B variant
-          await supabase
+          const { error: insertError } = await supabase
             .from('outreach_sequences')
             .insert({
               contact_id: contact.id,
-              listing_id: listing.zpid,
+              listing_id: zpidStr,
               listing_address: listing.addressstreet,
               listing_city: listing.lastcity,
               listing_state: listing.addressstate,
@@ -640,8 +675,15 @@ async function createAndSendDay1Emails(
               status: 'active',
             });
 
-          results.sent++;
-          console.log(`  Day 1 [${variant}] sent to ${contact.company_name} for ${listing.addressstreet}`);
+          if (insertError) {
+            console.error(`  Sequence insert error for ${contact.company_name}: ${JSON.stringify(insertError)}`);
+            results.errors++;
+          } else {
+            // Track in our local set to avoid sending duplicate in same run
+            existingPairs.add(pairKey);
+            results.sent++;
+            console.log(`  Day 1 [${variant}] sent to ${contact.company_name} for ${listing.addressstreet}, ${listing.lastcity}`);
+          }
         } else {
           results.errors++;
           console.error(`  Failed to send to ${contact.email}: ${emailResult.error}`);
@@ -697,6 +739,7 @@ async function sendTestEmail(
     subject: `Moving leads in ${city} — free for Test Moving Company`,
     ...(isPlainText ? { text: emailContent } : { html: emailContent }),
     from: OUTREACH_FROM,
+    replyTo: OUTREACH_REPLY_TO,
     tags: [
       { name: 'type', value: 'outreach-test' },
       { name: 'day', value: '1' },
