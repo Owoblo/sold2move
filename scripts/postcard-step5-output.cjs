@@ -75,20 +75,32 @@ function applyOutputFilters(listings, opts) {
   }
 
   // Filter to furnished homes (if furniture check was run)
-  const hasFurnitureScan = listings.some(l => l.is_furnished != null);
+  const hasFurnitureScan = listings.some(l => l.is_furnished != null || l.furniture_scan_date != null);
   if (hasFurnitureScan) {
     const beforeFurn = filtered.length;
-    if (opts.includeUnscanned) {
-      // Keep furnished + unscanned, remove unfurnished
-      filtered = filtered.filter(l => l.is_furnished === true || l.is_furnished == null);
-      console.log(`  Including unscanned homes (--include-unscanned)`);
-    } else {
-      // Keep only confirmed furnished
-      filtered = filtered.filter(l => l.is_furnished === true);
-    }
+
+    filtered = filtered.filter(l => {
+      // Always keep confirmed furnished
+      if (l.is_furnished === true) return true;
+      // Always remove confirmed unfurnished
+      if (l.is_furnished === false) return false;
+      // is_furnished === null beyond this point — "uncertain or not scanned"
+
+      // Has interior photos: scan ran but result was uncertain — include with benefit of doubt
+      const photoCount = (() => {
+        let p = l.carouselphotos;
+        if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
+        return Array.isArray(p) ? p.length : 0;
+      })();
+      if (photoCount >= 2) return true;
+
+      // No photos at all — we have no basis to include this listing
+      return false;
+    });
+
     const removedFurn = beforeFurn - filtered.length;
     if (removedFurn > 0) {
-      console.log(`  Removed ${removedFurn} unfurnished/unscanned listings`);
+      console.log(`  Removed ${removedFurn} listings (unfurnished or no photos to verify)`);
     }
   }
 

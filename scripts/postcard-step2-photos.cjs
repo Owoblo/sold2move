@@ -23,7 +23,7 @@ const {
   parseCliArgs,
 } = require('./postcard-lib.cjs');
 
-const MAX_BATCH = 50;
+const MAX_BATCH = 300;
 const MIN_PHOTO_COUNT = 2;
 const APIFY_ACTOR = 'maxcopell~zillow-detail-scraper';
 
