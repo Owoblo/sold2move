@@ -243,6 +243,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
     const { data, error } = await supabase
       .from('listings')
       .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent')
+      .eq('region', regionConfig.key)
       .eq('city', city)
       .in('status', ['active', 'just_listed', 'sold_archived', 'sold']);
 
