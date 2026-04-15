@@ -23,7 +23,6 @@ const {
   parseCliArgs,
 } = require('./postcard-lib.cjs');
 
-const RAPIDAPI_HOST = 'us-real-estate-data.p.rapidapi.com';
 const MAX_BATCH = 50;
 const MIN_PHOTO_COUNT = 2;
 const APIFY_ACTOR = 'maxcopell~zillow-detail-scraper';
@@ -86,73 +85,6 @@ function buildZillowUrl(listing) {
   return `https://www.zillow.com/homedetails/${street}-${city}-${state}/${listing.zpid}_zpid/`;
 }
 
-/**
- * Fetch property details from RapidAPI US Real Estate Data
- */
-function fetchPropertyDetail(zpid, apiKey) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      hostname: RAPIDAPI_HOST,
-      path: `/property?zpid=${zpid}`,
-      method: 'GET',
-      headers: {
-        'x-rapidapi-key': apiKey,
-        'x-rapidapi-host': RAPIDAPI_HOST,
-      },
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error(`Failed to parse response for zpid ${zpid}: ${e.message}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.setTimeout(15000, () => {
-      req.destroy();
-      reject(new Error(`Timeout fetching zpid ${zpid}`));
-    });
-    req.end();
-  });
-}
-
-/**
- * Extract photo URLs from API response.
- * Response has:
- *   - responsivePhotos: [{url: "..."}]  (simple, good for furniture check)
- *   - originalPhotos: [{caption, mixedSources: {jpeg: [{url, width}]}}]  (multiple sizes)
- */
-function extractPhotos(apiResponse) {
-  // Prefer responsivePhotos (simple {url} objects)
-  if (Array.isArray(apiResponse?.responsivePhotos) && apiResponse.responsivePhotos.length > 0) {
-    return apiResponse.responsivePhotos
-      .map(p => ({ url: p.url || p }))
-      .filter(p => p.url);
-  }
-
-  // Fallback to originalPhotos (extract largest jpeg)
-  if (Array.isArray(apiResponse?.originalPhotos) && apiResponse.originalPhotos.length > 0) {
-    return apiResponse.originalPhotos
-      .map(p => {
-        const jpegs = p?.mixedSources?.jpeg;
-        if (Array.isArray(jpegs) && jpegs.length > 0) {
-          // Pick the largest available
-          const sorted = [...jpegs].sort((a, b) => (b.width || 0) - (a.width || 0));
-          return { url: sorted[0].url };
-        }
-        return null;
-      })
-      .filter(Boolean);
-  }
-
-  return [];
-}
 
 function isValidPhotoUrl(url) {
   if (!url || typeof url !== 'string') return false;
