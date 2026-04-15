@@ -4,8 +4,12 @@
  *
  * Sends the generated CSV and PDF as attachments.
  *
- * Usage:
- *   node scripts/postcard-email-results.cjs <csv-path> <pdf-path>
+ * Usage (standalone):
+ *   node scripts/postcard-email-results.cjs <csv-path> <pdf-path> [--region windsor|wkg|london]
+ *
+ * Or import and call:
+ *   const { sendPostcardEmail } = require('./postcard-email-results.cjs');
+ *   await sendPostcardEmail('wkg', csvPath, pdfPath);
  *
  * Requires RESEND_API_KEY in environment.
  */
@@ -15,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { getRegionConfig } = require('./postcard-lib.cjs');
 
 const RECIPIENTS = [
   'business@starmovers.ca',
@@ -70,24 +75,17 @@ function sendEmail(subject, html, attachments) {
   });
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const csvPath = args[0];
-  const pdfPath = args[1];
-
-  if (!csvPath || !pdfPath) {
-    // Auto-detect from today's date
-    console.error('Usage: node scripts/postcard-email-results.cjs <csv-path> <pdf-path>');
-    process.exit(1);
-  }
+async function sendPostcardEmail(region, csvPath, pdfPath) {
+  region = (region || 'windsor').toLowerCase();
+  const regionConfig = getRegionConfig(region);
+  const regionLabel = regionConfig.label;
+  const pipelineDir = path.join(__dirname, `.pipeline-${region}`);
 
   if (!fs.existsSync(csvPath)) {
-    console.error(`CSV not found: ${csvPath}`);
-    process.exit(1);
+    throw new Error(`CSV not found: ${csvPath}`);
   }
   if (!fs.existsSync(pdfPath)) {
-    console.error(`PDF not found: ${pdfPath}`);
-    process.exit(1);
+    throw new Error(`PDF not found: ${pdfPath}`);
   }
 
   const csvContent = fs.readFileSync(csvPath).toString('base64');
@@ -102,7 +100,6 @@ async function main() {
   const today = new Date().toISOString().split('T')[0];
 
   // Read pipeline data for breakdown stats
-  const pipelineDir = path.join(__dirname, '.pipeline');
   let step1Count = 0, withPhotos = 0, furnished = 0, unfurnished = 0, unknown = 0;
   let verified = 0, badAddress = 0;
   let cityCounts = {}, statusCounts = {};
@@ -134,13 +131,12 @@ async function main() {
     .map(([city, count]) => `<tr><td style="padding: 4px 8px; border: 1px solid #eee;">${city}</td><td style="padding: 4px 8px; border: 1px solid #eee; text-align: center;">${count}</td></tr>`)
     .join('');
 
-  // Status breakdown
   const soldCount = statusCounts['sold'] || 0;
   const justListedCount = statusCounts['just_listed'] || 0;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px;">
-      <h2 style="color: #1a1a1a;">Windsor Postcard Pipeline — ${today}</h2>
+      <h2 style="color: #1a1a1a;">${regionLabel} Postcard Pipeline — ${today}</h2>
       <p>Your postcard batch is ready. Here's the breakdown:</p>
 
       <h3 style="color: #333; margin-bottom: 8px;">Pipeline Summary</h3>
@@ -187,6 +183,7 @@ async function main() {
         </tr>
       </table>
 
+      ${cityRows ? `
       <h3 style="color: #333; margin-bottom: 8px;">By City</h3>
       <table style="border-collapse: collapse; width: 100%; margin: 0 0 20px;">
         <tr style="background: #f5f5f5;">
@@ -195,19 +192,20 @@ async function main() {
         </tr>
         ${cityRows}
       </table>
+      ` : ''}
 
       <p>Both files attached. The PDF is print-ready at 9.5" × 4.125".</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
-      <p style="color: #888; font-size: 12px;">Automated by Sold2Move Postcard Pipeline</p>
+      <p style="color: #888; font-size: 12px;">Automated by Sold2Move Postcard Pipeline — ${regionLabel}</p>
     </div>
   `;
 
-  console.log(`Sending postcard results to ${RECIPIENTS.join(', ')}...`);
+  console.log(`Sending ${regionLabel} postcard results to ${RECIPIENTS.join(', ')}...`);
   console.log(`  CSV: ${csvName} (${recordCount} records)`);
   console.log(`  PDF: ${pdfName}`);
 
   const result = await sendEmail(
-    `Windsor Postcards Ready - ${today} (${recordCount} listings)`,
+    `${regionLabel} Postcards Ready — ${today} (${recordCount} listings)`,
     html,
     [
       { filename: csvName, content: csvContent },
@@ -215,10 +213,36 @@ async function main() {
     ]
   );
 
-  console.log(`Email sent successfully! Message ID: ${result.id}`);
+  console.log(`Email sent! Message ID: ${result.id}`);
+  return result;
 }
 
-main().catch(err => {
-  console.error('Email failed:', err.message);
-  process.exit(1);
-});
+// Standalone usage
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  let csvPath = null;
+  let pdfPath = null;
+  let region = 'windsor';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--region') {
+      region = args[++i];
+    } else if (!csvPath) {
+      csvPath = args[i];
+    } else if (!pdfPath) {
+      pdfPath = args[i];
+    }
+  }
+
+  if (!csvPath || !pdfPath) {
+    console.error('Usage: node scripts/postcard-email-results.cjs <csv-path> <pdf-path> [--region windsor|wkg|london]');
+    process.exit(1);
+  }
+
+  sendPostcardEmail(region, csvPath, pdfPath).catch(err => {
+    console.error('Email failed:', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { sendPostcardEmail };

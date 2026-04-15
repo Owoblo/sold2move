@@ -13,7 +13,6 @@
  */
 
 const {
-  WINDSOR_CITIES,
   getSupabase,
   writePipelineFile,
   parseCliArgs,
@@ -27,7 +26,7 @@ async function run(options) {
   console.log(`  Date range: ${opts.from} to ${opts.to}`);
   console.log(`  Min price: $${opts.minPrice.toLocaleString()}`);
   console.log(`  Statuses: ${opts.statuses.join(', ')}`);
-  console.log(`  Cities: ${WINDSOR_CITIES.join(', ')}`);
+  console.log(`  Region: ${opts.region} (${opts.cities.length} cities)`);
 
   if (opts.dryRun) {
     console.log('\n  [DRY RUN] Would query Supabase for matching listings.');
@@ -39,12 +38,14 @@ async function run(options) {
   // Query in batches by city to avoid hitting row limits
   let allListings = [];
 
-  for (const city of WINDSOR_CITIES) {
+  for (const city of opts.cities) {
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong')
+      .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry')
       .in('status', opts.statuses)
+      .eq('region', opts.region)
       .eq('city', city)
+      .eq('glitch_suspected', false)
       .gte('lastseenat', `${opts.from}T00:00:00Z`)
       .lte('lastseenat', `${opts.to}T23:59:59Z`)
       .gte('unformattedprice', opts.minPrice)
@@ -72,8 +73,17 @@ async function run(options) {
     console.log(`  Removed ${lotsRemoved} lots/land listings`);
   }
 
-  // Filter out listings without a street address
-  allListings = allListings.filter(l => l.addressstreet && l.addressstreet.trim());
+  // Filter out listings without a proper street address (must have a street number)
+  allListings = allListings.filter(l => {
+    const street = (l.addressstreet || '').trim();
+    if (!street) return false;
+    // Must start with a number (e.g. "1234 Oak St") — rejects things like "Corner Lot" or blank
+    if (!/^\d/.test(street)) {
+      console.log(`  Removed (no street number): zpid ${l.zpid} — "${street}"`);
+      return false;
+    }
+    return true;
+  });
 
   // Deduplicate by zpid (keep latest)
   const seen = new Map();

@@ -250,6 +250,11 @@ async function run(options) {
         } else {
           mismatched++;
         }
+      } else if (response.status === 'REQUEST_DENIED') {
+        // API key disabled/invalid — treat as skipped so listings still pass through
+        listing._geocode_verified = null;
+        listing._geocode_reason = `Geocoding skipped: API key denied`;
+        failed++;
       } else {
         listing._geocode_verified = false;
         listing._geocode_reason = `Geocoding failed: ${response.status}`;
@@ -259,7 +264,7 @@ async function run(options) {
       const total = verified + mismatched + failed;
       process.stdout.write(`  Processed ${total}/${needVerification.length} (${verified} verified, ${mismatched} mismatched, ${failed} failed)\r`);
     } catch (err) {
-      listing._geocode_verified = false;
+      listing._geocode_verified = null;
       listing._geocode_reason = `Error: ${err.message}`;
       failed++;
     }

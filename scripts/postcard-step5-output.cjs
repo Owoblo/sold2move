@@ -14,10 +14,13 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const Papa = require('papaparse');
 const fs = require('fs');
 const path = require('path');
+
+const projectRoot = path.join(__dirname, '..');
 const {
   readPipelineFile,
   stepHeader,
   parseCliArgs,
+  getRegionConfig,
 } = require('./postcard-lib.cjs');
 
 // Postcard dimensions: 9.5" x 4.125"
@@ -113,10 +116,11 @@ function generateCSV(listings, outputPath) {
 /**
  * Generate PDF postcards
  */
-async function generatePDF(listings, outputPath) {
+async function generatePDF(listings, outputPath, opts) {
   const pdfDoc = await PDFDocument.create();
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const addressFont = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
+  const regionConfig = getRegionConfig(opts.region);
 
   // Load stamp
   const stampBytes = await getStampImage();
@@ -138,19 +142,14 @@ async function generatePDF(listings, outputPath) {
     const returnLineHeight = 12;
     let returnY = PAGE_HEIGHT - MARGIN;
 
-    page.drawText('Saturn Star Services', {
-      x: MARGIN, y: returnY, size: returnFontSize, font: boldFont, color: rgb(0, 0, 0),
-    });
-    returnY -= returnLineHeight;
+    const returnAddr = regionConfig.returnAddressLines;
 
-    page.drawText('1487 Ouellette Avenue, G Floor', {
-      x: MARGIN, y: returnY, size: returnFontSize, font: boldFont, color: rgb(0, 0, 0),
-    });
-    returnY -= returnLineHeight;
-
-    page.drawText('Windsor, ON N1G 1C4', {
-      x: MARGIN, y: returnY, size: returnFontSize, font: boldFont, color: rgb(0, 0, 0),
-    });
+    for (const line of returnAddr) {
+      page.drawText(line, {
+        x: MARGIN, y: returnY, size: returnFontSize, font: boldFont, color: rgb(0, 0, 0),
+      });
+      returnY -= returnLineHeight;
+    }
 
     // Stamp (top-right)
     if (stampImage) {
@@ -223,10 +222,11 @@ async function run(options) {
 
   // Apply filters
   const finalListings = applyOutputFilters(listings, opts);
+
   console.log(`\n  Final postcard count: ${finalListings.length}`);
 
   if (finalListings.length === 0) {
-    console.log('  No listings passed all filters. Nothing to generate.');
+    console.log('  No new listings since last run. Nothing to generate.');
     return [];
   }
 
@@ -235,14 +235,23 @@ async function run(options) {
     return finalListings;
   }
 
-  // Generate outputs
+  const region = opts.region || 'windsor';
+  const regionConfig = getRegionConfig(region);
+  const regionLabel = regionConfig.outputPrefix;
   const dateStr = new Date().toISOString().split('T')[0];
-  const projectRoot = path.join(__dirname, '..');
-  const csvPath = path.join(projectRoot, `Windsor_Postcards_${dateStr}.csv`);
-  const pdfPath = path.join(projectRoot, `Windsor_Postcards_${dateStr}.pdf`);
+
+  // Use versioned filenames so re-runs never overwrite previous output
+  let runNum = 1;
+  let csvPath, pdfPath;
+  do {
+    const suffix = runNum === 1 ? dateStr : `${dateStr}_v${runNum}`;
+    csvPath = path.join(projectRoot, `${regionLabel}_Postcards_${suffix}.csv`);
+    pdfPath = path.join(projectRoot, `${regionLabel}_Postcards_${suffix}.pdf`);
+    runNum++;
+  } while (fs.existsSync(csvPath) || fs.existsSync(pdfPath));
 
   generateCSV(finalListings, csvPath);
-  await generatePDF(finalListings, pdfPath);
+  await generatePDF(finalListings, pdfPath, opts);
 
   // Summary
   const statusCounts = {};
@@ -252,6 +261,7 @@ async function run(options) {
 
   console.log('\n  === Output Summary ===');
   console.log(`  Total postcards: ${finalListings.length}`);
+  console.log(`  Batch ID: ${opts.batchId || 'n/a'}`);
   Object.entries(statusCounts).forEach(([s, c]) => console.log(`    ${s}: ${c}`));
   console.log(`  CSV: ${csvPath}`);
   console.log(`  PDF: ${pdfPath}`);

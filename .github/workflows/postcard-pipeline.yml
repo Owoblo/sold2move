@@ -1,11 +1,10 @@
-name: Windsor Postcard Pipeline
+name: Postcard Pipeline — Windsor + WKG + London + Ottawa
 
 on:
   schedule:
-    # Run every 2 days at 11 AM EST (4 PM UTC) — after scraper finishes
+    # Every 2 days at 11 AM EST (4 PM UTC)
     - cron: '0 16 */2 * *'
   workflow_dispatch:
-    # Allow manual trigger from GitHub Actions tab
     inputs:
       from_date:
         description: 'Start date (YYYY-MM-DD), default: 2 days ago'
@@ -21,11 +20,19 @@ on:
         description: 'Skip furniture check'
         type: boolean
         default: false
+      skip_scrape:
+        description: 'Skip Zillow scrape (use existing DB data)'
+        type: boolean
+        default: false
+      regions:
+        description: 'Which regions to run (comma-separated: windsor,wkg,london,ottawa)'
+        required: false
+        default: 'windsor,wkg,london,ottawa'
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -64,28 +71,43 @@ jobs:
           if [ "${{ github.event.inputs.skip_furniture }}" = "true" ]; then
             FLAGS="$FLAGS --skip-furniture"
           fi
+          if [ "${{ github.event.inputs.skip_scrape }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-scrape"
+          fi
           echo "flags=$FLAGS" >> $GITHUB_OUTPUT
 
-      - name: Run postcard pipeline
+      - name: Resolve regions
+        id: regions
+        run: |
+          REGIONS="${{ github.event.inputs.regions }}"
+          if [ -z "$REGIONS" ]; then REGIONS="windsor,wkg,london,ottawa"; fi
+          echo "list=$REGIONS" >> $GITHUB_OUTPUT
+
+      # ─── WINDSOR ─────────────────────────────────────────────────────────────
+
+      - name: Run Windsor pipeline
+        if: contains(steps.regions.outputs.list, 'windsor')
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: |
-          node scripts/windsor-postcard-pipeline.cjs \
+          node scripts/postcard-pipeline.cjs \
+            --region windsor \
             --from ${{ steps.dates.outputs.from }} \
             --to ${{ steps.dates.outputs.to }} \
             ${{ steps.flags.outputs.flags }}
 
-      - name: Find output files
-        id: files
+      - name: Find Windsor output files
+        id: windsor_files
         run: |
           CSV=$(ls -t Windsor_Postcards_*.csv 2>/dev/null | head -1)
           PDF=$(ls -t Windsor_Postcards_*.pdf 2>/dev/null | head -1)
           if [ -z "$CSV" ] || [ -z "$PDF" ]; then
-            echo "No output files generated (likely no listings in date range)"
+            echo "No Windsor output files (no listings in date range)"
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "csv=$CSV" >> $GITHUB_OUTPUT
@@ -93,21 +115,165 @@ jobs:
             echo "found=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Email results
-        if: steps.files.outputs.found == 'true'
+      - name: Email Windsor results
+        if: steps.windsor_files.outputs.found == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           node scripts/postcard-email-results.cjs \
-            "${{ steps.files.outputs.csv }}" \
-            "${{ steps.files.outputs.pdf }}"
+            "${{ steps.windsor_files.outputs.csv }}" \
+            "${{ steps.windsor_files.outputs.pdf }}" \
+            --region windsor
 
-      - name: Upload artifacts
-        if: steps.files.outputs.found == 'true'
+      # ─── WKG (Waterloo / Kitchener / Guelph) ────────────────────────────────
+
+      - name: Run WKG pipeline
+        if: contains(steps.regions.outputs.list, 'wkg')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region wkg \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find WKG output files
+        id: wkg_files
+        run: |
+          CSV=$(ls -t WKG_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t WKG_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No WKG output files (no listings in date range)"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email WKG results
+        if: steps.wkg_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.wkg_files.outputs.csv }}" \
+            "${{ steps.wkg_files.outputs.pdf }}" \
+            --region wkg
+
+      # ─── LONDON ──────────────────────────────────────────────────────────────
+
+      - name: Run London pipeline
+        if: contains(steps.regions.outputs.list, 'london')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region london \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find London output files
+        id: london_files
+        run: |
+          CSV=$(ls -t London_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t London_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No London output files (no listings in date range)"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email London results
+        if: steps.london_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.london_files.outputs.csv }}" \
+            "${{ steps.london_files.outputs.pdf }}" \
+            --region london
+
+      # ─── OTTAWA ──────────────────────────────────────────────────────────────
+
+      - name: Run Ottawa pipeline
+        if: contains(steps.regions.outputs.list, 'ottawa')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region ottawa \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find Ottawa output files
+        id: ottawa_files
+        run: |
+          CSV=$(ls -t Ottawa_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Ottawa_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No Ottawa output files (no listings in date range)"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email Ottawa results
+        if: steps.ottawa_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.ottawa_files.outputs.csv }}" \
+            "${{ steps.ottawa_files.outputs.pdf }}" \
+            --region ottawa
+
+      # ─── Upload all artifacts ─────────────────────────────────────────────────
+
+      - name: Upload all postcard artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: postcards-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
           path: |
             Windsor_Postcards_*.csv
             Windsor_Postcards_*.pdf
+            WKG_Postcards_*.csv
+            WKG_Postcards_*.pdf
+            London_Postcards_*.csv
+            London_Postcards_*.pdf
+            Ottawa_Postcards_*.csv
+            Ottawa_Postcards_*.pdf
+          if-no-files-found: ignore
           retention-days: 30

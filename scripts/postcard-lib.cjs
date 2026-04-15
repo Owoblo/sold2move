@@ -5,27 +5,36 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const fs = require('fs');
+const { getRegionConfig } = require('./postcard-region-config.cjs');
 
 // Load .env from project root
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-// Windsor-area cities for filtering
-const WINDSOR_CITIES = [
-  'Windsor', 'Essex', 'Tecumseh', 'Amherstburg', 'Lakeshore',
-  'Chatham-Kent', 'LaSalle', 'Leamington', 'Kingsville', 'Tilbury',
-];
+const WINDSOR_CITIES = getRegionConfig('windsor').cities;
+const WKG_CITIES = getRegionConfig('wkg').cities;
+const LONDON_CITIES = getRegionConfig('london').cities;
+const REGION_CITIES = {
+  windsor: WINDSOR_CITIES,
+  wkg: WKG_CITIES,
+  london: LONDON_CITIES,
+  ottawa: getRegionConfig('ottawa').cities,
+};
 
-// Pipeline data directory
-const PIPELINE_DIR = path.join(__dirname, '.pipeline');
+// Pipeline data directory — set per region so Windsor and WKG never share files
+let PIPELINE_DIR = path.join(__dirname, '.pipeline-windsor');
+
+function setPipelineRegion(region) {
+  PIPELINE_DIR = path.join(__dirname, `.pipeline-${region || 'windsor'}`);
+}
 
 /**
  * Initialize Supabase client
  */
 function getSupabase() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env');
+    throw new Error('Missing Supabase URL/key in env (expected VITE_SUPABASE_URL or SUPABASE_URL, and VITE_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY)');
   }
   return createClient(url, key);
 }
@@ -110,11 +119,14 @@ function parseCliArgs(argv) {
     to: today.toISOString().split('T')[0],
     skipPhotos: false,
     skipFurniture: false,
-    skipGeocode: false,
+    skipGeocode: true,
+    skipScrape: false,
     includeUnscanned: false,
-    minPrice: 375000,
+    minPrice: 300000,
     statuses: ['sold', 'just_listed'],
     dryRun: false,
+    region: 'windsor',
+    cities: WINDSOR_CITIES,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -134,6 +146,9 @@ function parseCliArgs(argv) {
       case '--skip-geocode':
         options.skipGeocode = true;
         break;
+      case '--skip-scrape':
+        options.skipScrape = true;
+        break;
       case '--include-unscanned':
         options.includeUnscanned = true;
         break;
@@ -146,6 +161,13 @@ function parseCliArgs(argv) {
       case '--dry-run':
         options.dryRun = true;
         break;
+      case '--region': {
+        const r = args[++i].toLowerCase();
+        const regionConfig = getRegionConfig(r);
+        options.region = r;
+        options.cities = regionConfig.cities;
+        break;
+      }
     }
   }
 
@@ -163,7 +185,12 @@ function stepHeader(stepNum, title) {
 
 module.exports = {
   WINDSOR_CITIES,
-  PIPELINE_DIR,
+  WKG_CITIES,
+  LONDON_CITIES,
+  REGION_CITIES,
+  getRegionConfig,
+  get PIPELINE_DIR() { return PIPELINE_DIR; },
+  setPipelineRegion,
   getSupabase,
   createRateLimiter,
   ensurePipelineDir,

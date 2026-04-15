@@ -23,22 +23,27 @@ const {
 const OpenAI = require('openai');
 
 const SKIP_EXTERIOR = 4;  // Skip first N photos (usually exterior)
-const MAX_INTERIOR_PHOTOS = 2;
+const MAX_INTERIOR_PHOTOS = 5;
+const MIN_PHOTOS_FOR_RETRY = 3; // Only retry if listing has this many photos or fewer (likely no interior uploaded yet)
 
 /**
  * Check if a listing has interior photos available
  */
 function getInteriorPhotoUrls(listing) {
-  const photos = listing.carouselphotos;
+  let photos = listing.carouselphotos;
+  if (typeof photos === 'string') { try { photos = JSON.parse(photos); } catch (e) { return []; } }
   if (!Array.isArray(photos) || photos.length === 0) return [];
 
-  // Skip first N (exterior), take up to MAX_INTERIOR_PHOTOS
-  const interior = photos.slice(SKIP_EXTERIOR, SKIP_EXTERIOR + MAX_INTERIOR_PHOTOS);
+  // If we don't have enough photos to confidently skip exteriors, use the available
+  // photos rather than dropping the listing entirely.
+  const interior = photos.length > SKIP_EXTERIOR
+    ? photos.slice(SKIP_EXTERIOR, SKIP_EXTERIOR + MAX_INTERIOR_PHOTOS)
+    : photos.slice(0, MAX_INTERIOR_PHOTOS);
 
   return interior.map(p => {
     if (typeof p === 'string') return p;
     return p?.url || p?.src || null;
-  }).filter(Boolean);
+  }).filter(url => url && !url.includes('maps.googleapis.com') && !url.includes('streetview'));
 }
 
 /**
@@ -69,14 +74,16 @@ async function checkFurnished(openai, photoUrls) {
 
   const answer = (response.choices[0]?.message?.content || '').trim().toUpperCase();
 
-  // Parse response
+  // If OpenAI couldn't determine (exterior-only photos, not enough info), treat as uncertain
+  const isUncertain = !answer.startsWith('YES') && !answer.startsWith('NO');
+
   const isFurnished = answer.startsWith('YES');
   let confidence = 0.5;
   if (answer.includes('HIGH')) confidence = 0.9;
   else if (answer.includes('MEDIUM')) confidence = 0.7;
   else if (answer.includes('LOW')) confidence = 0.4;
 
-  return { isFurnished, confidence, rawAnswer: answer };
+  return { isFurnished, confidence, rawAnswer: answer, isUncertain };
 }
 
 async function run(options) {
@@ -87,12 +94,18 @@ async function run(options) {
   console.log(`  Loaded ${listings.length} listings from Step 2`);
 
   // Separate: already scanned, has photos to scan, no photos
-  const alreadyScanned = listings.filter(l => l.furniture_scan_date != null);
+  // NOTE: listings flagged furniture_needs_retry=true get re-scanned even if previously scanned
+  // (these are listings that had exterior-only photos on first scan — may have new photos now)
+  const alreadyScanned = listings.filter(l =>
+    l.furniture_scan_date != null && !l.furniture_needs_retry
+  );
   const hasPhotos = listings.filter(l =>
-    l.furniture_scan_date == null && getInteriorPhotoUrls(l).length > 0
+    (l.furniture_scan_date == null || l.furniture_needs_retry) &&
+    getInteriorPhotoUrls(l).length > 0
   );
   const noPhotos = listings.filter(l =>
-    l.furniture_scan_date == null && getInteriorPhotoUrls(l).length === 0
+    (l.furniture_scan_date == null || l.furniture_needs_retry) &&
+    getInteriorPhotoUrls(l).length === 0
   );
 
   console.log(`  Already scanned: ${alreadyScanned.length}`);
@@ -131,31 +144,81 @@ async function run(options) {
     await rateLimiter();
     const urls = getInteriorPhotoUrls(listing);
 
+    // just_listed with only 1 total photo — skip scan, queue retry for next run
+    let totalPhotos = listing.carouselphotos;
+    if (typeof totalPhotos === 'string') { try { totalPhotos = JSON.parse(totalPhotos); } catch(e) {} }
+    totalPhotos = Array.isArray(totalPhotos) ? totalPhotos.length : 0;
+
+    if (listing.status === 'just_listed' && totalPhotos <= 1) {
+      listing.furniture_needs_retry = true;
+      listing.furniture_scan_date = null;
+      listing.is_furnished = null;
+      process.stdout.write(`  RETRY queued (just_listed, only ${totalPhotos} photo): zpid ${listing.zpid}\r`);
+      await supabase.from('listings').update({
+        furniture_needs_retry: true,
+        furniture_scan_date: null,
+        is_furnished: null,
+      }).eq('zpid', listing.zpid);
+      continue;
+    }
+
     try {
       const result = await checkFurnished(openai, urls);
 
-      listing.is_furnished = result.isFurnished;
-      listing.furniture_confidence = result.confidence;
-      listing.furniture_scan_date = new Date().toISOString();
+      // For just_listed with uncertain result AND very few photos → also hold for retry
+      const needsRetry = listing.status === 'just_listed' &&
+        (result.isUncertain || result.confidence <= 0.5) && totalPhotos <= MIN_PHOTOS_FOR_RETRY;
 
-      // Update Supabase
-      const { error } = await supabase
-        .from('listings')
-        .update({
-          is_furnished: result.isFurnished,
-          furniture_confidence: result.confidence,
+      if (needsRetry) {
+        listing.furniture_needs_retry = true;
+        listing.furniture_scan_date = null;
+        listing.is_furnished = null;
+        process.stdout.write(`  RETRY flagged (just_listed, low/uncertain conf): zpid ${listing.zpid} — ${result.rawAnswer}\r`);
+
+        await supabase.from('listings').update({
+          furniture_needs_retry: true,
+          furniture_scan_date: null,
+          is_furnished: null,
+        }).eq('zpid', listing.zpid);
+      } else if (result.isUncertain) {
+        // Sold listing uncertain — stamp it, no retry (Zillow removes sold photos anyway)
+        listing.furniture_needs_retry = false;
+        listing.furniture_scan_date = new Date().toISOString();
+        listing.is_furnished = null;
+        process.stdout.write(`  UNCERTAIN (sold, no retry): zpid ${listing.zpid} — ${result.rawAnswer}\r`);
+
+        await supabase.from('listings').update({
+          furniture_needs_retry: false,
           furniture_scan_date: new Date().toISOString(),
-          furniture_scan_method: 'postcard-pipeline-v1',
-        })
-        .eq('zpid', listing.zpid);
+          is_furnished: null,
+        }).eq('zpid', listing.zpid);
+      } else {
+        // Clear retry flag — we got a definitive YES or NO
+        listing.is_furnished = result.isFurnished;
+        listing.furniture_confidence = result.confidence;
+        listing.furniture_scan_date = new Date().toISOString();
+        listing.furniture_needs_retry = false;
 
-      if (error) {
-        console.error(`  DB update failed for zpid ${listing.zpid}:`, error.message);
+        // Update Supabase
+        const { error } = await supabase
+          .from('listings')
+          .update({
+            is_furnished: result.isFurnished,
+            furniture_confidence: result.confidence,
+            furniture_scan_date: new Date().toISOString(),
+            furniture_scan_method: 'postcard-pipeline-v1',
+            furniture_needs_retry: false,
+          })
+          .eq('zpid', listing.zpid);
+
+        if (error) {
+          console.error(`  DB update failed for zpid ${listing.zpid}:`, error.message);
+        }
+
+        scanned++;
+        if (result.isFurnished) furnished++;
+        process.stdout.write(`  Scanned ${scanned}/${hasPhotos.length} — ${result.rawAnswer} (zpid ${listing.zpid})\r`);
       }
-
-      scanned++;
-      if (result.isFurnished) furnished++;
-      process.stdout.write(`  Scanned ${scanned}/${hasPhotos.length} — ${result.rawAnswer} (zpid ${listing.zpid})\r`);
     } catch (err) {
       console.error(`\n  Error scanning zpid ${listing.zpid}:`, err.message);
       failed++;
