@@ -273,3 +273,38 @@ jobs:
             Ottawa_Postcards_*.pdf
           if-no-files-found: ignore
           retention-days: 30
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          node -e "
+          const https = require('https');
+          const body = JSON.stringify({
+            from: 'Sold2Move Pipeline <postcards@sold2move.com>',
+            to: ['johnowolabi80@gmail.com'],
+            subject: 'Pipeline FAILED — ${{ github.workflow }} (${{ steps.dates.outputs.from }} to ${{ steps.dates.outputs.to }})',
+            html: \`
+              <div style=\"font-family: Arial, sans-serif; max-width: 600px;\">
+                <h2 style=\"color: #dc2626;\">Postcard Pipeline Failed</h2>
+                <p>The pipeline encountered an error and did not complete successfully.</p>
+                <table style=\"border-collapse: collapse; width: 100%; margin: 16px 0;\">
+                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Workflow</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ github.workflow }}</td></tr>
+                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Date range</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ steps.dates.outputs.from }} to ${{ steps.dates.outputs.to }}</td></tr>
+                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Regions</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ steps.regions.outputs.list }}</td></tr>
+                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Run ID</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ github.run_id }}</td></tr>
+                </table>
+                <p><a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\" style=\"background: #1d4ed8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;\">View Full Logs</a></p>
+                <hr style=\"border: none; border-top: 1px solid #eee; margin: 24px 0;\">
+                <p style=\"color: #888; font-size: 12px;\">Sold2Move Postcard Pipeline — automated error alert</p>
+              </div>
+            \`,
+          });
+          const req = https.request({
+            hostname: 'api.resend.com', path: '/emails', method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+          }, res => { let d = ''; res.on('data', c => d += c); res.on('end', () => console.log('Alert sent:', res.statusCode, d)); });
+          req.on('error', e => console.error('Alert failed:', e.message));
+          req.write(body); req.end();
+          "
