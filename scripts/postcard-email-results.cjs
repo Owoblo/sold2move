@@ -21,14 +21,12 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { getRegionConfig } = require('./postcard-lib.cjs');
 
-const RECIPIENTS = [
-  'business@starmovers.ca',
-  'printinkshop@gmail.com',
-];
+const OWNER_EMAIL = 'business@starmovers.ca';
+const PRINT_EMAIL  = 'printinkshop@gmail.com';
 const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
 const REPLY_TO = 'business@starmovers.ca';
 
-function sendEmail(subject, html, attachments) {
+function sendEmail(to, subject, html, attachments) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -38,7 +36,7 @@ function sendEmail(subject, html, attachments) {
 
     const body = JSON.stringify({
       from: FROM,
-      to: RECIPIENTS,
+      to: Array.isArray(to) ? to : [to],
       reply_to: REPLY_TO,
       subject,
       html,
@@ -200,21 +198,35 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     </div>
   `;
 
-  console.log(`Sending ${regionLabel} postcard results to ${RECIPIENTS.join(', ')}...`);
-  console.log(`  CSV: ${csvName} (${recordCount} records)`);
-  console.log(`  PDF: ${pdfName}`);
+  const attachments = [
+    { filename: csvName, content: csvContent },
+    { filename: pdfName, content: pdfContent },
+  ];
+  const subject = `${regionLabel} Postcards Ready — ${today} (${recordCount} listings)`;
 
-  const result = await sendEmail(
-    `${regionLabel} Postcards Ready — ${today} (${recordCount} listings)`,
-    html,
-    [
-      { filename: csvName, content: csvContent },
-      { filename: pdfName, content: pdfContent },
-    ]
-  );
+  // --- Owner email: full breakdown ---
+  console.log(`Sending full report to ${OWNER_EMAIL}...`);
+  const ownerResult = await sendEmail(OWNER_EMAIL, subject, html, attachments);
+  console.log(`  Owner email sent! ID: ${ownerResult.id}`);
 
-  console.log(`Email sent! Message ID: ${result.id}`);
-  return result;
+  // --- Print shop email: simple instruction, PDF only ---
+  const printHtml = `
+    <div style="font-family: Arial, sans-serif; max-width: 500px;">
+      <p>Hi,</p>
+      <p>Please print the attached PDF for the <strong>${regionLabel}</strong> batch — <strong>${recordCount} postcards</strong>, dated ${today}.</p>
+      <p>The PDF is print-ready at 9.5" × 4.125".</p>
+      <p>Thanks!</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+      <p style="color: #aaa; font-size: 11px;">Saturn Star Services — Sold2Move Postcard Pipeline</p>
+    </div>
+  `;
+  console.log(`Sending print instruction to ${PRINT_EMAIL}...`);
+  const printResult = await sendEmail(PRINT_EMAIL, `Print Request: ${regionLabel} Postcards — ${today} (${recordCount})`, printHtml, [
+    { filename: pdfName, content: pdfContent },
+  ]);
+  console.log(`  Print shop email sent! ID: ${printResult.id}`);
+
+  return ownerResult;
 }
 
 // Standalone usage
