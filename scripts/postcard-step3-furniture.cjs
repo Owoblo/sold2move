@@ -93,24 +93,33 @@ async function run(options) {
   const listings = readPipelineFile('step2-photos.json');
   console.log(`  Loaded ${listings.length} listings from Step 2`);
 
-  // Separate: already scanned, has photos to scan, no photos
-  // NOTE: listings flagged furniture_needs_retry=true get re-scanned even if previously scanned
-  // (these are listings that had exterior-only photos on first scan — may have new photos now)
-  const alreadyScanned = listings.filter(l =>
+  // Sold listings: skip furniture scan entirely.
+  // Their furniture was checked when they were just_listed — we carry that result forward.
+  // Running OpenAI on sold listings wastes credits (Zillow removes interior photos after sale).
+  const soldListings = listings.filter(l => l.status === 'sold');
+  const justListedListings = listings.filter(l => l.status !== 'sold');
+  if (soldListings.length > 0) {
+    console.log(`  Skipping furniture scan for ${soldListings.length} sold listings (result carried from just_listed phase)`);
+  }
+
+  // Separate just_listed: already scanned, has photos to scan, no photos
+  // Listings flagged furniture_needs_retry=true get re-scanned even if previously scanned
+  // (had exterior-only photos on first scan — may have new interior photos now)
+  const alreadyScanned = justListedListings.filter(l =>
     l.furniture_scan_date != null && !l.furniture_needs_retry
   );
-  const hasPhotos = listings.filter(l =>
+  const hasPhotos = justListedListings.filter(l =>
     (l.furniture_scan_date == null || l.furniture_needs_retry) &&
     getInteriorPhotoUrls(l).length > 0
   );
-  const noPhotos = listings.filter(l =>
+  const noPhotos = justListedListings.filter(l =>
     (l.furniture_scan_date == null || l.furniture_needs_retry) &&
     getInteriorPhotoUrls(l).length === 0
   );
 
-  console.log(`  Already scanned: ${alreadyScanned.length}`);
-  console.log(`  Ready to scan: ${hasPhotos.length}`);
-  console.log(`  No interior photos: ${noPhotos.length}`);
+  console.log(`  just_listed — already scanned: ${alreadyScanned.length}`);
+  console.log(`  just_listed — ready to scan: ${hasPhotos.length}`);
+  console.log(`  just_listed — no interior photos: ${noPhotos.length}`);
 
   if (opts.dryRun) {
     console.log(`\n  [DRY RUN] Would scan ${hasPhotos.length} listings with OpenAI Vision.`);

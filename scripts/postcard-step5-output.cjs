@@ -74,43 +74,49 @@ function applyOutputFilters(listings, opts) {
     }
   }
 
-  // Furniture filter — applied differently by status:
+  // Furniture filter — status-aware:
   //
-  // just_listed: owner is actively living there → check furniture.
-  //   Keep: confirmed furnished + uncertain (has photos but no clear result)
-  //   Remove: confirmed unfurnished + no photos at all
+  // SOLD listings — use the just_listed postcard tag as the quality signal:
+  //   ✓ just_listed_postcard_sent_at IS NOT NULL → previously passed our filter, include
+  //   ✓ last_postcard_sent_at IS NULL → brand new sold lead we never saw as just_listed, include
+  //   ✗ was just_listed but failed our filter (last_postcard_sent_at set, no just_listed stamp) → skip
+  //   No photo scanning needed — Zillow removes photos after sale, waste of API credits.
   //
-  // sold: owner already moved out by the time Zillow shows "sold" — home
-  //   may be empty but that doesn't mean movers weren't needed.
-  //   Keep: ALL sold listings (valid address + price is enough signal)
+  // JUST_LISTED listings — full furniture check:
+  //   ✓ confirmed furnished (is_furnished = true)
+  //   ✓ uncertain but has interior photos (benefit of the doubt)
+  //   ✗ confirmed unfurnished
+  //   ✗ no photos at all (can't verify)
   const hasFurnitureScan = listings.some(l => l.is_furnished != null || l.furniture_scan_date != null);
   if (hasFurnitureScan) {
     const beforeFurn = filtered.length;
 
     filtered = filtered.filter(l => {
-      // Sold listings: always include — address + price is sufficient signal
-      if (l.status === 'sold') return true;
+      if (l.status === 'sold') {
+        // Previously sent a just_listed postcard → passed our filter → include
+        if (l.just_listed_postcard_sent_at) return true;
+        // Never processed at all → brand new sold lead → include
+        if (!l.last_postcard_sent_at) return true;
+        // Was processed as just_listed but didn't pass the filter → don't send sold either
+        return false;
+      }
 
-      // just_listed: apply furniture filter
+      // just_listed: full furniture filter
       if (l.is_furnished === true) return true;
       if (l.is_furnished === false) return false;
-      // is_furnished === null: uncertain or unscanned
 
-      // Has photos → gave it a shot but inconclusive → include (benefit of doubt)
+      // Uncertain (is_furnished = null): include if has interior photos
       const photoCount = (() => {
         let p = l.carouselphotos;
         if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
         return Array.isArray(p) ? p.length : 0;
       })();
-      if (photoCount >= 2) return true;
-
-      // No photos and not confirmed furnished → skip
-      return false;
+      return photoCount >= 2;
     });
 
     const removedFurn = beforeFurn - filtered.length;
     if (removedFurn > 0) {
-      console.log(`  Removed ${removedFurn} just_listed listings (unfurnished or no photos to verify)`);
+      console.log(`  Removed ${removedFurn} listings (failed furniture filter or previously filtered just_listed)`);
     }
   }
 

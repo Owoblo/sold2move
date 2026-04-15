@@ -205,7 +205,15 @@ async function run(options) {
   // interior photos uploaded since the last scan (e.g. realtor added photos next day).
   // Skip listings where we already tried and got 0 photos, unless the scraper has
   // updated the listing since (lastseenat > photos_last_attempted_at).
-  const needPhotos = listings.filter(l => {
+  // Sold listings: Zillow removes photos after sale and we already scanned them
+  // when they were just_listed. Skip photo fetch entirely — save Apify credits.
+  const soldListings = listings.filter(l => l.status === 'sold');
+  const justListedListings = listings.filter(l => l.status !== 'sold');
+  if (soldListings.length > 0) {
+    console.log(`  Skipping photo fetch for ${soldListings.length} sold listings (already processed as just_listed)`);
+  }
+
+  const needPhotos = justListedListings.filter(l => {
     if (getPhotoCount(l) >= MIN_PHOTO_COUNT && !l.furniture_needs_retry) return false;
     if ((l.photo_fetch_attempts || 0) >= 3) return false;
     // If we previously attempted and got nothing, only retry if scraper updated listing since
@@ -216,17 +224,12 @@ async function run(options) {
     }
     return true;
   });
-  const havePhotos = listings.filter(l =>
+  const havePhotos = justListedListings.filter(l =>
     getPhotoCount(l) >= MIN_PHOTO_COUNT && !l.furniture_needs_retry
   );
-  const lowPhotoListings = listings.filter(l => {
-    const count = getPhotoCount(l);
-    return count > 0 && count < MIN_PHOTO_COUNT;
-  });
 
-  console.log(`  Already have photos: ${havePhotos.length}`);
-  console.log(`  Need photos: ${needPhotos.length}`);
-  console.log(`  Low-photo listings to refresh: ${lowPhotoListings.length}`);
+  console.log(`  just_listed — already have photos: ${havePhotos.length}`);
+  console.log(`  just_listed — need photos: ${needPhotos.length}`);
 
   if (opts.dryRun) {
     console.log(`\n  [DRY RUN] Would fetch photos for ${needPhotos.length} listings.`);
