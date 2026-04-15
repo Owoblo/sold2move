@@ -77,9 +77,11 @@ function applyOutputFilters(listings, opts) {
   // Furniture filter — status-aware:
   //
   // SOLD listings — use the just_listed postcard tag as the quality signal:
-  //   ✓ just_listed_postcard_sent_at IS NOT NULL → previously passed our filter, include
-  //   ✓ last_postcard_sent_at IS NULL → brand new sold lead we never saw as just_listed, include
-  //   ✗ was just_listed but failed our filter (last_postcard_sent_at set, no just_listed stamp) → skip
+  //   ✗ sold_postcard_sent_at IS NOT NULL → already sent, never send again
+  //   ✓ just_listed_postcard_sent_at IS NOT NULL → passed furniture check as just_listed → include
+  //   ✓ no history at all + is_furnished = true → pre-pipeline sold with scan data → include
+  //   ✗ no history at all + is_furnished ≠ true → no quality signal, skip
+  //   ✗ was processed as just_listed but failed our filter → skip sold too
   //   No photo scanning needed — Zillow removes photos after sale, waste of API credits.
   //
   // JUST_LISTED listings — full furniture check:
@@ -93,10 +95,16 @@ function applyOutputFilters(listings, opts) {
 
     filtered = filtered.filter(l => {
       if (l.status === 'sold') {
+        // Already sent a sold postcard → never send again
+        if (l.sold_postcard_sent_at) return false;
         // Previously sent a just_listed postcard → passed our filter → include
         if (l.just_listed_postcard_sent_at) return true;
-        // Never processed at all → brand new sold lead → include
-        if (!l.last_postcard_sent_at) return true;
+        // Pre-pipeline sold listing (no just_listed history): use furniture scan if available
+        if (!l.last_postcard_sent_at) {
+          if (l.is_furnished === true) return true;
+          // No quality signal at all → skip (can't verify the home was furnished)
+          return false;
+        }
         // Was processed as just_listed but didn't pass the filter → don't send sold either
         return false;
       }
