@@ -74,19 +74,29 @@ function applyOutputFilters(listings, opts) {
     }
   }
 
-  // Filter to furnished homes (if furniture check was run)
+  // Furniture filter — applied differently by status:
+  //
+  // just_listed: owner is actively living there → check furniture.
+  //   Keep: confirmed furnished + uncertain (has photos but no clear result)
+  //   Remove: confirmed unfurnished + no photos at all
+  //
+  // sold: owner already moved out by the time Zillow shows "sold" — home
+  //   may be empty but that doesn't mean movers weren't needed.
+  //   Keep: ALL sold listings (valid address + price is enough signal)
   const hasFurnitureScan = listings.some(l => l.is_furnished != null || l.furniture_scan_date != null);
   if (hasFurnitureScan) {
     const beforeFurn = filtered.length;
 
     filtered = filtered.filter(l => {
-      // Always keep confirmed furnished
-      if (l.is_furnished === true) return true;
-      // Always remove confirmed unfurnished
-      if (l.is_furnished === false) return false;
-      // is_furnished === null beyond this point — "uncertain or not scanned"
+      // Sold listings: always include — address + price is sufficient signal
+      if (l.status === 'sold') return true;
 
-      // Has interior photos: scan ran but result was uncertain — include with benefit of doubt
+      // just_listed: apply furniture filter
+      if (l.is_furnished === true) return true;
+      if (l.is_furnished === false) return false;
+      // is_furnished === null: uncertain or unscanned
+
+      // Has photos → gave it a shot but inconclusive → include (benefit of doubt)
       const photoCount = (() => {
         let p = l.carouselphotos;
         if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
@@ -94,13 +104,13 @@ function applyOutputFilters(listings, opts) {
       })();
       if (photoCount >= 2) return true;
 
-      // No photos at all — we have no basis to include this listing
+      // No photos and not confirmed furnished → skip
       return false;
     });
 
     const removedFurn = beforeFurn - filtered.length;
     if (removedFurn > 0) {
-      console.log(`  Removed ${removedFurn} listings (unfurnished or no photos to verify)`);
+      console.log(`  Removed ${removedFurn} just_listed listings (unfurnished or no photos to verify)`);
     }
   }
 
