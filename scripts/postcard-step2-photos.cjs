@@ -23,7 +23,7 @@ const {
   parseCliArgs,
 } = require('./postcard-lib.cjs');
 
-const MAX_BATCH = 300;
+const MAX_BATCH = Infinity; // No cap — fetch photos for every listing that needs them
 const MIN_PHOTO_COUNT = 2;
 const APIFY_ACTOR = 'maxcopell~zillow-detail-scraper';
 
@@ -229,7 +229,7 @@ async function run(options) {
   console.log(`  Low-photo listings to refresh: ${lowPhotoListings.length}`);
 
   if (opts.dryRun) {
-    console.log(`\n  [DRY RUN] Would fetch photos for ${Math.min(needPhotos.length, MAX_BATCH)} listings.`);
+    console.log(`\n  [DRY RUN] Would fetch photos for ${needPhotos.length} listings.`);
     writePipelineFile('step2-photos.json', listings);
     return listings;
   }
@@ -243,25 +243,31 @@ async function run(options) {
   }
 
   const supabase = getSupabase();
-  const rateLimiter = createRateLimiter(1000); // 1 req/sec
-  const batch = needPhotos.slice(0, MAX_BATCH);
+  const APIFY_CHUNK = 100; // Max listings per Apify actor run
   let fetched = 0;
   let failed = 0;
 
-  console.log(`  Fetching photos for ${batch.length} listings (max ${MAX_BATCH})...`);
+  console.log(`  Fetching photos for ALL ${needPhotos.length} listings (${Math.ceil(needPhotos.length / APIFY_CHUNK)} Apify runs)...`);
 
-  let apifyResults = new Map();
-  if (batch.length > 0) {
+  // Process all listings in chunks so no listing is skipped
+  const allApifyResults = new Map();
+  for (let i = 0; i < needPhotos.length; i += APIFY_CHUNK) {
+    const chunk = needPhotos.slice(i, i + APIFY_CHUNK);
+    const chunkNum = Math.floor(i / APIFY_CHUNK) + 1;
+    const totalChunks = Math.ceil(needPhotos.length / APIFY_CHUNK);
+    console.log(`\n  Apify chunk ${chunkNum}/${totalChunks} (${chunk.length} listings)...`);
     try {
-      console.log('  Fetching photos via Apify...');
-      apifyResults = await fetchPhotosViaApify(batch, apifyToken);
+      const chunkResults = await fetchPhotosViaApify(chunk, apifyToken);
+      for (const [zpid, photos] of chunkResults) {
+        allApifyResults.set(zpid, photos);
+      }
     } catch (err) {
-      console.error(`  Apify fetch failed: ${err.message}`);
+      console.error(`  Apify chunk ${chunkNum} failed: ${err.message} — continuing with next chunk`);
     }
   }
 
-  for (const listing of batch) {
-    let photos = apifyResults.get(String(listing.zpid)) || [];
+  for (const listing of needPhotos) {
+    let photos = allApifyResults.get(String(listing.zpid)) || [];
 
     if (photos.length > 0) {
       listing.carouselphotos = photos;
@@ -276,7 +282,7 @@ async function run(options) {
       }
 
       fetched++;
-      process.stdout.write(`  Fetched ${fetched}/${batch.length} (${photos.length} photos for zpid ${listing.zpid})\r`);
+      process.stdout.write(`  Saved ${fetched}/${needPhotos.length} (${photos.length} photos for zpid ${listing.zpid})\r`);
     } else {
       // Stamp attempt time and increment counter — skip until scraper updates listing
       const newAttempts = (listing.photo_fetch_attempts || 0) + 1;
