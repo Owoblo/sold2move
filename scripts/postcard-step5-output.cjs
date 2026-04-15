@@ -28,12 +28,19 @@ const PAGE_WIDTH = 9.5 * 72;
 const PAGE_HEIGHT = 4.125 * 72;
 const MARGIN = 0.5 * 72;
 
-const STAMP_PATH = '/tmp/dotx_extract/word/media/image1.jpeg';
+const STAMP_PATHS = [
+  path.join(__dirname, 'assets', 'canada-post-stamp.jpeg'),
+  '/tmp/dotx_extract/word/media/image1.jpeg',
+];
 const TEMPLATE_PATH = '/Users/admin/Downloads/Saturn Star Services - standard(home.dotx';
 
 async function getStampImage() {
-  if (fs.existsSync(STAMP_PATH)) {
-    return fs.readFileSync(STAMP_PATH);
+  // Check committed asset first (works on CI), then local fallbacks
+  for (const p of STAMP_PATHS) {
+    if (fs.existsSync(p)) {
+      console.log(`  Stamp: loaded from ${path.basename(p)}`);
+      return fs.readFileSync(p);
+    }
   }
   try {
     const JSZip = require('jszip');
@@ -46,6 +53,7 @@ async function getStampImage() {
   } catch (e) {
     // Stamp is optional
   }
+  console.warn('  Stamp: not found — postcard will be generated without it');
   return null;
 }
 

@@ -355,23 +355,38 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
 }
 
 async function upsertListings(supabase, rows) {
-  const BATCH = 100;
+  const BATCH = 50;  // Smaller batch size to avoid statement timeouts
+  const MAX_RETRIES = 3;
   let upserted = 0;
   let errors = 0;
 
   for (let i = 0; i < rows.length; i += BATCH) {
     const batch = rows.slice(i, i + BATCH);
-    const { error } = await supabase
-      .from('listings')
-      .upsert(batch, { onConflict: 'zpid', ignoreDuplicates: false });
+    const batchNum = Math.floor(i / BATCH) + 1;
+    let success = false;
 
-    if (error) {
-      console.error(`  Upsert error batch ${Math.floor(i / BATCH) + 1}:`, error.message);
-      errors += batch.length;
-    } else {
-      upserted += batch.length;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const { error } = await supabase
+        .from('listings')
+        .upsert(batch, { onConflict: 'zpid', ignoreDuplicates: false });
+
+      if (!error) {
+        upserted += batch.length;
+        success = true;
+        break;
+      }
+
+      if (attempt < MAX_RETRIES) {
+        const delay = attempt * 3000; // 3s, 6s backoff
+        console.error(`  Upsert batch ${batchNum} failed (attempt ${attempt}/${MAX_RETRIES}): ${error.message} — retrying in ${delay / 1000}s...`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        console.error(`  Upsert batch ${batchNum} failed after ${MAX_RETRIES} attempts: ${error.message}`);
+        errors += batch.length;
+      }
     }
-    process.stdout.write(`  Upserted ${Math.min(i + BATCH, rows.length)}/${rows.length}\r`);
+
+    process.stdout.write(`  Upserted ${Math.min(i + BATCH, rows.length)}/${rows.length}${success ? '' : ' (some errors)'}\r`);
   }
   process.stdout.write('\n');
   return { upserted, errors };
