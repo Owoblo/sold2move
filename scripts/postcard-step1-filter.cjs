@@ -94,6 +94,22 @@ async function run(options) {
   }
   allListings = Array.from(seen.values());
 
+  // Fill missing postal codes from the address field (e.g. "123 Oak St, Windsor, ON N9A 1B2")
+  const CANADIAN_POSTAL_RE = /\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b/i;
+  let postalEnriched = 0;
+  for (const listing of allListings) {
+    if (!listing.addresszipcode && listing.address) {
+      const match = listing.address.match(CANADIAN_POSTAL_RE);
+      if (match) {
+        listing.addresszipcode = match[1].toUpperCase().replace(/\s/g, '');
+        postalEnriched++;
+      }
+    }
+  }
+  if (postalEnriched > 0) {
+    console.log(`  Enriched ${postalEnriched} postal codes from address field`);
+  }
+
   console.log(`\n  Total eligible listings: ${allListings.length}`);
 
   // Summary by status
