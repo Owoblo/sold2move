@@ -15,6 +15,7 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
 const Papa = require('papaparse');
 const path = require('path');
+const { formatCanadianPostal, formatRecipientDeliveryLine } = require('./postcard-lib.cjs');
 
 // Postcard dimensions: 9.5" x 4.125" (matches the .dotx template)
 const PAGE_WIDTH = 9.5 * 72;   // 684 points
@@ -120,6 +121,8 @@ async function generatePDF(options) {
     stampImage = await pdfDoc.embedJpg(stampBytes);
   }
 
+  let missingPostal = 0;
+
   // Generate each postcard
   for (let i = 0; i < records.length; i++) {
     const row = records[i];
@@ -171,16 +174,22 @@ async function generatePDF(options) {
     }
 
     // === RECIPIENT ADDRESS (centered) ===
+    // Canada Post machine-readable format: uppercase, "CITY PROVINCE  POSTAL CODE"
+    // on one line (two spaces before postal, space between FSA and LDU).
     const addrFontSize = 16;
     const addrLineHeight = 22;
 
     // Build address lines
-    const name = options.recipientName;
-    const street = row.addressstreet || '';
+    const name = (options.recipientName || 'Homeowner').toUpperCase();
+    const street = (row.addressstreet || '').trim().toUpperCase();
     const city = row.city || '';
     const province = row.addressstate || 'ON';
-    const postal = row.addresszipcode || '';
-    const cityLine = [city, province, postal].filter(Boolean).join(', ').replace(', ,', ',');
+    const postal = formatCanadianPostal(row.addresszipcode);
+    if (!postal) {
+      missingPostal++;
+      console.warn(`  WARNING: zpid ${row.zpid} — missing postal code ("${row.addressstreet}, ${city}")`);
+    }
+    const cityLine = formatRecipientDeliveryLine(city, province, postal);
 
     const lines = [name, street, cityLine].filter(Boolean);
 
@@ -225,6 +234,9 @@ async function generatePDF(options) {
   });
   console.log(`Recipient: "${options.recipientName}"`);
   console.log(`Output: ${options.outputPath}`);
+  if (missingPostal > 0) {
+    console.warn(`WARNING: ${missingPostal} postcard(s) printed without postal code — Canada Post sorting will be delayed`);
+  }
 }
 
 const options = parseArgs();

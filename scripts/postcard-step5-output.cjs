@@ -21,6 +21,8 @@ const {
   stepHeader,
   parseCliArgs,
   getRegionConfig,
+  formatCanadianPostal,
+  formatRecipientDeliveryLine,
 } = require('./postcard-lib.cjs');
 
 // Postcard dimensions: 9.5" x 4.125"
@@ -141,7 +143,7 @@ function generateCSV(listings, outputPath) {
     addressstreet: l.addressstreet,
     city: l.city || l.addresscity,
     addressstate: l.addressstate || 'ON',
-    addresszipcode: l.addresszipcode,
+    addresszipcode: formatCanadianPostal(l.addresszipcode),
     price: l.price,
     beds: l.beds,
     baths: l.baths,
@@ -177,6 +179,8 @@ async function generatePDF(listings, outputPath, opts) {
     }
   }
 
+  let missingPostal = 0;
+
   for (let i = 0; i < listings.length; i++) {
     const row = listings[i];
     const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
@@ -207,16 +211,24 @@ async function generatePDF(listings, outputPath, opts) {
       });
     }
 
-    // Recipient address (centered)
+    // Recipient address (centered) — Canada Post machine-readable format:
+    //   NAME
+    //   STREET ADDRESS
+    //   CITY PROVINCE  POSTAL CODE
+    // All uppercase, two spaces before postal code, postal code with space between FSA and LDU.
     const addrFontSize = 16;
     const addrLineHeight = 22;
 
-    const name = 'Homeowner';
-    const street = row.addressstreet || '';
+    const name = 'HOMEOWNER';
+    const street = (row.addressstreet || '').trim().toUpperCase();
     const city = row.city || row.addresscity || '';
     const province = row.addressstate || 'ON';
-    const postal = row.addresszipcode || '';
-    const cityLine = [city, province, postal].filter(Boolean).join(', ').replace(', ,', ',');
+    const postal = formatCanadianPostal(row.addresszipcode);
+    if (!postal) {
+      missingPostal++;
+      console.warn(`  WARNING: zpid ${row.zpid} — missing postal code ("${row.addressstreet}, ${city}")`);
+    }
+    const cityLine = formatRecipientDeliveryLine(city, province, postal);
     const lines = [name, street, cityLine].filter(Boolean);
 
     const totalTextHeight = lines.length * addrLineHeight;
@@ -239,6 +251,9 @@ async function generatePDF(listings, outputPath, opts) {
   const pdfBytes = await pdfDoc.save();
   fs.writeFileSync(outputPath, pdfBytes);
   console.log(`  PDF: ${path.basename(outputPath)} (${listings.length} postcards)`);
+  if (missingPostal > 0) {
+    console.warn(`  WARNING: ${missingPostal} postcard(s) printed without postal code — Canada Post sorting will be delayed`);
+  }
 }
 
 async function run(options) {

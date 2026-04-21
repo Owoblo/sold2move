@@ -17,6 +17,7 @@ const {
   writePipelineFile,
   parseCliArgs,
   stepHeader,
+  formatCanadianPostal,
 } = require('./postcard-lib.cjs');
 
 async function run(options) {
@@ -94,20 +95,30 @@ async function run(options) {
   }
   allListings = Array.from(seen.values());
 
-  // Fill missing postal codes from the address field (e.g. "123 Oak St, Windsor, ON N9A 1B2")
-  const CANADIAN_POSTAL_RE = /\b([A-Z]\d[A-Z]\s?\d[A-Z]\d)\b/i;
+  // Normalize postal codes to Canada Post format ("N9A 1B2"),
+  // and fill missing ones from the address field (e.g. "123 Oak St, Windsor, ON N9A 1B2").
   let postalEnriched = 0;
+  let postalMissing = 0;
   for (const listing of allListings) {
-    if (!listing.addresszipcode && listing.address) {
-      const match = listing.address.match(CANADIAN_POSTAL_RE);
-      if (match) {
-        listing.addresszipcode = match[1].toUpperCase().replace(/\s/g, '');
-        postalEnriched++;
-      }
+    const normalized = formatCanadianPostal(listing.addresszipcode);
+    if (normalized) {
+      listing.addresszipcode = normalized;
+      continue;
+    }
+    const fromAddress = formatCanadianPostal(listing.address);
+    if (fromAddress) {
+      listing.addresszipcode = fromAddress;
+      postalEnriched++;
+    } else {
+      listing.addresszipcode = '';
+      postalMissing++;
     }
   }
   if (postalEnriched > 0) {
     console.log(`  Enriched ${postalEnriched} postal codes from address field`);
+  }
+  if (postalMissing > 0) {
+    console.warn(`  WARNING: ${postalMissing} listings have no postal code — Canada Post sorting will be delayed`);
   }
 
   console.log(`\n  Total eligible listings: ${allListings.length}`);

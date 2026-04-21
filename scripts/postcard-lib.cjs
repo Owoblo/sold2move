@@ -183,6 +183,32 @@ function stepHeader(stepNum, title) {
   console.log(`${'='.repeat(60)}`);
 }
 
+const CANADIAN_POSTAL_RE = /\b([A-Z]\d[A-Z])\s*(\d[A-Z]\d)\b/i;
+
+/**
+ * Normalize a Canadian postal code to Canada Post format: "N9A 1B2"
+ * (uppercase, single space between FSA and LDU). Returns "" if not a valid postal.
+ */
+function formatCanadianPostal(raw) {
+  if (!raw) return '';
+  const match = String(raw).match(CANADIAN_POSTAL_RE);
+  if (!match) return '';
+  return `${match[1].toUpperCase()} ${match[2].toUpperCase()}`;
+}
+
+/**
+ * Build the Canada Post-standard recipient delivery line.
+ * Format: "CITY PROVINCE  POSTAL CODE" (uppercase, two spaces before postal).
+ * Falls back gracefully if postal is missing.
+ */
+function formatRecipientDeliveryLine(city, province, postal) {
+  const c = (city || '').trim().toUpperCase();
+  const p = (province || 'ON').trim().toUpperCase();
+  const z = formatCanadianPostal(postal);
+  const cityProv = [c, p].filter(Boolean).join(' ');
+  return z ? `${cityProv}  ${z}` : cityProv;
+}
+
 module.exports = {
   WINDSOR_CITIES,
   WKG_CITIES,
@@ -199,4 +225,6 @@ module.exports = {
   formatAddress,
   parseCliArgs,
   stepHeader,
+  formatCanadianPostal,
+  formatRecipientDeliveryLine,
 };
