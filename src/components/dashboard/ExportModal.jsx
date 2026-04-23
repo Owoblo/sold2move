@@ -116,7 +116,7 @@ const ExportModal = ({
     {
       id: 'mail-merge',
       title: 'Mail Merge Template',
-      description: 'Generate email template for outreach',
+      description: 'Generate email template for mail merge',
       icon: Mail,
       recommended: false
     }

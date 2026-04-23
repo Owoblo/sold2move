@@ -32,7 +32,7 @@ const UniqueFeatures = () => {
       icon: Search,
       title: "Homeowner Lookup",
       description: "Get homeowner contact information instantly. Skip the middlemen and reach decision-makers directly.",
-      highlights: ["Verified contact info", "Property owner data", "Direct outreach ready"],
+      highlights: ["Verified contact info", "Property owner data", "Direct access"],
       badge: "Direct Access",
       gradient: "from-orange-500 to-amber-500"
     },

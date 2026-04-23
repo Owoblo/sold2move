@@ -198,7 +198,7 @@ const OnboardingTour = ({ isOpen, onComplete, onSkip }) => {
               <Play className="h-5 w-5 text-teal" />
               <div>
                 <p className="text-sm font-medium text-lightest-slate">Email Templates</p>
-                <p className="text-xs text-slate">Pre-built outreach messages</p>
+                <p className="text-xs text-slate">Pre-built email templates</p>
               </div>
             </div>
           </div>

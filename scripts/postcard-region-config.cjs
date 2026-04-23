@@ -69,7 +69,7 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -76.40, east: -75.35, south: 45.10, north: 45.60 },
     returnAddressLines: [
-      'Saturn Star Services',
+      'Dexa Services',
       '4108-1100 Canadian Shield Avenue',
       'Kanata, Ottawa, ON K2K 0K9',
     ],
