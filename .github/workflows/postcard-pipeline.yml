@@ -274,6 +274,65 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      - name: Notify when a selected region produced no postcards
+        if: |
+          always() && !failure() && !cancelled() && (
+            (contains(steps.regions.outputs.list, 'windsor') && steps.windsor_files.outputs.found != 'true') ||
+            (contains(steps.regions.outputs.list, 'wkg') && steps.wkg_files.outputs.found != 'true') ||
+            (contains(steps.regions.outputs.list, 'london') && steps.london_files.outputs.found != 'true') ||
+            (contains(steps.regions.outputs.list, 'ottawa') && steps.ottawa_files.outputs.found != 'true')
+          )
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          REGION_LIST: ${{ steps.regions.outputs.list }}
+          WINDSOR_FOUND: ${{ steps.windsor_files.outputs.found }}
+          WKG_FOUND: ${{ steps.wkg_files.outputs.found }}
+          LONDON_FOUND: ${{ steps.london_files.outputs.found }}
+          OTTAWA_FOUND: ${{ steps.ottawa_files.outputs.found }}
+          DATE_FROM: ${{ steps.dates.outputs.from }}
+          DATE_TO: ${{ steps.dates.outputs.to }}
+          RUN_ID: ${{ github.run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node -e "
+          const https = require('https');
+          const selected = (process.env.REGION_LIST || '').split(',').map(s => s.trim()).filter(Boolean);
+          const found = {
+            windsor: process.env.WINDSOR_FOUND === 'true',
+            wkg:     process.env.WKG_FOUND === 'true',
+            london:  process.env.LONDON_FOUND === 'true',
+            ottawa:  process.env.OTTAWA_FOUND === 'true',
+          };
+          const empty = selected.filter(r => !found[r]);
+          if (empty.length === 0) process.exit(0);
+          const rows = selected.map(r => {
+            const ok = found[r];
+            const colour = ok ? '#16a34a' : '#dc2626';
+            const label = ok ? 'postcards generated' : 'NO postcards';
+            return '<tr><td style=\"padding:8px;border:1px solid #ddd\">' + r + '</td>' +
+                   '<td style=\"padding:8px;border:1px solid #ddd;color:' + colour + ';font-weight:bold\">' + label + '</td></tr>';
+          }).join('');
+          const body = JSON.stringify({
+            from: 'Sold2Move Pipeline <postcards@sold2move.com>',
+            to: ['johnowolabi80@gmail.com'],
+            subject: 'Pipeline produced no postcards for: ' + empty.join(', ') + ' (' + process.env.DATE_FROM + ' to ' + process.env.DATE_TO + ')',
+            html:
+              '<div style=\"font-family:Arial,sans-serif;max-width:600px\">' +
+                '<h2 style=\"color:#b45309\">Some regions produced no postcards</h2>' +
+                '<p>The pipeline finished without errors but at least one selected region returned zero listings (no scraped data, no rows passed step 1, or all were filtered out downstream).</p>' +
+                '<table style=\"border-collapse:collapse;width:100%;margin:16px 0\">' + rows + '</table>' +
+                '<p><a href=\"https://github.com/' + process.env.REPOSITORY + '/actions/runs/' + process.env.RUN_ID + '\" style=\"background:#1d4ed8;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px\">Open the run logs</a></p>' +
+                '<p>To diagnose: open the failing region\\'s \"Run X pipeline\" step and look for the per-step counts (\"Got N current results\", \"Total eligible listings: N\", \"Final postcard count: N\").</p>' +
+              '</div>',
+          });
+          const req = https.request({
+            hostname: 'api.resend.com', path: '/emails', method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+          }, res => { let d = ''; res.on('data', c => d += c); res.on('end', () => console.log('Empty-region alert sent:', res.statusCode, d)); });
+          req.on('error', e => console.error('Alert failed:', e.message));
+          req.write(body); req.end();
+          "
+
       - name: Notify on failure
         if: failure()
         env:
