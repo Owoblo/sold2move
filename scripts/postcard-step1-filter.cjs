@@ -12,13 +12,90 @@
  * Output: scripts/.pipeline/step1-filtered.json
  */
 
+const https = require('https');
 const {
   getSupabase,
   writePipelineFile,
   parseCliArgs,
   stepHeader,
   formatCanadianPostal,
+  createRateLimiter,
 } = require('./postcard-lib.cjs');
+
+// OpenStreetMap Nominatim — free postal lookup, no API key, 1 req/sec policy.
+// Used as a fallback when Apify/Zillow didn't return a postal and the address
+// field doesn't contain one either. Filled at runtime, written back to Supabase
+// so the next run gets it instantly without hitting Nominatim again.
+function nominatimLookup(listing) {
+  const street = (listing.addressstreet || '').trim();
+  const city = (listing.city || listing.addresscity || '').trim();
+  if (!street || !city) return Promise.resolve(null);
+
+  const query = `${street}, ${city}, ${listing.addressstate || 'ON'}, Canada`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&countrycodes=ca&limit=1`;
+
+  return new Promise((resolve) => {
+    const req = https.get(url, {
+      headers: {
+        // Nominatim usage policy requires a descriptive User-Agent
+        'User-Agent': 'sold2move-postcard-pipeline/1.0 (postcards@sold2move.com)',
+        'Accept': 'application/json',
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const result = Array.isArray(parsed) && parsed[0];
+          const postcode = result && result.address && result.address.postcode;
+          resolve(formatCanadianPostal(postcode) || null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+    req.on('error', () => resolve(null));
+    req.setTimeout(10_000, () => { req.destroy(); resolve(null); });
+  });
+}
+
+async function fillMissingPostalsFromNominatim(supabase, listings) {
+  const missing = listings.filter(l => !l.addresszipcode);
+  if (missing.length === 0) return { recovered: 0, stillMissing: 0 };
+
+  console.log(`  Looking up ${missing.length} missing postal codes via OpenStreetMap (≈${missing.length}s)...`);
+  const rateLimiter = createRateLimiter(1100); // honor Nominatim's 1 req/sec policy
+  let recovered = 0;
+  let stillMissing = 0;
+
+  for (const listing of missing) {
+    await rateLimiter();
+    const postal = await nominatimLookup(listing);
+    if (!postal) {
+      stillMissing++;
+      continue;
+    }
+    listing.addresszipcode = postal;
+    recovered++;
+
+    // Write back so the next run skips this lookup. Best-effort: a failed
+    // update should not abort the pipeline.
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .update({ addresszipcode: postal })
+        .eq('zpid', listing.zpid);
+      if (error) {
+        console.warn(`    DB write-back failed for zpid ${listing.zpid}: ${error.message}`);
+      }
+    } catch (e) {
+      console.warn(`    DB write-back failed for zpid ${listing.zpid}: ${e.message}`);
+    }
+  }
+
+  return { recovered, stillMissing };
+}
 
 async function run(options) {
   stepHeader(1, 'Filter Listings');
@@ -98,7 +175,6 @@ async function run(options) {
   // Normalize postal codes to Canada Post format ("N9A 1B2"),
   // and fill missing ones from the address field (e.g. "123 Oak St, Windsor, ON N9A 1B2").
   let postalEnriched = 0;
-  let postalMissing = 0;
   for (const listing of allListings) {
     const normalized = formatCanadianPostal(listing.addresszipcode);
     if (normalized) {
@@ -111,14 +187,20 @@ async function run(options) {
       postalEnriched++;
     } else {
       listing.addresszipcode = '';
-      postalMissing++;
     }
   }
   if (postalEnriched > 0) {
     console.log(`  Enriched ${postalEnriched} postal codes from address field`);
   }
-  if (postalMissing > 0) {
-    console.warn(`  WARNING: ${postalMissing} listings have no postal code — Canada Post sorting will be delayed`);
+
+  // Anything still missing a postal — look it up via OpenStreetMap Nominatim
+  // (free, no API key) and persist the result back to Supabase.
+  const { recovered, stillMissing } = await fillMissingPostalsFromNominatim(supabase, allListings);
+  if (recovered > 0) {
+    console.log(`  Recovered ${recovered} postal codes via OpenStreetMap (also written back to Supabase)`);
+  }
+  if (stillMissing > 0) {
+    console.warn(`  WARNING: ${stillMissing} listings still have no postal code after Nominatim lookup — Canada Post sorting will be delayed for those`);
   }
 
   console.log(`\n  Total eligible listings: ${allListings.length}`);
