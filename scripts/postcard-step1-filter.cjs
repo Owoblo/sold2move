@@ -172,25 +172,64 @@ async function run(options) {
   }
   allListings = Array.from(seen.values());
 
-  // Normalize postal codes to Canada Post format ("N9A 1B2"),
-  // and fill missing ones from the address field (e.g. "123 Oak St, Windsor, ON N9A 1B2").
-  let postalEnriched = 0;
+  // Three-tier postal recovery, cheapest source first:
+  //   1. The `address` field (e.g. "123 Oak St, Windsor, ON N9A 1B2")
+  //   2. The Zillow `detailurl` slug
+  //      (e.g. ".../556-Clover-St-Windsor-ON-N8P-1C6-2055636901_zpid")
+  //   3. OpenStreetMap Nominatim (free, ~1 req/s, last resort)
+  //
+  // Anything we recover gets written back to Supabase so the next run skips
+  // the work and downstream consumers (email flows, search) benefit too.
+  let enrichedFromAddress = 0;
+  let enrichedFromUrl = 0;
+  const writeBack = []; // { zpid, postal } — flushed after recovery loop
+
   for (const listing of allListings) {
-    const normalized = formatCanadianPostal(listing.addresszipcode);
-    if (normalized) {
-      listing.addresszipcode = normalized;
+    const fromColumn = formatCanadianPostal(listing.addresszipcode);
+    if (fromColumn) {
+      listing.addresszipcode = fromColumn;
       continue;
     }
     const fromAddress = formatCanadianPostal(listing.address);
     if (fromAddress) {
       listing.addresszipcode = fromAddress;
-      postalEnriched++;
-    } else {
-      listing.addresszipcode = '';
+      enrichedFromAddress++;
+      writeBack.push({ zpid: listing.zpid, postal: fromAddress });
+      continue;
     }
+    const fromUrl = formatCanadianPostal(listing.detailurl);
+    if (fromUrl) {
+      listing.addresszipcode = fromUrl;
+      enrichedFromUrl++;
+      writeBack.push({ zpid: listing.zpid, postal: fromUrl });
+      continue;
+    }
+    listing.addresszipcode = '';
   }
-  if (postalEnriched > 0) {
-    console.log(`  Enriched ${postalEnriched} postal codes from address field`);
+
+  if (enrichedFromAddress > 0) {
+    console.log(`  Enriched ${enrichedFromAddress} postal codes from address field`);
+  }
+  if (enrichedFromUrl > 0) {
+    console.log(`  Enriched ${enrichedFromUrl} postal codes from detailurl slug`);
+  }
+
+  // Persist cheap recoveries back to Supabase. Best-effort: log and continue
+  // on failure so a transient DB hiccup doesn't kill the pipeline.
+  if (writeBack.length > 0) {
+    let written = 0;
+    for (const { zpid, postal } of writeBack) {
+      const { error } = await supabase
+        .from('listings')
+        .update({ addresszipcode: postal })
+        .eq('zpid', zpid);
+      if (error) {
+        console.warn(`    DB write-back failed for zpid ${zpid}: ${error.message}`);
+      } else {
+        written++;
+      }
+    }
+    console.log(`  Wrote ${written}/${writeBack.length} recovered postals back to Supabase`);
   }
 
   // Anything still missing a postal — look it up via OpenStreetMap Nominatim
@@ -200,7 +239,7 @@ async function run(options) {
     console.log(`  Recovered ${recovered} postal codes via OpenStreetMap (also written back to Supabase)`);
   }
   if (stillMissing > 0) {
-    console.warn(`  WARNING: ${stillMissing} listings still have no postal code after Nominatim lookup — Canada Post sorting will be delayed for those`);
+    console.warn(`  WARNING: ${stillMissing} listings still have no postal code after all fallbacks — Canada Post sorting will be delayed for those`);
   }
 
   console.log(`\n  Total eligible listings: ${allListings.length}`);

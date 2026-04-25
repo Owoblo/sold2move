@@ -183,11 +183,15 @@ function stepHeader(stepNum, title) {
   console.log(`${'='.repeat(60)}`);
 }
 
-const CANADIAN_POSTAL_RE = /\b([A-Z]\d[A-Z])\s*(\d[A-Z]\d)\b/i;
+// Accepts the FSA and LDU separated by whitespace, a hyphen, or nothing.
+// The hyphen variant matches Zillow `detailurl` slugs like
+// ".../...-Windsor-ON-N8P-1C6-2055636901_zpid".
+const CANADIAN_POSTAL_RE = /\b([A-Z]\d[A-Z])[\s\-]?(\d[A-Z]\d)\b/i;
 
 /**
  * Normalize a Canadian postal code to Canada Post format: "N9A 1B2"
- * (uppercase, single space between FSA and LDU). Returns "" if not a valid postal.
+ * (uppercase, single space between FSA and LDU). Returns "" if no valid
+ * postal can be extracted from the input string.
  */
 function formatCanadianPostal(raw) {
   if (!raw) return '';
