@@ -22,7 +22,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { getRegionConfig } = require('./postcard-lib.cjs');
 
 const OWNER_EMAIL = 'business@starmovers.ca';
-const PRINT_EMAIL  = 'printinkshop@gmail.com';
+const PRINT_EMAIL  = 'loonieprints@gmail.com';
 const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
 const REPLY_TO = 'business@starmovers.ca';
 
