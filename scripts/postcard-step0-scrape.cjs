@@ -238,22 +238,42 @@ function normalizeResult(r, regionConfig, nowIso) {
 }
 
 async function fetchExistingRegionListings(supabase, regionConfig) {
+  // Split into two queries per city, cheapest first:
+  //   1. SLIM — `sold_archived` rows accumulate forever and are only checked
+  //      for status (glitch detection at line 276). Pulling 24 columns
+  //      including the heavy JSONB carouselphotos for thousands of these
+  //      rows is what triggered Postgres statement_timeout on Ottawa.
+  //   2. FULL — only live statuses need their lifecycle metadata
+  //      (postcard timestamps, photo fetch state, etc.).
+  //
+  // Both calls use explicit .limit() so Supabase's default 1000-row cap
+  // can't silently truncate as the table grows.
   let rows = [];
   for (const city of regionConfig.cities) {
-    const { data, error } = await supabase
+    const archived = await supabase
+      .from('listings')
+      .select('zpid, status')
+      .eq('region', regionConfig.key)
+      .eq('city', city)
+      .eq('status', 'sold_archived')
+      .limit(50000);
+    if (archived.error) {
+      throw new Error(`Failed to fetch archived listings for ${city}: ${archived.error.message}`);
+    }
+
+    const live = await supabase
       .from('listings')
       .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent')
       .eq('region', regionConfig.key)
       .eq('city', city)
-      .in('status', ['active', 'just_listed', 'sold_archived', 'sold']);
-
-    if (error) {
-      throw new Error(`Failed to fetch existing listings for ${city}: ${error.message}`);
+      .in('status', ['active', 'just_listed', 'sold'])
+      .limit(10000);
+    if (live.error) {
+      throw new Error(`Failed to fetch live listings for ${city}: ${live.error.message}`);
     }
 
-    if (data?.length) {
-      rows = rows.concat(data);
-    }
+    if (archived.data?.length) rows = rows.concat(archived.data);
+    if (live.data?.length) rows = rows.concat(live.data);
   }
 
   return rows;
