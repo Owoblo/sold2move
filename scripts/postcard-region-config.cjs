@@ -10,7 +10,7 @@ const REGION_CONFIG = {
       'Belle River', 'Harrow', 'McGregor',
       'Wallaceburg', 'Ridgetown', 'Blenheim', 'Dresden', 'Thamesville', 'Bothwell',
     ],
-    bounds: { west: -83.30, east: -81.80, south: 42.15, north: 42.45 },
+    bounds: { west: -83.30, east: -81.80, south: 42.15, north: 42.70 },
     returnAddressLines: [
       'Saturn Star Services',
       '3608 Seminole Street, Unit 3',
