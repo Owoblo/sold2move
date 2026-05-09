@@ -126,6 +126,23 @@ async function runSearchScraper(token, searchUrl) {
   }
 
   console.log(`  Got ${dataResp.data.length} current results`);
+
+  // FIELD PROBE — logs all keys from the first result so we can confirm
+  // which agent/broker fields Apify returns. Safe to remove once confirmed.
+  if (dataResp.data.length > 0) {
+    const sample = dataResp.data[0];
+    console.log('  [FIELD PROBE] Top-level keys:', Object.keys(sample).sort().join(', '));
+    const agentKeys = Object.keys(sample).filter(k =>
+      /agent|broker|realtor|listing|attribution|contact|phone/i.test(k)
+    );
+    if (agentKeys.length > 0) {
+      console.log('  [FIELD PROBE] Agent-related keys + values:');
+      agentKeys.forEach(k => console.log(`    ${k}:`, JSON.stringify(sample[k])));
+    } else {
+      console.log('  [FIELD PROBE] No agent/broker keys found at top level — check nested objects above.');
+    }
+  }
+
   return dataResp.data;
 }
 
