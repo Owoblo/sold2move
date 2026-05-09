@@ -1,14 +1,23 @@
 const REGION_CONFIG = {
 
-  // ─── ZONE 1 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
   windsor: {
     key: 'windsor',
     label: 'Windsor / Essex County',
     outputPrefix: 'Windsor',
     printRecipientLabel: 'Windsor print batch',
     cities: [
-      'Windsor', 'LaSalle', 'Tecumseh', 'Amherstburg',
-      'Lakeshore', 'Belle River',
+      // City of Windsor
+      'Windsor',
+      // Windsor suburbs / Middlesex
+      'LaSalle', 'Tecumseh', 'Amherstburg',
+      // Lakeshore municipality (Belle River, Comber, Stoney Point, St. Joachim)
+      'Lakeshore', 'Belle River', 'Comber', 'Stoney Point', 'St. Joachim',
+      // Tecumseh area hamlets
+      'Puce', 'Emeryville',
+      // Amherstburg area
+      'Anderdon',
+      // Essex County towns
       'Leamington', 'Kingsville', 'Essex',
       'Harrow', 'McGregor', 'Cottam', 'Ruthven',
       'Colchester', 'Maidstone', 'Wheatley',
@@ -21,19 +30,25 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── ZONE 2 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 2: CHATHAM-KENT ─────────────────────────────────────────────────
   chatham: {
     key: 'chatham',
     label: 'Chatham-Kent',
     outputPrefix: 'Chatham',
     printRecipientLabel: 'Chatham print batch',
     cities: [
-      'Chatham', 'Chatham Kent', 'Tilbury', 'Wallaceburg',
-      'Blenheim', 'Ridgetown', 'Dresden', 'Thamesville', 'Bothwell',
-      'Merlin', 'Pain Court', 'Highgate', 'Morpeth',
-      "Mitchell's Bay", 'Charing Cross', 'Cedar Springs', 'Dealtown',
+      // Chatham urban area
+      'Chatham', 'Chatham Kent',
+      // West CK (401 corridor)
+      'Tilbury', 'Wallaceburg', 'Dresden', 'Pain Court',
+      // Central CK
+      'Blenheim', 'Merlin', 'Charing Cross', 'Cedar Springs', 'Dealtown',
+      // East CK
+      'Ridgetown', 'Thamesville', 'Bothwell', 'Highgate', 'Morpeth', 'Muirkirk',
+      // Lake Erie shoreline
+      "Mitchell's Bay", 'Lighthouse Cove', 'Erieau', 'Shrewsbury', 'Erie Beach',
     ],
-    bounds: { west: -82.75, east: -81.75, south: 42.20, north: 42.70 },
+    bounds: { west: -82.75, east: -81.75, south: 42.15, north: 42.70 },
     returnAddressLines: [
       'Saturn Star Services',
       '3608 Seminole Street, Unit 3',
@@ -41,20 +56,30 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── ZONE 3 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 3: SARNIA / LAMBTON COUNTY ─────────────────────────────────────
   sarnia: {
     key: 'sarnia',
     label: 'Sarnia / Lambton County',
     outputPrefix: 'Sarnia',
     printRecipientLabel: 'Sarnia print batch',
     cities: [
-      'Sarnia', 'Point Edward', 'Corunna', 'Mooretown',
-      'Petrolia', 'Oil Springs', 'Wyoming', 'Plympton-Wyoming',
-      'Watford', 'Brigden', 'Alvinston', 'Arkona',
-      'Forest', 'Thedford', 'Grand Bend', 'Lambton Shores',
-      'Port Franks', 'Ipperwash', 'St. Clair', 'Dawn-Euphemia',
+      // Sarnia urban area
+      'Sarnia', 'Point Edward', 'Brights Grove', 'Camlachie',
+      // St. Clair River corridor
+      'Corunna', 'Mooretown', 'Courtright', 'Sombra', 'Port Lambton',
+      // St. Clair Township & Dawn-Euphemia
+      'St. Clair', 'Dawn-Euphemia',
+      // Petrolia / Oil Springs area
+      'Petrolia', 'Oil Springs', 'Brigden',
+      // Wyoming / Plympton area
+      'Wyoming', 'Plympton-Wyoming',
+      // East Lambton
+      'Watford', 'Warwick', 'Alvinston', 'Brooke-Alvinston',
+      // North Lambton (Lake Huron shore)
+      'Arkona', 'Forest', 'Thedford',
+      'Grand Bend', 'Lambton Shores', 'Port Franks', 'Ipperwash',
     ],
-    bounds: { west: -82.60, east: -81.55, south: 42.65, north: 43.40 },
+    bounds: { west: -82.60, east: -81.55, south: 42.60, north: 43.40 },
     returnAddressLines: [
       'Saturn Star Services',
       '55 Cedar St',
@@ -62,23 +87,39 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── ZONE 4 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 4: LONDON / MIDDLESEX ───────────────────────────────────────────
   london: {
     key: 'london',
     label: 'London / Middlesex',
     outputPrefix: 'London',
     printRecipientLabel: 'London print batch',
     cities: [
+      // London urban
       'London',
-      'St. Thomas', 'Strathroy', 'Glencoe', 'Parkhill', 'Newbury', 'Wardsville',
-      'Komoka', 'Dorchester', 'Belmont', 'Ilderton', 'Lucan', 'Ailsa Craig',
-      'Middlesex Centre', 'Thames Centre', 'Adelaide-Metcalfe', 'Southwest Middlesex',
-      'North Middlesex', 'Lucan Biddulph',
-      'Aylmer', 'Port Stanley', 'Springfield', 'Dutton', 'West Lorne', 'Rodney',
-      'Central Elgin', 'Malahide', 'Bayham', 'Dutton-Dunwich',
-      'Ingersoll', 'Thamesford',
+      // Middlesex County north
+      'Lucan', 'Lucan Biddulph', 'Ailsa Craig', 'Parkhill', 'Ilderton',
+      'North Middlesex',
+      // Middlesex County west
+      'Strathroy', 'Strathroy-Caradoc', 'Mount Brydges', 'Kerwood',
+      'Glencoe', 'Newbury', 'Wardsville', 'Adelaide-Metcalfe', 'Southwest Middlesex',
+      // Middlesex County central
+      'Komoka', 'Middlesex Centre',
+      // Middlesex County east
+      'Dorchester', 'Thames Centre', 'Thamesford',
+      // Middlesex County south
+      'Belmont',
+      // Elgin County (St. Thomas, Lake Erie towns)
+      'St. Thomas', 'Central Elgin', 'Southwold', 'Talbotville',
+      'Shedden', 'Fingal', 'Port Stanley', 'Dutton', 'Dutton-Dunwich',
+      'West Lorne', 'Rodney',
+      // Elgin County east
+      'Aylmer', 'Springfield', 'Malahide', 'Bayham', 'Vienna', 'Port Burwell',
+      // Perth County
+      'St. Marys',
+      // Oxford (shared with Woodstock zone)
+      'Ingersoll',
     ],
-    bounds: { west: -81.90, east: -80.80, south: 42.45, north: 43.25 },
+    bounds: { west: -81.90, east: -80.75, south: 42.45, north: 43.30 },
     returnAddressLines: [
       'Saturn Star Services',
       '55 Cedar St',
@@ -86,17 +127,28 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── ZONE 5 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 5: WOODSTOCK / OXFORD COUNTY ───────────────────────────────────
   woodstock: {
     key: 'woodstock',
     label: 'Woodstock / Oxford County',
     outputPrefix: 'Woodstock',
     printRecipientLabel: 'Woodstock print batch',
     cities: [
-      'Woodstock', 'Ingersoll', 'Tillsonburg', 'Norwich', 'Tavistock',
-      'Sweaburg', 'Thamesford', 'Otterville', 'Burgessville',
-      'Drumbo', 'Princeton', 'Plattsville', 'Bright', 'Beachville',
-      'Mount Elgin', 'Courtland', 'Aylmer',
+      // Oxford County west
+      'Woodstock', 'Ingersoll', 'Beachville',
+      // Oxford County central
+      'Sweaburg', 'Burgessville', 'Otterville', 'Norwich', 'Mount Elgin', 'Courtland',
+      // Oxford County east (Tillsonburg area)
+      'Tillsonburg',
+      // Oxford County north (Tavistock / Zorra area)
+      'Tavistock', 'Thamesford', 'Innerkip', 'East Zorra-Tavistock',
+      'Embro', 'Hickson', 'Kintore', 'Zorra',
+      // Oxford County northeast (Blandford-Blenheim)
+      'Drumbo', 'Princeton', 'Plattsville', 'Bright',
+      // Norfolk County (within bounds)
+      'Delhi',
+      // Elgin (shared)
+      'Aylmer',
     ],
     bounds: { west: -81.05, east: -80.45, south: 42.75, north: 43.40 },
     returnAddressLines: [
@@ -106,18 +158,29 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── ZONE 6 ───────────────────────────────────────────────────────────────
+  // ─── ZONE 6: KITCHENER / WATERLOO / CAMBRIDGE / GUELPH ──────────────────
   wkg: {
     key: 'wkg',
     label: 'Kitchener / Waterloo / Cambridge / Guelph',
     outputPrefix: 'WKG',
     printRecipientLabel: 'WKG print batch',
     cities: [
-      'Kitchener', 'Waterloo', 'Cambridge', 'Guelph', 'Ayr',
-      'Elmira', 'New Hamburg', 'Fergus', 'Elora',
-      'Woolwich', 'Wellesley', 'North Dumfries', 'Wilmot',
-      'Guelph-Eramosa', 'Centre Wellington',
-      'Breslau', 'Baden', 'St. Jacobs', 'Conestogo', 'Paris',
+      // Waterloo Region core
+      'Kitchener', 'Waterloo', 'Cambridge', 'Guelph',
+      // Waterloo Region townships
+      'Elmira', 'St. Jacobs', 'Conestogo', 'Breslau', 'Woolwich',
+      'New Hamburg', 'Baden', 'Wellesley', 'Wilmot',
+      'Ayr', 'North Dumfries',
+      // Guelph area
+      'Puslinch', 'Guelph-Eramosa', 'Rockwood',
+      // Wellington County
+      'Fergus', 'Elora', 'Centre Wellington',
+      'Drayton', 'Mapleton', 'Arthur',
+      'Palmerston',
+      // Perth County (within bounds)
+      'Stratford', 'Listowel',
+      // Brant County
+      'Paris',
     ],
     bounds: { west: -81.05, east: -80.10, south: 43.15, north: 43.85 },
     returnAddressLines: [
@@ -127,7 +190,7 @@ const REGION_CONFIG = {
     ],
   },
 
-  // ─── OTTAWA ───────────────────────────────────────────────────────────────
+  // ─── OTTAWA (PAUSED) ──────────────────────────────────────────────────────
   ottawa: {
     key: 'ottawa',
     label: 'Ottawa',
