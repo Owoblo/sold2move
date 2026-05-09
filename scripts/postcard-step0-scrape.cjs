@@ -127,19 +127,45 @@ async function runSearchScraper(token, searchUrl) {
 
   console.log(`  Got ${dataResp.data.length} current results`);
 
-  // FIELD PROBE — logs all keys from the first result so we can confirm
-  // which agent/broker fields Apify returns. Safe to remove once confirmed.
+  // FIELD PROBE — logs agent/broker fields at top level and inside hdpData.
+  // Safe to remove once realtor pipeline is built.
   if (dataResp.data.length > 0) {
     const sample = dataResp.data[0];
     console.log('  [FIELD PROBE] Top-level keys:', Object.keys(sample).sort().join(', '));
+
+    // Top-level agent/broker fields
     const agentKeys = Object.keys(sample).filter(k =>
       /agent|broker|realtor|listing|attribution|contact|phone/i.test(k)
     );
     if (agentKeys.length > 0) {
-      console.log('  [FIELD PROBE] Agent-related keys + values:');
+      console.log('  [FIELD PROBE] Top-level agent keys + values:');
       agentKeys.forEach(k => console.log(`    ${k}:`, JSON.stringify(sample[k])));
+    }
+
+    // Dig into hdpData — agent info is often nested here
+    if (sample.hdpData && typeof sample.hdpData === 'object') {
+      console.log('  [FIELD PROBE] hdpData keys:', Object.keys(sample.hdpData).sort().join(', '));
+      const hdpAgentKeys = Object.keys(sample.hdpData).filter(k =>
+        /agent|broker|realtor|listing|attribution|contact|phone/i.test(k)
+      );
+      if (hdpAgentKeys.length > 0) {
+        console.log('  [FIELD PROBE] hdpData agent keys + values:');
+        hdpAgentKeys.forEach(k => console.log(`    hdpData.${k}:`, JSON.stringify(sample.hdpData[k])));
+      }
+      // Also check homeInfo inside hdpData
+      const homeInfo = sample.hdpData.homeInfo;
+      if (homeInfo && typeof homeInfo === 'object') {
+        console.log('  [FIELD PROBE] hdpData.homeInfo keys:', Object.keys(homeInfo).sort().join(', '));
+        const hiAgentKeys = Object.keys(homeInfo).filter(k =>
+          /agent|broker|realtor|listing|attribution|contact|phone/i.test(k)
+        );
+        if (hiAgentKeys.length > 0) {
+          console.log('  [FIELD PROBE] hdpData.homeInfo agent keys + values:');
+          hiAgentKeys.forEach(k => console.log(`    homeInfo.${k}:`, JSON.stringify(homeInfo[k])));
+        }
+      }
     } else {
-      console.log('  [FIELD PROBE] No agent/broker keys found at top level — check nested objects above.');
+      console.log('  [FIELD PROBE] hdpData not present or not an object.');
     }
   }
 
