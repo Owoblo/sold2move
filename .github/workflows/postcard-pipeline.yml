@@ -1,4 +1,4 @@
-name: Postcard Pipeline — Windsor + WKG + London + Ottawa
+name: Postcard Pipeline — All Regions (Windsor · Chatham · Sarnia · London · Woodstock · WKG · Ottawa)
 
 on:
   schedule:
@@ -25,14 +25,14 @@ on:
         type: boolean
         default: false
       regions:
-        description: 'Which regions to run (comma-separated: windsor,wkg,london,ottawa)'
+        description: 'Which regions to run (comma-separated: windsor,chatham,sarnia,london,woodstock,wkg,ottawa)'
         required: false
-        default: 'windsor,wkg,ottawa'
+        default: 'windsor,chatham,sarnia,london,woodstock,wkg'
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
 
     steps:
       - name: Checkout code
@@ -80,11 +80,11 @@ jobs:
         id: regions
         run: |
           REGIONS="${{ github.event.inputs.regions }}"
-          # London is currently paused; un-pause by adding it back here and to the input default above.
-          if [ -z "$REGIONS" ]; then REGIONS="windsor,wkg,ottawa"; fi
+          # Ottawa is currently paused; re-add 'ottawa' here and to the input default above to resume it.
+          if [ -z "$REGIONS" ]; then REGIONS="windsor,chatham,sarnia,london,woodstock,wkg"; fi
           echo "list=$REGIONS" >> $GITHUB_OUTPUT
 
-      # ─── WINDSOR ─────────────────────────────────────────────────────────────
+      # ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
 
       - name: Run Windsor pipeline
         if: contains(steps.regions.outputs.list, 'windsor')
@@ -107,7 +107,7 @@ jobs:
           CSV=$(ls -t Windsor_Postcards_*.csv 2>/dev/null | head -1)
           PDF=$(ls -t Windsor_Postcards_*.pdf 2>/dev/null | head -1)
           if [ -z "$CSV" ] || [ -z "$PDF" ]; then
-            echo "No Windsor output files (no listings in date range)"
+            echo "No Windsor output files"
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "csv=$CSV" >> $GITHUB_OUTPUT
@@ -127,10 +127,10 @@ jobs:
             "${{ steps.windsor_files.outputs.pdf }}" \
             --region windsor
 
-      # ─── WKG (Waterloo / Kitchener / Guelph) ────────────────────────────────
+      # ─── ZONE 2: CHATHAM-KENT ─────────────────────────────────────────────────
 
-      - name: Run WKG pipeline
-        if: contains(steps.regions.outputs.list, 'wkg')
+      - name: Run Chatham pipeline
+        if: contains(steps.regions.outputs.list, 'chatham')
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -139,18 +139,18 @@ jobs:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: |
           node scripts/postcard-pipeline.cjs \
-            --region wkg \
+            --region chatham \
             --from ${{ steps.dates.outputs.from }} \
             --to ${{ steps.dates.outputs.to }} \
             ${{ steps.flags.outputs.flags }}
 
-      - name: Find WKG output files
-        id: wkg_files
+      - name: Find Chatham output files
+        id: chatham_files
         run: |
-          CSV=$(ls -t WKG_Postcards_*.csv 2>/dev/null | head -1)
-          PDF=$(ls -t WKG_Postcards_*.pdf 2>/dev/null | head -1)
+          CSV=$(ls -t Chatham_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Chatham_Postcards_*.pdf 2>/dev/null | head -1)
           if [ -z "$CSV" ] || [ -z "$PDF" ]; then
-            echo "No WKG output files (no listings in date range)"
+            echo "No Chatham output files"
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "csv=$CSV" >> $GITHUB_OUTPUT
@@ -158,19 +158,62 @@ jobs:
             echo "found=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Email WKG results
-        if: steps.wkg_files.outputs.found == 'true'
+      - name: Email Chatham results
+        if: steps.chatham_files.outputs.found == 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           node scripts/postcard-email-results.cjs \
-            "${{ steps.wkg_files.outputs.csv }}" \
-            "${{ steps.wkg_files.outputs.pdf }}" \
-            --region wkg
+            "${{ steps.chatham_files.outputs.csv }}" \
+            "${{ steps.chatham_files.outputs.pdf }}" \
+            --region chatham
 
-      # ─── LONDON ──────────────────────────────────────────────────────────────
+      # ─── ZONE 3: SARNIA / LAMBTON COUNTY ─────────────────────────────────────
+
+      - name: Run Sarnia pipeline
+        if: contains(steps.regions.outputs.list, 'sarnia')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region sarnia \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find Sarnia output files
+        id: sarnia_files
+        run: |
+          CSV=$(ls -t Sarnia_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Sarnia_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No Sarnia output files"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email Sarnia results
+        if: steps.sarnia_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.sarnia_files.outputs.csv }}" \
+            "${{ steps.sarnia_files.outputs.pdf }}" \
+            --region sarnia
+
+      # ─── ZONE 4: LONDON / MIDDLESEX ───────────────────────────────────────────
 
       - name: Run London pipeline
         if: contains(steps.regions.outputs.list, 'london')
@@ -193,7 +236,7 @@ jobs:
           CSV=$(ls -t London_Postcards_*.csv 2>/dev/null | head -1)
           PDF=$(ls -t London_Postcards_*.pdf 2>/dev/null | head -1)
           if [ -z "$CSV" ] || [ -z "$PDF" ]; then
-            echo "No London output files (no listings in date range)"
+            echo "No London output files"
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "csv=$CSV" >> $GITHUB_OUTPUT
@@ -213,7 +256,93 @@ jobs:
             "${{ steps.london_files.outputs.pdf }}" \
             --region london
 
-      # ─── OTTAWA ──────────────────────────────────────────────────────────────
+      # ─── ZONE 5: WOODSTOCK / OXFORD COUNTY ───────────────────────────────────
+
+      - name: Run Woodstock pipeline
+        if: contains(steps.regions.outputs.list, 'woodstock')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region woodstock \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find Woodstock output files
+        id: woodstock_files
+        run: |
+          CSV=$(ls -t Woodstock_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Woodstock_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No Woodstock output files"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email Woodstock results
+        if: steps.woodstock_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.woodstock_files.outputs.csv }}" \
+            "${{ steps.woodstock_files.outputs.pdf }}" \
+            --region woodstock
+
+      # ─── ZONE 6: KITCHENER / WATERLOO / CAMBRIDGE / GUELPH ──────────────────
+
+      - name: Run WKG pipeline
+        if: contains(steps.regions.outputs.list, 'wkg')
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/postcard-pipeline.cjs \
+            --region wkg \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find WKG output files
+        id: wkg_files
+        run: |
+          CSV=$(ls -t WKG_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t WKG_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No WKG output files"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email WKG results
+        if: steps.wkg_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.wkg_files.outputs.csv }}" \
+            "${{ steps.wkg_files.outputs.pdf }}" \
+            --region wkg
+
+      # ─── OTTAWA ───────────────────────────────────────────────────────────────
 
       - name: Run Ottawa pipeline
         if: contains(steps.regions.outputs.list, 'ottawa')
@@ -236,7 +365,7 @@ jobs:
           CSV=$(ls -t Ottawa_Postcards_*.csv 2>/dev/null | head -1)
           PDF=$(ls -t Ottawa_Postcards_*.pdf 2>/dev/null | head -1)
           if [ -z "$CSV" ] || [ -z "$PDF" ]; then
-            echo "No Ottawa output files (no listings in date range)"
+            echo "No Ottawa output files"
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "csv=$CSV" >> $GITHUB_OUTPUT
@@ -256,7 +385,7 @@ jobs:
             "${{ steps.ottawa_files.outputs.pdf }}" \
             --region ottawa
 
-      # ─── Upload all artifacts ─────────────────────────────────────────────────
+      # ─── ARTIFACTS ────────────────────────────────────────────────────────────
 
       - name: Upload all postcard artifacts
         if: always()
@@ -266,30 +395,44 @@ jobs:
           path: |
             Windsor_Postcards_*.csv
             Windsor_Postcards_*.pdf
-            WKG_Postcards_*.csv
-            WKG_Postcards_*.pdf
+            Chatham_Postcards_*.csv
+            Chatham_Postcards_*.pdf
+            Sarnia_Postcards_*.csv
+            Sarnia_Postcards_*.pdf
             London_Postcards_*.csv
             London_Postcards_*.pdf
+            Woodstock_Postcards_*.csv
+            Woodstock_Postcards_*.pdf
+            WKG_Postcards_*.csv
+            WKG_Postcards_*.pdf
             Ottawa_Postcards_*.csv
             Ottawa_Postcards_*.pdf
           if-no-files-found: ignore
           retention-days: 30
 
+      # ─── NOTIFICATIONS ────────────────────────────────────────────────────────
+
       - name: Notify when a selected region produced no postcards
         if: |
           always() && !failure() && !cancelled() && (
-            (contains(steps.regions.outputs.list, 'windsor') && steps.windsor_files.outputs.found != 'true') ||
-            (contains(steps.regions.outputs.list, 'wkg') && steps.wkg_files.outputs.found != 'true') ||
-            (contains(steps.regions.outputs.list, 'london') && steps.london_files.outputs.found != 'true') ||
-            (contains(steps.regions.outputs.list, 'ottawa') && steps.ottawa_files.outputs.found != 'true')
+            (contains(steps.regions.outputs.list, 'windsor')  && steps.windsor_files.outputs.found  != 'true') ||
+            (contains(steps.regions.outputs.list, 'chatham')  && steps.chatham_files.outputs.found  != 'true') ||
+            (contains(steps.regions.outputs.list, 'sarnia')   && steps.sarnia_files.outputs.found   != 'true') ||
+            (contains(steps.regions.outputs.list, 'london')   && steps.london_files.outputs.found   != 'true') ||
+            (contains(steps.regions.outputs.list, 'woodstock')&& steps.woodstock_files.outputs.found!= 'true') ||
+            (contains(steps.regions.outputs.list, 'wkg')      && steps.wkg_files.outputs.found      != 'true') ||
+            (contains(steps.regions.outputs.list, 'ottawa')   && steps.ottawa_files.outputs.found   != 'true')
           )
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           REGION_LIST: ${{ steps.regions.outputs.list }}
-          WINDSOR_FOUND: ${{ steps.windsor_files.outputs.found }}
-          WKG_FOUND: ${{ steps.wkg_files.outputs.found }}
-          LONDON_FOUND: ${{ steps.london_files.outputs.found }}
-          OTTAWA_FOUND: ${{ steps.ottawa_files.outputs.found }}
+          WINDSOR_FOUND:   ${{ steps.windsor_files.outputs.found }}
+          CHATHAM_FOUND:   ${{ steps.chatham_files.outputs.found }}
+          SARNIA_FOUND:    ${{ steps.sarnia_files.outputs.found }}
+          LONDON_FOUND:    ${{ steps.london_files.outputs.found }}
+          WOODSTOCK_FOUND: ${{ steps.woodstock_files.outputs.found }}
+          WKG_FOUND:       ${{ steps.wkg_files.outputs.found }}
+          OTTAWA_FOUND:    ${{ steps.ottawa_files.outputs.found }}
           DATE_FROM: ${{ steps.dates.outputs.from }}
           DATE_TO: ${{ steps.dates.outputs.to }}
           RUN_ID: ${{ github.run_id }}
@@ -299,10 +442,13 @@ jobs:
           const https = require('https');
           const selected = (process.env.REGION_LIST || '').split(',').map(s => s.trim()).filter(Boolean);
           const found = {
-            windsor: process.env.WINDSOR_FOUND === 'true',
-            wkg:     process.env.WKG_FOUND === 'true',
-            london:  process.env.LONDON_FOUND === 'true',
-            ottawa:  process.env.OTTAWA_FOUND === 'true',
+            windsor:   process.env.WINDSOR_FOUND   === 'true',
+            chatham:   process.env.CHATHAM_FOUND   === 'true',
+            sarnia:    process.env.SARNIA_FOUND    === 'true',
+            london:    process.env.LONDON_FOUND    === 'true',
+            woodstock: process.env.WOODSTOCK_FOUND === 'true',
+            wkg:       process.env.WKG_FOUND       === 'true',
+            ottawa:    process.env.OTTAWA_FOUND    === 'true',
           };
           const empty = selected.filter(r => !found[r]);
           if (empty.length === 0) process.exit(0);
@@ -320,10 +466,9 @@ jobs:
             html:
               '<div style=\"font-family:Arial,sans-serif;max-width:600px\">' +
                 '<h2 style=\"color:#b45309\">Some regions produced no postcards</h2>' +
-                '<p>The pipeline finished without errors but at least one selected region returned zero listings (no scraped data, no rows passed step 1, or all were filtered out downstream).</p>' +
+                '<p>The pipeline finished without errors but at least one selected region returned zero listings.</p>' +
                 '<table style=\"border-collapse:collapse;width:100%;margin:16px 0\">' + rows + '</table>' +
                 '<p><a href=\"https://github.com/' + process.env.REPOSITORY + '/actions/runs/' + process.env.RUN_ID + '\" style=\"background:#1d4ed8;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px\">Open the run logs</a></p>' +
-                '<p>To diagnose: open the failing region\\'s \"Run X pipeline\" step and look for the per-step counts (\"Got N current results\", \"Total eligible listings: N\", \"Final postcard count: N\").</p>' +
               '</div>',
           });
           const req = https.request({
