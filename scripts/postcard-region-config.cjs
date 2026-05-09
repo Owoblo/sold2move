@@ -13,8 +13,8 @@ const REGION_CONFIG = {
     bounds: { west: -83.30, east: -82.75, south: 42.15, north: 42.45 },
     returnAddressLines: [
       'Saturn Star Services',
-      '1487 Ouellette Avenue, G Floor',
-      'Windsor, ON N9X 1K1',
+      '3608 Seminole Street, Unit 3',
+      'Windsor, ON N8Y 1Y4',
     ],
   },
   wkg: {
