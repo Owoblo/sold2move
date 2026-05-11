@@ -2,8 +2,8 @@ name: Postcard Pipeline — All Regions (Windsor · Chatham · Sarnia · London 
 
 on:
   schedule:
-    # Every 2 days at 11 AM EST (4 PM UTC)
-    - cron: '0 16 */2 * *'
+    # Every 2 days at 10 AM EDT (2 PM UTC) — gives ~2hr buffer before noon worst-case
+    - cron: '0 14 */2 * *'
   workflow_dispatch:
     inputs:
       from_date:
