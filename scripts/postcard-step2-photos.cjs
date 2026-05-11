@@ -176,6 +176,25 @@ async function fetchPhotosViaApify(listings, token) {
     throw new Error('Apify returned a non-array dataset payload');
   }
 
+  // Field probe — log full detail scraper shape on first result to discover agent fields.
+  // Safe to remove once realtor pipeline is built.
+  if (dataResp.data.length > 0) {
+    const sample = dataResp.data[0];
+    console.log('[FIELD PROBE] Detail scraper top-level keys:', Object.keys(sample).join(', '));
+    const agentKeys = Object.entries(sample).filter(([k]) => /agent|broker|realtor|attribution|contact|phone|email/i.test(k));
+    console.log('[FIELD PROBE] Top-level agent keys + values:');
+    agentKeys.forEach(([k, v]) => console.log(`  ${k}:`, JSON.stringify(v)));
+    if (sample.attributionInfo) {
+      console.log('[FIELD PROBE] attributionInfo:', JSON.stringify(sample.attributionInfo, null, 2));
+    }
+    if (sample.hdpData?.attributionInfo) {
+      console.log('[FIELD PROBE] hdpData.attributionInfo:', JSON.stringify(sample.hdpData.attributionInfo, null, 2));
+    }
+    if (sample.realtorInfo) {
+      console.log('[FIELD PROBE] realtorInfo:', JSON.stringify(sample.realtorInfo, null, 2));
+    }
+  }
+
   const byZpid = new Map();
   for (const result of dataResp.data) {
     let zpid = result.zpid || result.id;
