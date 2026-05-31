@@ -12,6 +12,7 @@
 
 const https = require('https');
 const {
+  getSupabase,
   createRateLimiter,
   readPipelineFile,
   writePipelineFile,
@@ -281,6 +282,19 @@ async function run(options) {
       console.log(`      Issue: ${l._geocode_reason}`);
       if (l._geocode_formatted) console.log(`      Google says: ${l._geocode_formatted}`);
     });
+
+    // Persist skip reason to Supabase so it's queryable
+    const supabase = getSupabase();
+    const zpids = badAddresses.map(l => l.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      const batch = badAddresses.slice(i, i + 200);
+      for (const l of batch) {
+        const reason = `geocode_mismatch: ${(l._geocode_reason || '').slice(0, 200)}`;
+        await supabase.from('listings')
+          .update({ postcard_skip_reason: reason })
+          .eq('zpid', l.zpid);
+      }
+    }
   }
 
   // Show warnings (verified but worth noting)

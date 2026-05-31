@@ -17,6 +17,7 @@ const path = require('path');
 
 const projectRoot = path.join(__dirname, '..');
 const {
+  getSupabase,
   readPipelineFile,
   stepHeader,
   parseCliArgs,
@@ -60,20 +61,28 @@ async function getStampImage() {
 }
 
 /**
- * Apply final filters to determine which listings get postcards
+ * Apply final filters to determine which listings get postcards.
+ * Returns { finalListings, rejected } where rejected is an array of
+ * { zpid, reason } objects for all excluded listings.
  */
 function applyOutputFilters(listings, opts) {
   let filtered = [...listings];
+  const rejected = []; // { zpid, reason }
 
   // Filter to verified addresses (if geocoding was run)
   const hasGeocode = listings.some(l => l._geocode_verified != null);
   if (hasGeocode) {
-    const beforeGeo = filtered.length;
-    filtered = filtered.filter(l => l._geocode_verified === true || l._geocode_verified == null);
-    const removedGeo = beforeGeo - filtered.length;
-    if (removedGeo > 0) {
-      console.log(`  Removed ${removedGeo} listings with address mismatches`);
+    const next = [];
+    for (const l of filtered) {
+      if (l._geocode_verified === true || l._geocode_verified == null) {
+        next.push(l);
+      } else {
+        rejected.push({ zpid: l.zpid, reason: `geocode_mismatch: ${(l._geocode_reason || '').slice(0, 200)}` });
+      }
     }
+    const removedGeo = filtered.length - next.length;
+    if (removedGeo > 0) console.log(`  Removed ${removedGeo} listings with address mismatches`);
+    filtered = next;
   }
 
   // Furniture filter — status-aware:
@@ -93,27 +102,26 @@ function applyOutputFilters(listings, opts) {
   //   ✗ no photos at all (can't verify)
   const hasFurnitureScan = listings.some(l => l.is_furnished != null || l.furniture_scan_date != null);
   if (hasFurnitureScan) {
-    const beforeFurn = filtered.length;
-
-    filtered = filtered.filter(l => {
+    const next = [];
+    for (const l of filtered) {
       if (l.status === 'sold') {
-        // Already sent a sold postcard → never send again
-        if (l.sold_postcard_sent_at) return false;
-        // Previously sent a just_listed postcard → passed our filter → include
-        if (l.just_listed_postcard_sent_at) return true;
-        // Pre-pipeline sold listing (no just_listed history): use furniture scan if available
-        if (!l.last_postcard_sent_at) {
-          if (l.is_furnished === true) return true;
-          // No quality signal at all → skip (can't verify the home was furnished)
-          return false;
+        if (l.sold_postcard_sent_at) {
+          rejected.push({ zpid: l.zpid, reason: 'sold_postcard_already_sent' });
+          continue;
         }
-        // Was processed as just_listed but didn't pass the filter → don't send sold either
-        return false;
+        if (l.just_listed_postcard_sent_at) { next.push(l); continue; }
+        if (!l.last_postcard_sent_at) {
+          if (l.is_furnished === true) { next.push(l); continue; }
+          rejected.push({ zpid: l.zpid, reason: 'sold_no_quality_signal' });
+          continue;
+        }
+        rejected.push({ zpid: l.zpid, reason: 'sold_failed_just_listed_filter' });
+        continue;
       }
 
       // just_listed: full furniture filter
-      if (l.is_furnished === true) return true;
-      if (l.is_furnished === false) return false;
+      if (l.is_furnished === true) { next.push(l); continue; }
+      if (l.is_furnished === false) { rejected.push({ zpid: l.zpid, reason: 'unfurnished' }); continue; }
 
       // Uncertain (is_furnished = null): include if has interior photos
       const photoCount = (() => {
@@ -121,16 +129,19 @@ function applyOutputFilters(listings, opts) {
         if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
         return Array.isArray(p) ? p.length : 0;
       })();
-      return photoCount >= 2;
-    });
-
-    const removedFurn = beforeFurn - filtered.length;
-    if (removedFurn > 0) {
-      console.log(`  Removed ${removedFurn} listings (failed furniture filter or previously filtered just_listed)`);
+      if (photoCount >= 2) {
+        next.push(l);
+      } else {
+        rejected.push({ zpid: l.zpid, reason: 'no_photos_to_verify' });
+      }
     }
+
+    const removedFurn = filtered.length - next.length;
+    if (removedFurn > 0) console.log(`  Removed ${removedFurn} listings (failed furniture filter or previously filtered just_listed)`);
+    filtered = next;
   }
 
-  return filtered;
+  return { finalListings: filtered, rejected };
 }
 
 /**
@@ -280,7 +291,21 @@ async function run(options) {
   }
 
   // Apply filters
-  const finalListings = applyOutputFilters(listings, opts);
+  const { finalListings, rejected } = applyOutputFilters(listings, opts);
+
+  // Persist skip reasons to Supabase (best-effort)
+  if (rejected.length > 0 && !opts.dryRun) {
+    const supabase = getSupabase();
+    for (let i = 0; i < rejected.length; i += 200) {
+      const batch = rejected.slice(i, i + 200);
+      for (const { zpid, reason } of batch) {
+        await supabase.from('listings')
+          .update({ postcard_skip_reason: reason })
+          .eq('zpid', zpid);
+      }
+    }
+    console.log(`  Wrote postcard_skip_reason for ${rejected.length} excluded listings`);
+  }
 
   console.log(`\n  Final postcard count: ${finalListings.length}`);
 
