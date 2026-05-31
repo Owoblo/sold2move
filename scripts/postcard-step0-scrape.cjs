@@ -331,6 +331,27 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
     if (live.data?.length) rows = rows.concat(live.data);
   }
 
+  // Also fetch any listings stored under cities not in our known list (e.g. "Essex County").
+  // Without this, unknown-city listings would never appear in existingRows and would be
+  // re-inserted as just_listed on every single run.
+  const knownCities = regionConfig.cities;
+  const unknownArchived = await supabase
+    .from('listings')
+    .select('zpid, status')
+    .eq('region', regionConfig.key)
+    .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
+    .eq('status', 'sold_archived')
+    .limit(50000);
+  const unknownLive = await supabase
+    .from('listings')
+    .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent')
+    .eq('region', regionConfig.key)
+    .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
+    .in('status', ['active', 'just_listed', 'sold'])
+    .limit(10000);
+  if (unknownArchived.data?.length) rows = rows.concat(unknownArchived.data);
+  if (unknownLive.data?.length) rows = rows.concat(unknownLive.data);
+
   return rows;
 }
 
