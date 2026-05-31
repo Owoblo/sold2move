@@ -126,7 +126,6 @@ async function run(options) {
       .eq('glitch_suspected', false)
       .gte('lastseenat', `${opts.from}T00:00:00Z`)
       .lte('lastseenat', `${opts.to}T23:59:59Z`)
-      .gte('unformattedprice', opts.minPrice)
       .order('lastseenat', { ascending: false });
 
     if (error) {
@@ -140,28 +139,58 @@ async function run(options) {
     }
   }
 
-  // Filter out lots/land
-  const before = allListings.length;
+  // Filter out sub-minimum-price listings — write skip reason so they're not silently lost
+  const belowPrice = allListings.filter(l => l.unformattedprice > 0 && l.unformattedprice < opts.minPrice);
+  allListings = allListings.filter(l => l.unformattedprice === 0 || l.unformattedprice >= opts.minPrice);
+  if (belowPrice.length > 0) {
+    console.log(`  Removed ${belowPrice.length} listings below $${opts.minPrice.toLocaleString()} price threshold`);
+    belowPrice.forEach(l => console.log(`    zpid ${l.zpid} — ${l.addressstreet}, ${l.city} — $${(l.unformattedprice || 0).toLocaleString()}`));
+    const zpids = belowPrice.map(l => l.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      await supabase.from('listings')
+        .update({ postcard_skip_reason: `below_min_price: $${opts.minPrice.toLocaleString()}` })
+        .in('zpid', zpids.slice(i, i + 200));
+    }
+  }
+
+  // Filter out lots/land — write skip reason back to Supabase
+  const lotsLand = allListings.filter(l => {
+    const ct = (l.contenttype || '').toUpperCase();
+    return ct === 'LOT' || ct === 'LAND';
+  });
   allListings = allListings.filter(l => {
     const ct = (l.contenttype || '').toUpperCase();
     return ct !== 'LOT' && ct !== 'LAND';
   });
-  const lotsRemoved = before - allListings.length;
-  if (lotsRemoved > 0) {
-    console.log(`  Removed ${lotsRemoved} lots/land listings`);
+  if (lotsLand.length > 0) {
+    console.log(`  Removed ${lotsLand.length} lots/land listings`);
+    const zpids = lotsLand.map(l => l.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      await supabase.from('listings')
+        .update({ postcard_skip_reason: 'lot_or_land' })
+        .in('zpid', zpids.slice(i, i + 200));
+    }
   }
 
   // Filter out listings without a proper street address (must have a street number)
+  const noStreetNumber = [];
   allListings = allListings.filter(l => {
     const street = (l.addressstreet || '').trim();
-    if (!street) return false;
-    // Must start with a number (e.g. "1234 Oak St") — rejects things like "Corner Lot" or blank
-    if (!/^\d/.test(street)) {
+    if (!street || !/^\d/.test(street)) {
       console.log(`  Removed (no street number): zpid ${l.zpid} — "${street}"`);
+      noStreetNumber.push(l);
       return false;
     }
     return true;
   });
+  if (noStreetNumber.length > 0) {
+    const zpids = noStreetNumber.map(l => l.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      await supabase.from('listings')
+        .update({ postcard_skip_reason: 'no_street_number' })
+        .in('zpid', zpids.slice(i, i + 200));
+    }
+  }
 
   // Deduplicate by zpid (keep latest)
   const seen = new Map();

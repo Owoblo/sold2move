@@ -53,6 +53,7 @@ async function run(options, finalListings) {
         last_postcard_sent_at: sentAt,
         last_postcard_batch_id: batchId,
         last_postcard_type_sent: 'sold',
+        postcard_skip_reason: null,
       })
       .in('zpid', batch);
     if (error) console.error(`  Failed to archive sold batch:`, error.message);
@@ -72,6 +73,7 @@ async function run(options, finalListings) {
         last_postcard_sent_at: sentAt,
         last_postcard_batch_id: batchId,
         last_postcard_type_sent: 'just_listed',
+        postcard_skip_reason: null,
       })
       .in('zpid', batch);
     if (error) console.error(`  Failed to reset just_listed batch:`, error.message);
