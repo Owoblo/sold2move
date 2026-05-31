@@ -217,9 +217,16 @@ function normalizeResult(r, regionConfig, nowIso) {
   const addr = extractAddress(r);
   if (!addr.addressstreet || !/^\d/.test(addr.addressstreet.trim())) return null;
 
-  const rawCity = addr.addresscity || r.city || '';
+  const rawCity = (addr.addresscity || r.city || '').trim();
   const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase());
-  if (!matchedCity) return null;
+  if (!matchedCity) {
+    // Log unmatched cities so we can spot gaps in the city list
+    if (rawCity) {
+      if (!normalizeResult._unknownCities) normalizeResult._unknownCities = new Set();
+      normalizeResult._unknownCities.add(rawCity);
+    }
+    return null;
+  }
 
   const rawPrice = r.price || r.listPrice || r.unformattedPrice || 0;
   const unformattedprice = typeof rawPrice === 'number'
@@ -491,8 +498,17 @@ async function run(options) {
 
   const liveRows = liveResults
     .map(r => normalizeResult(r, regionConfig, nowIso))
-    .filter(Boolean)
-    .filter(r => r.unformattedprice === 0 || r.unformattedprice >= (opts.minPrice || 300000));
+    .filter(Boolean);
+
+  // Log any cities Zillow returned that didn't match our city list — helps
+  // catch gaps like "Essex County" vs "Essex" before they become missed listings.
+  if (normalizeResult._unknownCities && normalizeResult._unknownCities.size > 0) {
+    const unknown = [...normalizeResult._unknownCities].sort();
+    console.warn(`\n  WARNING: ${unknown.length} city name(s) from Zillow didn't match our list (listings dropped):`);
+    unknown.forEach(c => console.warn(`    "${c}"`));
+    console.warn('  → Add any valid ones to postcard-region-config.cjs to capture those listings.');
+    normalizeResult._unknownCities.clear();
+  }
 
   console.log(`\n  Normalised current listings: ${liveRows.length}`);
 

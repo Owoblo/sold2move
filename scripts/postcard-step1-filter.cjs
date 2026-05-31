@@ -126,7 +126,6 @@ async function run(options) {
       .eq('glitch_suspected', false)
       .gte('lastseenat', `${opts.from}T00:00:00Z`)
       .lte('lastseenat', `${opts.to}T23:59:59Z`)
-      .gte('unformattedprice', opts.minPrice)
       .order('lastseenat', { ascending: false });
 
     if (error) {
@@ -137,6 +136,20 @@ async function run(options) {
     if (data && data.length > 0) {
       allListings = allListings.concat(data);
       console.log(`  ${city}: ${data.length} listings`);
+    }
+  }
+
+  // Filter out sub-minimum-price listings — write skip reason so they're not silently lost
+  const belowPrice = allListings.filter(l => l.unformattedprice > 0 && l.unformattedprice < opts.minPrice);
+  allListings = allListings.filter(l => l.unformattedprice === 0 || l.unformattedprice >= opts.minPrice);
+  if (belowPrice.length > 0) {
+    console.log(`  Removed ${belowPrice.length} listings below $${opts.minPrice.toLocaleString()} price threshold`);
+    belowPrice.forEach(l => console.log(`    zpid ${l.zpid} — ${l.addressstreet}, ${l.city} — $${(l.unformattedprice || 0).toLocaleString()}`));
+    const zpids = belowPrice.map(l => l.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      await supabase.from('listings')
+        .update({ postcard_skip_reason: `below_min_price: $${opts.minPrice.toLocaleString()}` })
+        .in('zpid', zpids.slice(i, i + 200));
     }
   }
 
