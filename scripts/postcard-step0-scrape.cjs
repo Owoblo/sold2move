@@ -215,17 +215,20 @@ function normalizeResult(r, regionConfig, nowIso) {
   if (!zpid) return null;
 
   const addr = extractAddress(r);
-  if (!addr.addressstreet || !/^\d/.test(addr.addressstreet.trim())) return null;
+  // Only drop listings with no zpid or no address at all — everything else goes to DB
+  if (!addr.addressstreet) return null;
 
   const rawCity = (addr.addresscity || r.city || '').trim();
-  const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase());
-  if (!matchedCity) {
-    // Log unmatched cities so we can spot gaps in the city list
-    if (rawCity) {
-      if (!normalizeResult._unknownCities) normalizeResult._unknownCities = new Set();
-      normalizeResult._unknownCities.add(rawCity);
-    }
-    return null;
+  // Try to match against known cities; store the raw city if it doesn't match
+  // so nothing is silently lost — step 1 does postcard-specific city filtering.
+  const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase()) || rawCity;
+  if (!matchedCity) return null;
+
+  // Log unknown cities so we can spot gaps in postcard-region-config.cjs
+  const isKnownCity = regionConfig.cities.some(c => c.toLowerCase() === rawCity.toLowerCase());
+  if (!isKnownCity && rawCity) {
+    if (!normalizeResult._unknownCities) normalizeResult._unknownCities = new Set();
+    normalizeResult._unknownCities.add(rawCity);
   }
 
   const rawPrice = r.price || r.listPrice || r.unformattedPrice || 0;
@@ -237,11 +240,12 @@ function normalizeResult(r, regionConfig, nowIso) {
     : (r.priceLabel || '');
 
   const contenttype = r.homeType || r.propertyType || r.contentType || 'SINGLE_FAMILY';
-  const ct = contenttype.toUpperCase();
-  if (ct === 'LOT' || ct === 'LAND') return null;
 
   const imgsrc = r.imgSrc || r.thumbnail || r.mainImage || null;
   const detailurl = r.detailUrl || r.url || null;
+
+  // Capture listing description if Apify returns it
+  const description = r.description || r.homeDescription || r.hdpData?.homeInfo?.description || null;
 
   let carouselphotos = null;
   const photoArrays = [r.responsivePhotos, r.originalPhotos, r.photos, r.images, r.big];
@@ -278,6 +282,7 @@ function normalizeResult(r, regionConfig, nowIso) {
     area: r.area || r.livingArea || r.sqft || null,
     imgsrc,
     detailurl,
+    description,
     carouselphotos: carouselphotos && carouselphotos.length > 0 ? carouselphotos : null,
     contenttype,
     first_seen_at: nowIso,
