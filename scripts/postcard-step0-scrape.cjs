@@ -72,7 +72,7 @@ function buildZillowSearchUrl(bounds) {
       isForSaleForeclosure: { value: false },
       isComingSoon: { value: false },
       isAuction: { value: false },
-      doz: { value: '7' },
+      doz: { value: '14' },
     },
     pagination: {},
   };

@@ -142,7 +142,6 @@ async function fetchPhotosViaApify(listings, token) {
   const input = {
     startUrls: listings.map(listing => ({ url: buildZillowUrl(listing) })),
     addresses,
-    propertyStatus: 'RECENTLY_SOLD',
     extractBuildingUnits: 'disabled',
   };
 
@@ -234,12 +233,21 @@ async function run(options) {
 
   const needPhotos = justListedListings.filter(l => {
     if (getPhotoCount(l) >= MIN_PHOTO_COUNT && !l.furniture_needs_retry) return false;
-    if ((l.photo_fetch_attempts || 0) >= 3) return false;
+    // After 3 attempts, wait 7 days before retrying — avoids permanent bans from
+    // temporary Apify failures while still protecting against endlessly retrying
+    // listings that will never have photos.
+    if ((l.photo_fetch_attempts || 0) >= 3) {
+      if (!l.photos_last_attempted_at) return false;
+      const daysSinceAttempt = (Date.now() - new Date(l.photos_last_attempted_at).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceAttempt < 7) return false;
+      // 7+ days have passed — reset counter and try again
+      l.photo_fetch_attempts = 0;
+    }
     // If we previously attempted and got nothing, only retry if scraper updated listing since
     if (l.photos_last_attempted_at && l.lastseenat) {
       const attempted = new Date(l.photos_last_attempted_at).getTime();
       const lastSeen = new Date(l.lastseenat).getTime();
-      if (lastSeen <= attempted) return false;
+      if (lastSeen <= attempted && (l.photo_fetch_attempts || 0) < 3) return false;
     }
     return true;
   });
