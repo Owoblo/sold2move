@@ -24,7 +24,7 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -83.20, east: -82.45, south: 41.90, north: 42.45 },
     returnAddressLines: [
-      'Saturn Star Services',
+      'SSM | Saturn Star Movers',
       '3608 Seminole Street, Unit 3',
       'Windsor, ON N8Y 1Y4',
     ],
@@ -50,9 +50,9 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -82.75, east: -81.75, south: 42.15, north: 42.70 },
     returnAddressLines: [
-      'Saturn Star Services',
-      '3608 Seminole Street, Unit 3',
-      'Windsor, ON N8Y 1Y4',
+      'SSM | Saturn Star Movers',
+      '220 St Clair Street',
+      'Chatham, ON N7L 3J8',
     ],
   },
 
@@ -81,9 +81,9 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -82.60, east: -81.55, south: 42.60, north: 43.40 },
     returnAddressLines: [
-      'Saturn Star Services',
-      '55 Cedar St',
-      'Guelph, ON N1G 1C4',
+      'SSM | Saturn Star Movers',
+      '390 Saskatoon St, Unit 207D',
+      'London, ON N5W 4R3',
     ],
   },
 
@@ -121,9 +121,9 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -81.90, east: -80.75, south: 42.45, north: 43.30 },
     returnAddressLines: [
-      'Saturn Star Services',
-      '55 Cedar St',
-      'Guelph, ON N1G 1C4',
+      'SSM | Saturn Star Movers',
+      '390 Saskatoon St, Unit 207D',
+      'London, ON N5W 4R3',
     ],
   },
 
@@ -152,8 +152,8 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -81.05, east: -80.45, south: 42.75, north: 43.40 },
     returnAddressLines: [
-      'Saturn Star Services',
-      '55 Cedar St',
+      'SSM | Saturn Star Movers',
+      '55 Cedar Drive',
       'Guelph, ON N1G 1C4',
     ],
   },
@@ -184,9 +184,9 @@ const REGION_CONFIG = {
     ],
     bounds: { west: -81.05, east: -80.10, south: 43.15, north: 43.85 },
     returnAddressLines: [
-      'Saturn Star Services',
-      '55 Cedar St',
-      'Guelph, ON N1G 1C4',
+      'SSM | Saturn Star Movers',
+      '550 Parkside Drive, Unit B13',
+      'Waterloo, ON N2L 5V4',
     ],
   },
 
