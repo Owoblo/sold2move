@@ -2,103 +2,41 @@
 /**
  * Test: Realtor Lookup via OpenAI web search + extraction
  *
- * Uses OpenAI's Responses API with web_search_preview tool so the model
- * searches the web itself — no separate Brave/Bing key needed.
+ * Pulls real active listings from Supabase and tests agent lookup accuracy.
  *
  * Usage:
  *   OPENAI_API_KEY=sk-... node scripts/test-realtor-lookup.cjs
  *
- * Optional — also try Brave Search for comparison:
- *   OPENAI_API_KEY=sk-... BRAVE_SEARCH_API_KEY=BSA... node scripts/test-realtor-lookup.cjs
+ * Options:
+ *   --region=windsor|london|wkg|chatham   (default: all)
+ *   --count=N                              (default: 3 per region)
  */
 
 const https = require('https');
-const zlib = require('zlib');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+const { getSupabase } = require('./postcard-lib.cjs');
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
-const BRAVE_KEY = process.env.BRAVE_SEARCH_API_KEY || '';
 
-// ─── Test listings — one per region ──────────────────────────────────────────
-const TEST_LISTINGS = [
-  {
-    region: 'Windsor / Essex',
-    addressstreet: '1 Oak Ct',
-    city: 'Essex',
-    addressstate: 'ON',
-    addresszipcode: 'N0R 1J0',
-    brokerage: '',
-  },
-  {
-    region: 'Chatham-Kent',
-    addressstreet: '55 Murray St',
-    city: 'Chatham',
-    addressstate: 'ON',
-    addresszipcode: '',
-    brokerage: '',
-  },
-  {
-    region: 'London / Middlesex',
-    addressstreet: '234 Commissioners Rd W',
-    city: 'London',
-    addressstate: 'ON',
-    addresszipcode: '',
-    brokerage: '',
-  },
-  {
-    region: 'Kitchener / Waterloo',
-    addressstreet: '85 Bridgeport Rd E',
-    city: 'Waterloo',
-    addressstate: 'ON',
-    addresszipcode: '',
-    brokerage: '',
-  },
-];
+// Parse CLI args
+const args = process.argv.slice(2);
+const regionArg = (args.find(a => a.startsWith('--region=')) || '').replace('--region=', '') || null;
+const countArg = parseInt((args.find(a => a.startsWith('--count=')) || '').replace('--count=', '') || '3', 10);
 
-// ─── Brave Search (optional, for comparison) ─────────────────────────────────
-function braveSearch(query) {
-  if (!BRAVE_KEY) return Promise.resolve([]);
-  return new Promise((resolve) => {
-    const encoded = encodeURIComponent(query);
-    const options = {
-      hostname: 'api.search.brave.com',
-      path: `/res/v1/web/search?q=${encoded}&count=10&country=ca&search_lang=en`,
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip',
-        'X-Subscription-Token': BRAVE_KEY,
-      },
-    };
+const REGIONS_TO_TEST = regionArg
+  ? [regionArg]
+  : ['windsor', 'chatham', 'london', 'wkg'];
 
-    const req = https.request(options, (res) => {
-      const chunks = [];
-      const stream = res.headers['content-encoding'] === 'gzip'
-        ? res.pipe(zlib.createGunzip()) : res;
-      stream.on('data', c => chunks.push(c));
-      stream.on('end', () => {
-        try {
-          const parsed = JSON.parse(Buffer.concat(chunks).toString());
-          resolve((parsed?.web?.results || []).map(r => ({
-            name: r.title || '', url: r.url || '', snippet: r.description || '',
-          })));
-        } catch { resolve([]); }
-      });
-      stream.on('error', () => resolve([]));
-    });
-    req.on('error', () => resolve([]));
-    req.setTimeout(15000, () => { req.destroy(); resolve([]); });
-    req.end();
-  });
-}
-
-// ─── OpenAI with web search (primary method) ─────────────────────────────────
+// ─── OpenAI with web search ───────────────────────────────────────────────────
 function openaiWebSearch(address, brokerage) {
-  const prompt = `Search the web for the listing agent/realtor for this Canadian property:
+  const prompt = `Search the web for the listing agent/realtor for this Canadian property that is currently or was recently for sale:
 
 Address: ${address}
 ${brokerage ? `Known brokerage: ${brokerage}` : ''}
 
-Search for this exact address on realtor.ca, brokerage websites, Zillow.ca, HouseSigma, Zolo, and any MLS listing sites.
+Search for this exact address on realtor.ca, brokerage websites, HouseSigma, Zolo, Point2Homes, and any MLS listing sites.
 
 Return ONLY valid JSON with no other text:
 {
@@ -109,7 +47,7 @@ Return ONLY valid JSON with no other text:
   "agent_email": "email or null",
   "source_url": "URL where you found this or null",
   "confidence": 0-100,
-  "confidence_reason": "brief explanation of why you are or aren't confident"
+  "confidence_reason": "brief explanation"
 }
 
 Rules:
@@ -117,7 +55,7 @@ Rules:
 - If you find the brokerage but not the specific agent, still return the brokerage
 - ${brokerage ? `Cross-check: brokerage should match "${brokerage}" — lower confidence if it doesn't` : ''}
 - If you cannot find reliable info, set confidence below 30
-- NEVER guess or hallucinate — only report what you actually found on the web`;
+- NEVER guess or hallucinate — only report what you actually found`;
 
   const body = JSON.stringify({
     model: 'gpt-4o-mini',
@@ -143,8 +81,6 @@ Rules:
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-
-          // The Responses API nests output differently
           let text = '';
           if (parsed.output) {
             for (const item of parsed.output) {
@@ -156,17 +92,13 @@ Rules:
             }
           }
           if (!text && parsed.error) {
-            console.log(`    API error: ${parsed.error.message || JSON.stringify(parsed.error)}`);
-            resolve({ confidence: 0, confidence_reason: 'API error' });
+            resolve({ confidence: 0, confidence_reason: 'API error: ' + (parsed.error.message || JSON.stringify(parsed.error)) });
             return;
           }
-
-          // Extract JSON from response (may have markdown code blocks)
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             resolve(JSON.parse(jsonMatch[0]));
           } else {
-            console.log(`    Raw response: ${text.slice(0, 300)}`);
             resolve({ confidence: 0, confidence_reason: 'No JSON in response' });
           }
         } catch (e) {
@@ -181,137 +113,116 @@ Rules:
   });
 }
 
-// ─── OpenAI extraction from Brave results (secondary method) ─────────────────
-function openaiExtractFromSnippets(address, brokerage, searchResults) {
-  const snippets = searchResults
-    .map((r, i) => `[${i + 1}] ${r.name}\n${r.url}\n${r.snippet}`)
-    .join('\n\n');
-
-  const body = JSON.stringify({
-    model: 'gpt-4o-mini',
-    messages: [{
-      role: 'user',
-      content: `Extract listing agent info from these search results for: ${address}
-${brokerage ? `Known brokerage: ${brokerage}` : ''}
-
-${snippets}
-
-Return ONLY valid JSON:
-{"listing_agent":"name or null","co_listing_agent":"name or null","brokerage":"name or null","agent_phone":"phone or null","agent_email":"email or null","source_url":"url or null","confidence":0-100,"confidence_reason":"reason"}
-
-Only extract names explicitly shown as the listing agent for this exact address. Never guess.`
-    }],
-    temperature: 0,
-    max_tokens: 400,
-  });
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.openai.com', path: '/v1/chat/completions', method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, (res) => {
-      let data = '';
-      res.on('data', c => { data += c; });
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          const text = parsed.choices?.[0]?.message?.content || '{}';
-          const jsonMatch = text.match(/\{[\s\S]*\}/);
-          resolve(jsonMatch ? JSON.parse(jsonMatch[0]) : { confidence: 0 });
-        } catch (e) {
-          resolve({ confidence: 0, confidence_reason: 'Parse error: ' + e.message });
-        }
-      });
-    });
-    req.on('error', reject);
-    req.setTimeout(20000, () => { req.destroy(); reject(new Error('OpenAI timeout')); });
-    req.write(body);
-    req.end();
-  });
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-async function testListing(listing) {
-  const address = `${listing.addressstreet}, ${listing.city}, ${listing.addressstate}${listing.addresszipcode ? ' ' + listing.addresszipcode : ''}`;
+async function fetchListingsForRegion(supabase, region, count) {
+  const { getRegionConfig } = require('./postcard-region-config.cjs');
+  const config = getRegionConfig(region);
 
-  console.log(`\n${'═'.repeat(60)}`);
-  console.log(`  Region: ${listing.region}`);
-  console.log(`  Address: ${address}`);
-  if (listing.brokerage) console.log(`  Known brokerage: ${listing.brokerage}`);
-  console.log(`${'═'.repeat(60)}`);
+  const { data, error } = await supabase
+    .from('listings')
+    .select('zpid, addressstreet, city, addressstate, addresszipcode, status, unformattedprice, carouselphotos, detailurl')
+    .in('status', ['just_listed', 'active'])
+    .in('city', config.cities)
+    .not('addressstreet', 'is', null)
+    .order('lastseenat', { ascending: false })
+    .limit(count * 3); // fetch extra so we can pick ones with good addresses
 
-  // ── Method 1: OpenAI with built-in web search ──
-  console.log('\n  METHOD 1: OpenAI + Web Search');
-  console.log('  Searching and extracting...');
-  const result1 = await openaiWebSearch(address, listing.brokerage);
+  if (error) throw new Error(`Supabase error for ${region}: ${error.message}`);
 
-  console.log('  ─── RESULT ───────────────────────────────────────────');
-  console.log(`  Listing Agent:    ${result1.listing_agent || '—'}`);
-  console.log(`  Co-listing Agent: ${result1.co_listing_agent || '—'}`);
-  console.log(`  Brokerage:        ${result1.brokerage || '—'}`);
-  console.log(`  Phone:            ${result1.agent_phone || '—'}`);
-  console.log(`  Email:            ${result1.agent_email || '—'}`);
-  console.log(`  Source:           ${result1.source_url || '—'}`);
-  console.log(`  Confidence:       ${result1.confidence}%`);
-  console.log(`  Reason:           ${result1.confidence_reason}`);
-  const e1 = result1.confidence >= 80 ? '✅' : result1.confidence >= 50 ? '⚠️' : '❌';
-  console.log(`  ${e1} Confidence: ${result1.confidence}%`);
-
-  // ── Method 2: Brave Search + OpenAI extraction (if Brave key provided) ──
-  if (BRAVE_KEY) {
-    console.log('\n  METHOD 2: Brave Search + OpenAI Extraction');
-    const query = `"${listing.addressstreet}" "${listing.city}" Ontario listing agent realtor`;
-    console.log(`  🔍 Searching: ${query}`);
-    const braveResults = await braveSearch(query);
-    console.log(`     → ${braveResults.length} results`);
-
-    if (braveResults.length > 0) {
-      braveResults.slice(0, 3).forEach((r, i) => {
-        console.log(`  [${i + 1}] ${r.name}`);
-        console.log(`      ${r.snippet.slice(0, 120)}`);
-      });
-
-      const result2 = await openaiExtractFromSnippets(address, listing.brokerage, braveResults);
-      console.log('  ─── RESULT ───────────────────────────────────────────');
-      console.log(`  Listing Agent:    ${result2.listing_agent || '—'}`);
-      console.log(`  Brokerage:        ${result2.brokerage || '—'}`);
-      console.log(`  Confidence:       ${result2.confidence}%`);
-      console.log(`  Reason:           ${result2.confidence_reason}`);
-    } else {
-      console.log('  No Brave results found');
-    }
-  }
+  // Prefer listings with a street number
+  const valid = (data || []).filter(l => l.addressstreet && /^\d/.test(l.addressstreet));
+  return valid.slice(0, count);
 }
 
 async function main() {
   if (!OPENAI_KEY) {
-    console.error('Missing OPENAI_API_KEY env var');
-    console.error('Usage: OPENAI_API_KEY=sk-... node scripts/test-realtor-lookup.cjs');
+    console.error('Missing OPENAI_API_KEY');
     process.exit(1);
   }
 
+  const supabase = getSupabase();
+
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║          Realtor Lookup Test — 4 Regions                ║');
-  console.log('╠══════════════════════════════════════════════════════════╣');
-  console.log('║  Method 1: OpenAI with web_search_preview (primary)    ║');
-  if (BRAVE_KEY) {
-    console.log('║  Method 2: Brave Search + OpenAI extraction (compare)  ║');
-  }
+  console.log('║     Realtor Lookup Test — Real Listings from Supabase   ║');
+  console.log('║     Method: OpenAI web_search_preview                   ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
+  console.log(`  Regions: ${REGIONS_TO_TEST.join(', ')}   Listings per region: ${countArg}\n`);
 
-  for (const listing of TEST_LISTINGS) {
-    await testListing(listing);
-    await new Promise(r => setTimeout(r, 2000));
+  const summary = { total: 0, found: 0, partial: 0, notFound: 0 };
+
+  for (const region of REGIONS_TO_TEST) {
+    console.log(`\n${'═'.repeat(60)}`);
+    console.log(`  REGION: ${region.toUpperCase()}`);
+    console.log('═'.repeat(60));
+
+    let listings;
+    try {
+      listings = await fetchListingsForRegion(supabase, region, countArg);
+    } catch (err) {
+      console.error(`  Failed to fetch listings for ${region}: ${err.message}`);
+      continue;
+    }
+
+    if (listings.length === 0) {
+      console.log('  No active listings found in DB for this region.');
+      continue;
+    }
+
+    console.log(`  Found ${listings.length} listings to test\n`);
+
+    for (const listing of listings) {
+      const address = `${listing.addressstreet}, ${listing.city}, ${listing.addressstate || 'ON'}${listing.addresszipcode ? ' ' + listing.addresszipcode : ''}`;
+      const price = listing.unformattedprice ? `$${listing.unformattedprice.toLocaleString()}` : 'N/A';
+
+      console.log(`  ── zpid ${listing.zpid} ─ ${address} ─ ${price}`);
+      console.log('     Searching...');
+
+      try {
+        const result = await openaiWebSearch(address, null);
+
+        const icon = result.confidence >= 70 ? '✅' : result.confidence >= 40 ? '⚠️ ' : '❌';
+        console.log(`     ${icon} Confidence: ${result.confidence}%`);
+        if (result.listing_agent) console.log(`     Agent:     ${result.listing_agent}`);
+        if (result.co_listing_agent) console.log(`     Co-agent:  ${result.co_listing_agent}`);
+        if (result.brokerage) console.log(`     Brokerage: ${result.brokerage}`);
+        if (result.agent_phone) console.log(`     Phone:     ${result.agent_phone}`);
+        if (result.agent_email) console.log(`     Email:     ${result.agent_email}`);
+        if (result.source_url) console.log(`     Source:    ${result.source_url}`);
+        console.log(`     Reason:    ${result.confidence_reason}`);
+
+        summary.total++;
+        if (result.confidence >= 70) summary.found++;
+        else if (result.confidence >= 30) summary.partial++;
+        else summary.notFound++;
+
+      } catch (err) {
+        console.error(`     Error: ${err.message}`);
+        summary.total++;
+        summary.notFound++;
+      }
+
+      console.log('');
+      await sleep(2000); // be nice to OpenAI rate limits
+    }
   }
 
-  console.log('\n\n' + '═'.repeat(60));
-  console.log('  Test complete.');
-  console.log('  If results are accurate, we build this into Step 7.');
+  console.log('\n' + '═'.repeat(60));
+  console.log('  SUMMARY');
   console.log('═'.repeat(60));
+  console.log(`  Total tested:     ${summary.total}`);
+  console.log(`  ✅ Found (≥70%):  ${summary.found}`);
+  console.log(`  ⚠️  Partial (≥30%): ${summary.partial}`);
+  console.log(`  ❌ Not found:     ${summary.notFound}`);
+  const hitRate = summary.total > 0 ? Math.round((summary.found / summary.total) * 100) : 0;
+  console.log(`  Hit rate:         ${hitRate}%`);
+  console.log('═'.repeat(60));
+  console.log('\n  Decision guide:');
+  console.log('  ≥60% hit rate → build Step 7 with OpenAI web search as primary');
+  console.log('  30-60% hit rate → use Zillow attributionInfo first, web search as fallback');
+  console.log('  <30% hit rate → rely on Zillow attributionInfo only, skip web search');
 }
 
 main().catch(err => {
