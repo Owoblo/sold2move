@@ -25,10 +25,9 @@ async function main() {
   // Pull a broad sample of recent listings with all columns
   const { data, error } = await supabase
     .from('listings')
-    .select('zpid, status, addressstreet, city, addressstate, detailurl, carouselphotos, lastseenat')
-    .in('status', ['just_listed', 'active', 'sold'])
-    .order('lastseenat', { ascending: false })
-    .limit(20);
+    .select('zpid, status, addressstreet, city, carouselphotos, detailurl')
+    .eq('status', 'just_listed')
+    .limit(3);
 
   if (error) {
     console.error('Supabase error:', error.message);
