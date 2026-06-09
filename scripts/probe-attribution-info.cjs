@@ -25,10 +25,10 @@ async function main() {
   // Pull a broad sample of recent listings with all columns
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select('zpid, status, addressstreet, city, addressstate, detailurl, carouselphotos, lastseenat, brokerage, agent_phone, agent_email, listing_agent, attributioninfo, attribution_info, agentname, agent_name, listingagent, listing_by, office_name, officename, contact_phone, contactphone')
     .in('status', ['just_listed', 'active', 'sold'])
     .order('lastseenat', { ascending: false })
-    .limit(200);
+    .limit(50);
 
   if (error) {
     console.error('Supabase error:', error.message);
@@ -37,10 +37,10 @@ async function main() {
 
   console.log(`Loaded ${data.length} recent listings\n`);
 
-  // ── 1. Show ALL column names so we know what fields exist ──
+  // ── 1. Show what columns came back (non-error ones exist in schema) ──
   if (data.length > 0) {
     console.log('═'.repeat(60));
-    console.log('ALL COLUMNS IN LISTINGS TABLE:');
+    console.log('COLUMNS RETURNED (exist in schema):');
     console.log('═'.repeat(60));
     const cols = Object.keys(data[0]);
     cols.forEach(c => console.log(`  ${c}`));
