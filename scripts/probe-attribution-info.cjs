@@ -25,10 +25,10 @@ async function main() {
   // Pull a broad sample of recent listings with all columns
   const { data, error } = await supabase
     .from('listings')
-    .select('zpid, status, addressstreet, city, addressstate, detailurl, carouselphotos, lastseenat, brokerage, agent_phone, agent_email, listing_agent, attributioninfo, attribution_info, agentname, agent_name, listingagent, listing_by, office_name, officename, contact_phone, contactphone')
+    .select('zpid, status, addressstreet, city, addressstate, detailurl, carouselphotos, lastseenat')
     .in('status', ['just_listed', 'active', 'sold'])
     .order('lastseenat', { ascending: false })
-    .limit(50);
+    .limit(20);
 
   if (error) {
     console.error('Supabase error:', error.message);
@@ -107,14 +107,12 @@ async function main() {
   console.log('═'.repeat(60));
   console.log('COVERAGE SUMMARY:');
   console.log('═'.repeat(60));
-  const hasBrokerage = data.filter(l => l.brokerage && l.brokerage.trim()).length;
-  const hasPhone = data.filter(l => l.agent_phone && l.agent_phone.trim()).length;
-  const hasEmail = data.filter(l => l.agent_email && l.agent_email.trim()).length;
-  const hasAgentName = data.filter(l => l.listing_agent && l.listing_agent.trim()).length;
-  console.log(`  Has brokerage field:    ${hasBrokerage}/${data.length}`);
-  console.log(`  Has agent_phone field:  ${hasPhone}/${data.length}`);
-  console.log(`  Has agent_email field:  ${hasEmail}/${data.length}`);
-  console.log(`  Has listing_agent field: ${hasAgentName}/${data.length}`);
+  const hasPhotos2 = data.filter(l => l.carouselphotos).length;
+  const hasDetailUrl = data.filter(l => l.detailurl).length;
+  console.log(`  Has carouselphotos: ${hasPhotos2}/${data.length}`);
+  console.log(`  Has detailurl:      ${hasDetailUrl}/${data.length}`);
+  console.log(`\n  NOTE: No brokerage/agent columns exist yet in listings table.`);
+  console.log(`  Step 7 will need to add them OR use a separate realtors table.`);
   console.log('');
 
   // ── 7. Raw sample of 3 listings — full object ──
