@@ -22,6 +22,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { getRegionConfig } = require('./postcard-lib.cjs');
 
 const OWNER_EMAIL = 'business@starmovers.ca';
+const SOLD_REPORT_EMAIL = 'business@starmovers.ca';
 const PRINT_EMAIL  = 'loonieprints@gmail.com';
 const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
 const REPLY_TO = 'business@starmovers.ca';
@@ -71,6 +72,98 @@ function sendEmail(to, subject, html, attachments) {
     req.write(body);
     req.end();
   });
+}
+
+async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
+  const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+  const Papa = require('papaparse');
+
+  if (soldListings.length === 0) {
+    console.log('  No sold listings — skipping sold-only report email.');
+    return;
+  }
+
+  // Generate sold-only CSV in memory
+  const csvData = soldListings.map(l => ({
+    Address: l.address || `${l.addressstreet}, ${l.city || l.addresscity}, ${l.addressstate || 'ON'} ${l.addresszipcode || ''}`.trim(),
+    Street: l.addressstreet || '',
+    City: l.city || l.addresscity || '',
+    Province: l.addressstate || 'ON',
+    Postal: l.addresszipcode || '',
+    Price: l.price || '',
+    Status: l.status || '',
+    Beds: l.beds || '',
+    Baths: l.baths || '',
+    Area: l.area || '',
+    ListingURL: l.detailurl || '',
+    LastSeen: l.lastseenat || '',
+  }));
+  const csvText = Papa.unparse(csvData);
+  const csvContent = Buffer.from(csvText).toString('base64');
+  const csvName = `${region}_SoldOnly_${today}.csv`;
+
+  // Generate sold-only PDF in memory
+  const pdfDoc = await PDFDocument.create();
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const PAGE_WIDTH = 9.5 * 72;
+  const PAGE_HEIGHT = 4.125 * 72;
+  const MARGIN = 0.5 * 72;
+
+  for (const listing of soldListings) {
+    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    const addressStreet = listing.addressstreet || '';
+    const city = listing.city || listing.addresscity || '';
+    const province = listing.addressstate || 'ON';
+    const postal = listing.addresszipcode || '';
+    const price = listing.price || '';
+
+    // Header
+    page.drawText('SOLD', { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 14, size: 14, font: boldFont, color: rgb(0.8, 0.1, 0.1) });
+    page.drawText(addressStreet, { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 32, size: 11, font: boldFont, color: rgb(0.1, 0.1, 0.1) });
+    page.drawText(`${city}, ${province} ${postal}`, { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 46, size: 10, font: regularFont, color: rgb(0.3, 0.3, 0.3) });
+    if (price) page.drawText(price, { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 62, size: 10, font: regularFont, color: rgb(0.3, 0.3, 0.3) });
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  const pdfContent = Buffer.from(pdfBytes).toString('base64');
+  const pdfName = `${region}_SoldOnly_${today}.pdf`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px;">
+      <h2 style="color: #1a1a1a;">🏷️ Sold Listings Report — ${regionLabel} — ${today}</h2>
+      <p>Here are the <strong>${soldListings.length} sold listing${soldListings.length !== 1 ? 's' : ''}</strong> from this pipeline run for ${regionLabel}.</p>
+      <p>This is your internal reference only — not sent to the print shop.</p>
+      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+        <tr style="background: #f5f5f5;">
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Address</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">City</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Price</th>
+        </tr>
+        ${soldListings.map(l => `
+        <tr>
+          <td style="padding: 5px 8px; border: 1px solid #eee;">${l.addressstreet || ''}</td>
+          <td style="padding: 5px 8px; border: 1px solid #eee;">${l.city || l.addresscity || ''}</td>
+          <td style="padding: 5px 8px; border: 1px solid #eee;">${l.price || ''}</td>
+        </tr>`).join('')}
+      </table>
+      <p>Both the CSV and PDF are attached for your records.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+      <p style="color: #888; font-size: 12px;">Automated by Sold2Move Postcard Pipeline — ${regionLabel}</p>
+    </div>
+  `;
+
+  console.log(`  Sending sold-only report (${soldListings.length} listings) to ${SOLD_REPORT_EMAIL}...`);
+  const result = await sendEmail(
+    SOLD_REPORT_EMAIL,
+    `Sold Listings — ${regionLabel} — ${today} (${soldListings.length})`,
+    html,
+    [
+      { filename: csvName, content: csvContent },
+      { filename: pdfName, content: pdfContent },
+    ]
+  );
+  console.log(`  Sold-only report sent! ID: ${result.id}`);
 }
 
 async function sendPostcardEmail(region, csvPath, pdfPath) {
@@ -225,6 +318,18 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     { filename: pdfName, content: pdfContent },
   ]);
   console.log(`  Print shop email sent! ID: ${printResult.id}`);
+
+  // --- Sold-only report: separate email to owner, internal use only ---
+  try {
+    const step1Path = path.join(pipelineDir, 'step1-filtered.json');
+    if (fs.existsSync(step1Path)) {
+      const allListings = JSON.parse(fs.readFileSync(step1Path, 'utf-8'));
+      const soldListings = allListings.filter(l => l.status === 'sold');
+      await sendSoldOnlyEmail(region, regionLabel, soldListings, today);
+    }
+  } catch (e) {
+    console.warn(`  Sold-only report skipped: ${e.message}`);
+  }
 
   return ownerResult;
 }
