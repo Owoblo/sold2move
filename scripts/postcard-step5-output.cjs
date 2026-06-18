@@ -145,6 +145,95 @@ function applyOutputFilters(listings, opts) {
 }
 
 /**
+ * Normalize a listing's address into a stable key for cross-zpid deduplication.
+ * Combines street + postal, uppercased, punctuation stripped, whitespace collapsed.
+ * Two listings at the same physical address produce the same key even if they
+ * have different zpids (e.g. a relist) or slightly different formatting.
+ */
+function normalizeAddressKey(listing) {
+  const street = (listing.addressstreet || '').toString();
+  const postal = (listing.addresszipcode || '').toString();
+  const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return `${clean(street)}|${clean(postal)}`;
+}
+
+/**
+ * Address-level duplicate guard — prevents re-sending to the same physical
+ * address across DIFFERENT zpids (the relist bug).
+ *
+ * A property that gets taken off market and relisted receives a brand-new
+ * zpid from Zillow, so the zpid-keyed checks (just_listed_postcard_sent_at,
+ * glitch detection) don't catch it. This guard closes that gap by checking
+ * whether any listing at the same street+postal has already received a
+ * postcard of the same type — regardless of zpid, for the lifetime of the DB.
+ *
+ * Rule: an address gets at most ONE just_listed postcard and at most ONE
+ * sold postcard, ever. Returns { kept, rejected }.
+ *
+ * Purely subtractive: it can only remove a listing from the send batch,
+ * never add one, so it cannot break the existing 2-postcard lifecycle.
+ */
+async function filterAddressDuplicates(supabase, region, finalListings) {
+  const kept = [];
+  const rejected = [];
+
+  // Collect distinct street values to scope the lookup query tightly.
+  const streets = [...new Set(
+    finalListings.map(l => (l.addressstreet || '').trim()).filter(Boolean)
+  )];
+  if (streets.length === 0) {
+    return { kept: finalListings, rejected };
+  }
+
+  // Pull every prior send in this region for those streets (any status,
+  // including sold_archived). Minimal columns to keep the query light.
+  const sentByAddress = new Map(); // normKey -> { jl: bool, sold: bool, zpids: Set }
+  const CHUNK = 100;
+  for (let i = 0; i < streets.length; i += CHUNK) {
+    const chunk = streets.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from('listings')
+      .select('zpid, addressstreet, addresszipcode, just_listed_postcard_sent_at, sold_postcard_sent_at')
+      .eq('region', region)
+      .in('addressstreet', chunk)
+      .or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null');
+
+    if (error) {
+      console.warn(`  Address-dup lookup failed for a chunk: ${error.message} — skipping guard for it`);
+      continue;
+    }
+    for (const row of data || []) {
+      const key = normalizeAddressKey(row);
+      const entry = sentByAddress.get(key) || { jl: false, sold: false, zpids: new Set() };
+      if (row.just_listed_postcard_sent_at) entry.jl = true;
+      if (row.sold_postcard_sent_at) entry.sold = true;
+      entry.zpids.add(String(row.zpid));
+      sentByAddress.set(key, entry);
+    }
+  }
+
+  for (const listing of finalListings) {
+    const key = normalizeAddressKey(listing);
+    const prior = sentByAddress.get(key);
+
+    if (prior) {
+      const fromOtherZpid = [...prior.zpids].some(z => z !== String(listing.zpid));
+      if (listing.status === 'just_listed' && prior.jl && fromOtherZpid) {
+        rejected.push({ zpid: listing.zpid, reason: 'address_already_sent_just_listed (relist)' });
+        continue;
+      }
+      if (listing.status === 'sold' && prior.sold && fromOtherZpid) {
+        rejected.push({ zpid: listing.zpid, reason: 'address_already_sent_sold (relist)' });
+        continue;
+      }
+    }
+    kept.push(listing);
+  }
+
+  return { kept, rejected };
+}
+
+/**
  * Generate CSV file
  */
 function generateCSV(listings, outputPath) {
@@ -291,7 +380,21 @@ async function run(options) {
   }
 
   // Apply filters
-  const { finalListings, rejected } = applyOutputFilters(listings, opts);
+  let { finalListings, rejected } = applyOutputFilters(listings, opts);
+
+  // Address-level duplicate guard — block relists (new zpid, same address)
+  // from getting a second postcard of the same type. Skipped in dry runs.
+  if (!opts.dryRun && finalListings.length > 0) {
+    const supabase = getSupabase();
+    const region = opts.region || 'windsor';
+    const { kept, rejected: addrRejected } = await filterAddressDuplicates(supabase, region, finalListings);
+    if (addrRejected.length > 0) {
+      console.log(`  Address-dup guard removed ${addrRejected.length} relist duplicate(s):`);
+      addrRejected.forEach(r => console.log(`    zpid ${r.zpid} — ${r.reason}`));
+    }
+    finalListings = kept;
+    rejected = rejected.concat(addrRejected);
+  }
 
   // Persist skip reasons to Supabase (best-effort)
   if (rejected.length > 0 && !opts.dryRun) {
