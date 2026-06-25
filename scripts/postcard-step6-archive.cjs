@@ -38,13 +38,14 @@ async function run(options, finalListings) {
   console.log(`  Batch ID: ${batchId}`);
 
   const supabase = getSupabase();
-  const BATCH = 200;
 
-  // Mark sold listings as sold_archived
+  // Per-row updates so we can increment postcard_send_count from each row's
+  // current value (Supabase JS .update() doesn't support `col = col + 1`
+  // expressions without an RPC). Loop is bounded by batch size; for a few
+  // hundred rows the wall-clock cost is small.
   let archived = 0;
-  const soldZpids = soldListings.map(l => l.zpid);
-  for (let i = 0; i < soldZpids.length; i += BATCH) {
-    const batch = soldZpids.slice(i, i + BATCH);
+  for (const l of soldListings) {
+    const nextCount = (l.postcard_send_count || 0) + 1;
     const { error } = await supabase
       .from('listings')
       .update({
@@ -54,17 +55,17 @@ async function run(options, finalListings) {
         last_postcard_batch_id: batchId,
         last_postcard_type_sent: 'sold',
         postcard_skip_reason: null,
+        postcard_send_count: nextCount,
       })
-      .in('zpid', batch);
-    if (error) console.error(`  Failed to archive sold batch:`, error.message);
-    else archived += batch.length;
+      .eq('zpid', l.zpid);
+    if (error) console.error(`  Failed to archive zpid ${l.zpid}:`, error.message);
+    else archived++;
   }
 
   // Mark just_listed listings as active — clean slate for next scrape
   let reset = 0;
-  const jlZpids = justListedListings.map(l => l.zpid);
-  for (let i = 0; i < jlZpids.length; i += BATCH) {
-    const batch = jlZpids.slice(i, i + BATCH);
+  for (const l of justListedListings) {
+    const nextCount = (l.postcard_send_count || 0) + 1;
     const { error } = await supabase
       .from('listings')
       .update({
@@ -74,10 +75,11 @@ async function run(options, finalListings) {
         last_postcard_batch_id: batchId,
         last_postcard_type_sent: 'just_listed',
         postcard_skip_reason: null,
+        postcard_send_count: nextCount,
       })
-      .in('zpid', batch);
-    if (error) console.error(`  Failed to reset just_listed batch:`, error.message);
-    else reset += batch.length;
+      .eq('zpid', l.zpid);
+    if (error) console.error(`  Failed to reset zpid ${l.zpid}:`, error.message);
+    else reset++;
   }
 
   console.log(`  ✓ ${archived} sold → sold_archived`);

@@ -318,7 +318,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
 
     const live = await supabase
       .from('listings')
-      .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent')
+      .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count')
       .eq('region', regionConfig.key)
       .eq('city', city)
       .in('status', ['active', 'just_listed', 'sold'])
@@ -344,7 +344,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
     .limit(50000);
   const unknownLive = await supabase
     .from('listings')
-    .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent')
+    .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count')
     .eq('region', regionConfig.key)
     .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
     .in('status', ['active', 'just_listed', 'sold'])
@@ -363,6 +363,15 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
   let activeCount = 0;
   let soldCount = 0;
   let glitchCount = 0;
+  let pendingMissCount = 0;
+
+  // Tier 2: a listing missing from one scrape is not enough evidence it's sold.
+  // Wait until it's missing from this many CONSECUTIVE scrapes before flipping
+  // to status='sold'. At our every-2-day cron, 2 misses ≈ 4-6 days — long
+  // enough to filter Zillow API hiccups, pagination drift, and short delistings,
+  // short enough that real sold listings still get caught while sellers are
+  // packing.
+  const REQUIRED_CONSECUTIVE_MISSES = 2;
 
   for (const scraped of scrapedRows) {
     if (currentByZpid.has(scraped.zpid)) continue;
@@ -377,6 +386,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
         status: 'sold_archived',
         glitch_suspected: true,
         lastseenat: nowIso,
+        missing_scrape_count: 0,
       });
       continue;
     }
@@ -404,6 +414,8 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
         last_postcard_sent_at: existing.last_postcard_sent_at,
         last_postcard_batch_id: existing.last_postcard_batch_id,
         last_postcard_type_sent: existing.last_postcard_type_sent,
+        postcard_send_count: existing.postcard_send_count || 0,
+        missing_scrape_count: 0, // listing is back — reset the miss streak
         glitch_suspected: false,
       });
     } else {
@@ -419,6 +431,8 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
         last_postcard_sent_at: null,
         last_postcard_batch_id: null,
         last_postcard_type_sent: null,
+        postcard_send_count: 0,
+        missing_scrape_count: 0,
       });
     }
   }
@@ -428,14 +442,32 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
     if (currentByZpid.has(zpid)) continue;
     if (!['active', 'just_listed'].includes(existing.status)) continue;
 
-    soldCount++;
-    nextRows.push({
-      zpid,
-      region: regionConfig.key,
-      status: 'sold',
-      lastseenat: nowIso,
-      glitch_suspected: false,
-    });
+    const newMissingCount = (existing.missing_scrape_count || 0) + 1;
+
+    if (newMissingCount >= REQUIRED_CONSECUTIVE_MISSES) {
+      // Confirmed missing across enough scrapes — flip to sold.
+      soldCount++;
+      nextRows.push({
+        zpid,
+        region: regionConfig.key,
+        status: 'sold',
+        lastseenat: nowIso,
+        missing_scrape_count: newMissingCount,
+        glitch_suspected: false,
+      });
+    } else {
+      // First (or sub-threshold) miss — bump the counter but don't flip status.
+      // The row stays active/just_listed and is NOT eligible for a sold
+      // postcard this run. We don't touch lastseenat — we didn't see it.
+      pendingMissCount++;
+      nextRows.push({
+        zpid,
+        region: regionConfig.key,
+        status: existing.status,
+        missing_scrape_count: newMissingCount,
+        glitch_suspected: false,
+      });
+    }
   }
 
   return {
@@ -446,6 +478,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
       activeCount,
       soldCount,
       glitchCount,
+      pendingMissCount,
     },
   };
 }
@@ -547,7 +580,7 @@ async function run(options) {
   console.log(`  Existing region records: ${existingRows.length}`);
 
   const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso);
-  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch`);
+  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (1 of ${2} scrapes — not yet sold)`);
 
   console.log('\n  Upserting to Supabase...');
   const { upserted, errors } = await upsertListings(supabase, nextRows);

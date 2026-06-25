@@ -69,6 +69,28 @@ function applyOutputFilters(listings, opts) {
   let filtered = [...listings];
   const rejected = []; // { zpid, reason }
 
+  // ─── Tier 1: hard cap on total postcards per address ─────────────────────
+  // No matter how the status flaps (e.g. just_listed → sold → just_listed → sold
+  // because of Zillow API hiccups), no zpid ever receives more than MAX_SENDS
+  // postcards lifetime. This is the last line of defence against over-mailing,
+  // independent of the upstream "is it really sold?" question that Tier 2 (in
+  // step0) handles.
+  const MAX_SENDS = 2;
+  {
+    const next = [];
+    for (const l of filtered) {
+      const count = l.postcard_send_count || 0;
+      if (count >= MAX_SENDS) {
+        rejected.push({ zpid: l.zpid, reason: `max_sends_reached: ${count}/${MAX_SENDS}` });
+      } else {
+        next.push(l);
+      }
+    }
+    const removed = filtered.length - next.length;
+    if (removed > 0) console.log(`  Removed ${removed} listings at the ${MAX_SENDS}-send cap`);
+    filtered = next;
+  }
+
   // Filter to verified addresses (if geocoding was run)
   const hasGeocode = listings.some(l => l._geocode_verified != null);
   if (hasGeocode) {
