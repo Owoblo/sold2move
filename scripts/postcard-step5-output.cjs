@@ -19,6 +19,7 @@ const projectRoot = path.join(__dirname, '..');
 const {
   getSupabase,
   readPipelineFile,
+  writePipelineFile,
   stepHeader,
   parseCliArgs,
   getRegionConfig,
@@ -555,6 +556,8 @@ async function run(options) {
     const { kept } = await verifySoldCandidates(supabase, finalListings);
     finalListings = kept;
   }
+
+  writePipelineFile('step5-final.json', finalListings);
 
   // Persist skip reasons to Supabase (best-effort)
   if (rejected.length > 0 && !opts.dryRun) {

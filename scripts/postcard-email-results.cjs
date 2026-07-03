@@ -79,7 +79,7 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
   const Papa = require('papaparse');
 
   if (soldListings.length === 0) {
-    console.log('  No sold listings — skipping sold-only report email.');
+    console.log('  No final sold listings — skipping sold-ready report email.');
     return;
   }
 
@@ -100,7 +100,7 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
   }));
   const csvText = Papa.unparse(csvData);
   const csvContent = Buffer.from(csvText).toString('base64');
-  const csvName = `${region}_SoldOnly_${today}.csv`;
+  const csvName = `${region}_SoldReady_${today}.csv`;
 
   // Generate sold-only PDF in memory
   const pdfDoc = await PDFDocument.create();
@@ -127,13 +127,13 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
 
   const pdfBytes = await pdfDoc.save();
   const pdfContent = Buffer.from(pdfBytes).toString('base64');
-  const pdfName = `${region}_SoldOnly_${today}.pdf`;
+  const pdfName = `${region}_SoldReady_${today}.pdf`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px;">
-      <h2 style="color: #1a1a1a;">🏷️ Sold Listings Report — ${regionLabel} — ${today}</h2>
-      <p>Here are the <strong>${soldListings.length} sold listing${soldListings.length !== 1 ? 's' : ''}</strong> from this pipeline run for ${regionLabel}.</p>
-      <p>This is your internal reference only — not sent to the print shop.</p>
+      <h2 style="color: #1a1a1a;">Sold-Ready Delivery List — ${regionLabel} — ${today}</h2>
+      <p>Here are the <strong>${soldListings.length} final sold listing${soldListings.length !== 1 ? 's' : ''}</strong> from this pipeline run for ${regionLabel}.</p>
+      <p>These rows survived the postcard filters and sold verification step. Internal delivery use only — not sent to the print shop.</p>
       <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
         <tr style="background: #f5f5f5;">
           <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Address</th>
@@ -153,17 +153,17 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
     </div>
   `;
 
-  console.log(`  Sending sold-only report (${soldListings.length} listings) to ${SOLD_REPORT_EMAIL}...`);
+  console.log(`  Sending sold-ready delivery report (${soldListings.length} listings) to ${SOLD_REPORT_EMAIL}...`);
   const result = await sendEmail(
     SOLD_REPORT_EMAIL,
-    `Sold Listings — ${regionLabel} — ${today} (${soldListings.length})`,
+    `Sold-Ready Delivery List — ${regionLabel} — ${today} (${soldListings.length})`,
     html,
     [
       { filename: csvName, content: csvContent },
       { filename: pdfName, content: pdfContent },
     ]
   );
-  console.log(`  Sold-only report sent! ID: ${result.id}`);
+  console.log(`  Sold-ready delivery report sent! ID: ${result.id}`);
 }
 
 async function sendPostcardEmail(region, csvPath, pdfPath) {
@@ -319,16 +319,18 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   ]);
   console.log(`  Print shop email sent! ID: ${printResult.id}`);
 
-  // --- Sold-only report: separate email to owner, internal use only ---
+  // --- Sold-ready report: final sold rows only, separate owner/internal email ---
   try {
-    const step1Path = path.join(pipelineDir, 'step1-filtered.json');
-    if (fs.existsSync(step1Path)) {
-      const allListings = JSON.parse(fs.readFileSync(step1Path, 'utf-8'));
-      const soldListings = allListings.filter(l => l.status === 'sold');
+    const finalPath = path.join(pipelineDir, 'step5-final.json');
+    if (!fs.existsSync(finalPath)) {
+      console.warn('  Sold-ready report skipped: step5-final.json not found');
+    } else {
+      const finalListings = JSON.parse(fs.readFileSync(finalPath, 'utf-8'));
+      const soldListings = finalListings.filter(l => l.status === 'sold');
       await sendSoldOnlyEmail(region, regionLabel, soldListings, today);
     }
   } catch (e) {
-    console.warn(`  Sold-only report skipped: ${e.message}`);
+    console.warn(`  Sold-ready report skipped: ${e.message}`);
   }
 
   return ownerResult;
