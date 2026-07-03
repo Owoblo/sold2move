@@ -20,6 +20,10 @@ on:
         description: 'Skip furniture check'
         type: boolean
         default: false
+      include_unscanned:
+        description: 'Allow unscanned listings with enough photos into the postcard batch'
+        type: boolean
+        default: false
       skip_scrape:
         description: 'Skip Zillow scrape (use existing DB data)'
         type: boolean
@@ -64,12 +68,15 @@ jobs:
       - name: Build pipeline flags
         id: flags
         run: |
-          FLAGS="--include-unscanned"
+          FLAGS=""
           if [ "${{ github.event.inputs.skip_photos }}" = "true" ]; then
             FLAGS="$FLAGS --skip-photos"
           fi
           if [ "${{ github.event.inputs.skip_furniture }}" = "true" ]; then
             FLAGS="$FLAGS --skip-furniture"
+          fi
+          if [ "${{ github.event.inputs.include_unscanned }}" = "true" ]; then
+            FLAGS="$FLAGS --include-unscanned"
           fi
           if [ "${{ github.event.inputs.skip_scrape }}" = "true" ]; then
             FLAGS="$FLAGS --skip-scrape"

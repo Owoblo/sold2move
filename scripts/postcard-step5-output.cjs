@@ -66,6 +66,7 @@ async function getStampImage() {
  * { zpid, reason } objects for all excluded listings.
  */
 function applyOutputFilters(listings, opts) {
+  opts = opts || {};
   let filtered = [...listings];
   const rejected = []; // { zpid, reason }
 
@@ -122,46 +123,46 @@ function applyOutputFilters(listings, opts) {
   //   ✓ uncertain but has interior photos (benefit of the doubt)
   //   ✗ confirmed unfurnished
   //   ✗ no photos at all (can't verify)
-  const hasFurnitureScan = listings.some(l => l.is_furnished != null || l.furniture_scan_date != null);
-  if (hasFurnitureScan) {
-    const next = [];
-    for (const l of filtered) {
-      if (l.status === 'sold') {
-        if (l.sold_postcard_sent_at) {
-          rejected.push({ zpid: l.zpid, reason: 'sold_postcard_already_sent' });
-          continue;
-        }
-        if (l.just_listed_postcard_sent_at) { next.push(l); continue; }
-        if (!l.last_postcard_sent_at) {
-          if (l.is_furnished === true) { next.push(l); continue; }
-          rejected.push({ zpid: l.zpid, reason: 'sold_no_quality_signal' });
-          continue;
-        }
-        rejected.push({ zpid: l.zpid, reason: 'sold_failed_just_listed_filter' });
+  const next = [];
+  for (const l of filtered) {
+    if (l.status === 'sold') {
+      if (l.sold_postcard_sent_at) {
+        rejected.push({ zpid: l.zpid, reason: 'sold_postcard_already_sent' });
         continue;
       }
-
-      // just_listed: full furniture filter
-      if (l.is_furnished === true) { next.push(l); continue; }
-      if (l.is_furnished === false) { rejected.push({ zpid: l.zpid, reason: 'unfurnished' }); continue; }
-
-      // Uncertain (is_furnished = null): include if has interior photos
-      const photoCount = (() => {
-        let p = l.carouselphotos;
-        if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
-        return Array.isArray(p) ? p.length : 0;
-      })();
-      if (photoCount >= 2) {
-        next.push(l);
-      } else {
-        rejected.push({ zpid: l.zpid, reason: 'no_photos_to_verify' });
+      if (l.just_listed_postcard_sent_at) { next.push(l); continue; }
+      if (!l.last_postcard_sent_at) {
+        if (l.is_furnished === true) { next.push(l); continue; }
+        rejected.push({ zpid: l.zpid, reason: 'sold_no_quality_signal' });
+        continue;
       }
+      rejected.push({ zpid: l.zpid, reason: 'sold_failed_just_listed_filter' });
+      continue;
     }
 
-    const removedFurn = filtered.length - next.length;
-    if (removedFurn > 0) console.log(`  Removed ${removedFurn} listings (failed furniture filter or previously filtered just_listed)`);
-    filtered = next;
+    // just_listed: full furniture filter. Unknown/unscanned rows are held by
+    // default; --include-unscanned is an explicit override for emergency runs.
+    if (l.is_furnished === true) { next.push(l); continue; }
+    if (l.is_furnished === false) { rejected.push({ zpid: l.zpid, reason: 'unfurnished' }); continue; }
+
+    const photoCount = (() => {
+      let p = l.carouselphotos;
+      if (typeof p === 'string') { try { p = JSON.parse(p); } catch(e) { return 0; } }
+      return Array.isArray(p) ? p.length : 0;
+    })();
+
+    if (opts.includeUnscanned && photoCount >= 2) {
+      next.push(l);
+    } else if (photoCount >= 2) {
+      rejected.push({ zpid: l.zpid, reason: 'unscanned_furniture' });
+    } else {
+      rejected.push({ zpid: l.zpid, reason: 'no_photos_to_verify' });
+    }
   }
+
+  const removedFurn = filtered.length - next.length;
+  if (removedFurn > 0) console.log(`  Removed ${removedFurn} listings (failed furniture filter, unscanned, or previously filtered just_listed)`);
+  filtered = next;
 
   return { finalListings: filtered, rejected };
 }
@@ -622,4 +623,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, applyOutputFilters, normalizeAddressKey };

@@ -358,7 +358,18 @@ function normalizeResult(r, regionConfig, nowIso) {
   };
 }
 
-const LIVE_COLUMNS = 'zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+
+function normalizeAddressKey(listing) {
+  const street = (listing.addressstreet || '').toString();
+  const postal = (listing.addresszipcode || '').toString();
+  const city = (listing.city || listing.addresscity || '').toString();
+  const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const streetKey = clean(street);
+  if (!streetKey) return '';
+  const postalKey = clean(postal);
+  return postalKey ? `${streetKey}|${postalKey}` : `${streetKey}|${clean(city)}`;
+}
 
 /**
  * Fetch existing rows for a specific set of zpids, REGARDLESS of region.
@@ -399,7 +410,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   for (const city of regionConfig.cities) {
     const archived = await supabase
       .from('listings')
-      .select('zpid, status, region')
+      .select('zpid, status, region, addressstreet, addresszipcode, city, addresscity')
       .eq('region', regionConfig.key)
       .eq('city', city)
       .eq('status', 'sold_archived')
@@ -429,7 +440,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   const knownCities = regionConfig.cities;
   const unknownArchived = await supabase
     .from('listings')
-    .select('zpid, status, region')
+    .select('zpid, status, region, addressstreet, addresszipcode, city, addresscity')
     .eq('region', regionConfig.key)
     .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
     .eq('status', 'sold_archived')
@@ -456,7 +467,17 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
   //   a region doesn't mass-mail its entire backlog.
   const { degraded = false, seedMode = false } = lifecycleOpts;
   const existingByZpid = new Map(existingRows.map(row => [String(row.zpid), row]));
+  const existingByAddress = new Map();
+  for (const row of existingRows) {
+    const key = normalizeAddressKey(row);
+    if (!key) continue;
+    const current = existingByAddress.get(key);
+    const currentSent = (current?.postcard_send_count || 0) > 0 || current?.last_postcard_sent_at;
+    const rowSent = (row.postcard_send_count || 0) > 0 || row.last_postcard_sent_at;
+    if (!current || rowSent || !currentSent) existingByAddress.set(key, row);
+  }
   const currentByZpid = new Map();
+  const currentAddressKeys = new Set();
   const nextRows = [];
   let justListedCount = 0;
   let activeCount = 0;
@@ -476,6 +497,8 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
   for (const scraped of scrapedRows) {
     if (currentByZpid.has(scraped.zpid)) continue;
     currentByZpid.set(scraped.zpid, scraped);
+    const scrapedAddressKey = normalizeAddressKey(scraped);
+    if (scrapedAddressKey) currentAddressKeys.add(scrapedAddressKey);
     const existing = existingByZpid.get(scraped.zpid);
 
     if (existing?.status === 'sold_archived') {
@@ -542,6 +565,29 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
         missing_scrape_count: 0,
       });
     } else {
+      const addressMatch = existingByAddress.get(scrapedAddressKey);
+      if (addressMatch) {
+        activeCount++;
+        nextRows.push({
+          ...scraped,
+          // New zpid at a known physical address is a relist or scraper identity
+          // change, not a genuinely new market opportunity.
+          region: addressMatch.region || regionConfig.key,
+          status: 'active',
+          photo_fetch_attempts: 0,
+          photos_last_attempted_at: null,
+          furniture_needs_retry: false,
+          just_listed_postcard_sent_at: null,
+          sold_postcard_sent_at: null,
+          last_postcard_sent_at: null,
+          last_postcard_batch_id: null,
+          last_postcard_type_sent: null,
+          postcard_send_count: 0,
+          missing_scrape_count: 0,
+          postcard_skip_reason: `known_address_relist: ${addressMatch.zpid}`,
+        });
+        continue;
+      }
       justListedCount++;
       nextRows.push({
         ...scraped,
@@ -566,6 +612,8 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
     for (const existing of existingRows) {
       const zpid = String(existing.zpid);
       if (currentByZpid.has(zpid)) continue;
+      const existingAddressKey = normalizeAddressKey(existing);
+      if (existingAddressKey && currentAddressKeys.has(existingAddressKey)) continue;
       if (!['active', 'just_listed'].includes(existing.status)) continue;
 
       const newMissingCount = (existing.missing_scrape_count || 0) + 1;
@@ -688,7 +736,7 @@ async function run(options) {
   try {
     liveResults = await runSearchScraper(token, searchUrls);
   } catch (err) {
-    console.error(`  Live scrape failed: ${err.message}`);
+    throw new Error(`Live scrape failed; refusing to continue with stale DB data. Use --skip-scrape intentionally if you want that. ${err.message}`);
   }
 
   const liveRows = liveResults
@@ -708,8 +756,7 @@ async function run(options) {
   console.log(`\n  Normalised current listings: ${liveRows.length}`);
 
   if (liveRows.length === 0) {
-    console.log('\n  WARNING: No current listings extracted. Pipeline will continue with existing DB data only.');
-    return [];
+    throw new Error('No current listings extracted from a completed scrape; refusing to continue with stale DB data.');
   }
 
   const regionRows = await fetchExistingRegionListings(supabase, regionConfig);
@@ -761,4 +808,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey };
