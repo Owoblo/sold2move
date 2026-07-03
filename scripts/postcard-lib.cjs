@@ -125,6 +125,7 @@ function parseCliArgs(argv) {
     minPrice: 300000,
     statuses: ['sold', 'just_listed'],
     dryRun: false,
+    seed: false,
     region: 'windsor',
     cities: WINDSOR_CITIES,
   };
@@ -160,6 +161,12 @@ function parseCliArgs(argv) {
         break;
       case '--dry-run':
         options.dryRun = true;
+        break;
+      case '--seed':
+        // First run for a new region: step 0 stores unseen listings as
+        // 'active' inventory instead of 'just_listed', so onboarding a
+        // region doesn't mass-mail its entire existing backlog.
+        options.seed = true;
         break;
       case '--region': {
         const r = args[++i].toLowerCase();

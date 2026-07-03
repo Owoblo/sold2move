@@ -1,14 +1,25 @@
 #!/usr/bin/env node
 /**
- * Step 0: Scrape fresh listings from Zillow via Apify
+ * Step 0: Scrape the FULL active inventory from Zillow via Apify
  *
  * For this Canada workflow, "sold" is inferred by disappearance:
  * - freshly scraped listings not seen before -> just_listed
- * - previously live listings missing from the fresh scrape -> sold
+ * - previously live listings missing from TWO consecutive full scrapes -> sold
  * - previously live listings still present -> active
  *
+ * Disappearance-inference is only valid when the scrape covers the whole
+ * active inventory, so there is NO days-on-Zillow filter, and region bounds
+ * are grid-split into sub-searches to stay under Zillow's ~500/search cap.
+ *
+ * Guards:
+ * - degraded-scrape gate: a scrape returning <50% of known-active listings
+ *   freezes miss counters for the run (partial Apify results can't create
+ *   phantom solds)
+ * - --seed: first run for a new region stores everything as 'active' so
+ *   onboarding never mass-mails a region's existing backlog
+ *
  * Usage:
- *   node scripts/postcard-step0-scrape.cjs [--region windsor|wkg|london|ottawa] [--dry-run]
+ *   node scripts/postcard-step0-scrape.cjs [--region <key>] [--seed] [--dry-run]
  */
 
 const https = require('https');
@@ -60,6 +71,13 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// NOTE: no `doz` (days-on-Zillow) filter here — deliberately.
+// Sold detection works by disappearance ("in DB but missing from scrape"),
+// which is only valid if the scrape covers the ENTIRE active inventory.
+// A doz window silently drops every listing older than the window, making
+// perfectly-live listings look "missing" and generating phantom solds.
+// FSBO listings are included: no agent involved, but the homeowner is
+// still a prime moving prospect.
 function buildZillowSearchUrl(bounds) {
   const state = {
     isMapVisible: true,
@@ -67,12 +85,11 @@ function buildZillowSearchUrl(bounds) {
     mapBounds: bounds,
     filterState: {
       isForSaleByAgent: { value: true },
-      isForSaleByOwner: { value: false },
+      isForSaleByOwner: { value: true },
       isNewConstruction: { value: false },
       isForSaleForeclosure: { value: false },
       isComingSoon: { value: false },
       isAuction: { value: false },
-      doz: { value: '14' },
     },
     pagination: {},
   };
@@ -80,13 +97,39 @@ function buildZillowSearchUrl(bounds) {
   return 'https://www.zillow.com/homes/for_sale/?searchQueryState=' + encodeURIComponent(JSON.stringify(state));
 }
 
-async function runSearchScraper(token, searchUrl) {
+// Zillow map searches cap out around ~500 results per query. A full-inventory
+// scrape of a whole region can exceed that, so we split the region bounds into
+// a grid of sub-searches and hand the actor one URL per cell (it dedupes).
+// Regions can override the default 2×2 via `gridSplit: { rows, cols }` in
+// postcard-region-config.cjs — size the grid so each cell stays under ~400
+// active listings (see docs/ADDING_A_REGION.md).
+function splitBoundsIntoGrid(bounds, gridRows, gridCols) {
+  const rows = Math.max(1, gridRows || 2);
+  const cols = Math.max(1, gridCols || 2);
+  const latStep = (bounds.north - bounds.south) / rows;
+  const lngStep = (bounds.east - bounds.west) / cols;
+  const cells = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      cells.push({
+        south: bounds.south + r * latStep,
+        north: bounds.south + (r + 1) * latStep,
+        west: bounds.west + c * lngStep,
+        east: bounds.west + (c + 1) * lngStep,
+      });
+    }
+  }
+  return cells;
+}
+
+async function runSearchScraper(token, searchUrls) {
+  const urls = Array.isArray(searchUrls) ? searchUrls : [searchUrls];
   const input = {
-    searchUrls: [{ url: searchUrl }],
+    searchUrls: urls.map(u => ({ url: u })),
     extractionMethod: 'PAGINATION',
   };
 
-  console.log('  Starting Apify search run (current live listings)...');
+  console.log(`  Starting Apify search run (${urls.length} grid cell${urls.length > 1 ? 's' : ''}, full active inventory)...`);
 
   const startResp = await httpRequest(
     `https://api.apify.com/v2/acts/${SEARCH_ACTOR}/runs?token=${token}`,
@@ -101,8 +144,17 @@ async function runSearchScraper(token, searchUrl) {
   const datasetId = startResp.data.data.defaultDatasetId;
   console.log(`  Run ID: ${runId}`);
 
+  // Hard cap on polling so a stuck actor can't hang the job until the
+  // workflow-level timeout kills it without cleanup.
+  const MAX_POLL_MS = 45 * 60 * 1000;
+  const pollStart = Date.now();
   let status = 'RUNNING';
   while (status === 'RUNNING' || status === 'READY') {
+    if (Date.now() - pollStart > MAX_POLL_MS) {
+      await httpRequest(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${token}`, { method: 'POST' })
+        .catch(() => {});
+      throw new Error(`Apify run ${runId} exceeded ${MAX_POLL_MS / 60000} minutes — aborted`);
+    }
     await sleep(10000);
     const s = await httpRequest(`https://api.apify.com/v2/actor-runs/${runId}?token=${token}`);
     status = s?.data?.data?.status;
@@ -123,6 +175,20 @@ async function runSearchScraper(token, searchUrl) {
 
   if (!Array.isArray(dataResp.data)) {
     throw new Error('Apify returned unexpected payload: ' + JSON.stringify(dataResp.data).slice(0, 200));
+  }
+
+  // A run can report SUCCEEDED while its dataset contains error objects
+  // instead of listings (seen in the wild: credits exhausted / upstream
+  // block). Strip them, and fail loudly if that's ALL we got.
+  const errorItems = dataResp.data.filter(it =>
+    it && typeof it === 'object' && 'error' in it && !it.zpid && !it.detailUrl && !it.address
+  );
+  if (errorItems.length > 0) {
+    console.warn(`  WARNING: dataset contained ${errorItems.length} error item(s): ${JSON.stringify(errorItems[0]).slice(0, 200)}`);
+    if (errorItems.length === dataResp.data.length) {
+      throw new Error('Apify dataset contains only error items — treating scrape as failed');
+    }
+    dataResp.data = dataResp.data.filter(it => !errorItems.includes(it));
   }
 
   console.log(`  Got ${dataResp.data.length} current results`);
@@ -292,6 +358,32 @@ function normalizeResult(r, regionConfig, nowIso) {
   };
 }
 
+const LIVE_COLUMNS = 'zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+
+/**
+ * Fetch existing rows for a specific set of zpids, REGARDLESS of region.
+ * Region bounds overlap (e.g. London/Woodstock), so a listing scraped by this
+ * region's run may already live in the DB under another region. Without this
+ * lookup it would be treated as brand-new — re-inserted as just_listed with
+ * its postcard history (send count, sent-at timestamps) wiped to null.
+ */
+async function fetchExistingByZpids(supabase, zpids) {
+  const rows = [];
+  const CHUNK = 200;
+  for (let i = 0; i < zpids.length; i += CHUNK) {
+    const chunk = zpids.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from('listings')
+      .select(LIVE_COLUMNS)
+      .in('zpid', chunk);
+    if (error) {
+      throw new Error(`Failed to fetch existing rows by zpid: ${error.message}`);
+    }
+    if (data?.length) rows.push(...data);
+  }
+  return rows;
+}
+
 async function fetchExistingRegionListings(supabase, regionConfig) {
   // Split into two queries per city, cheapest first:
   //   1. SLIM — `sold_archived` rows accumulate forever and are only checked
@@ -307,7 +399,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   for (const city of regionConfig.cities) {
     const archived = await supabase
       .from('listings')
-      .select('zpid, status')
+      .select('zpid, status, region')
       .eq('region', regionConfig.key)
       .eq('city', city)
       .eq('status', 'sold_archived')
@@ -318,7 +410,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
 
     const live = await supabase
       .from('listings')
-      .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count')
+      .select(LIVE_COLUMNS)
       .eq('region', regionConfig.key)
       .eq('city', city)
       .in('status', ['active', 'just_listed', 'sold'])
@@ -337,14 +429,14 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   const knownCities = regionConfig.cities;
   const unknownArchived = await supabase
     .from('listings')
-    .select('zpid, status')
+    .select('zpid, status, region')
     .eq('region', regionConfig.key)
     .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
     .eq('status', 'sold_archived')
     .limit(50000);
   const unknownLive = await supabase
     .from('listings')
-    .select('zpid, region, status, city, addressstreet, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count')
+    .select(LIVE_COLUMNS)
     .eq('region', regionConfig.key)
     .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
     .in('status', ['active', 'just_listed', 'sold'])
@@ -355,7 +447,14 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   return rows;
 }
 
-function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
+function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lifecycleOpts = {}) {
+  // degraded: this scrape returned far fewer rows than we know to be active,
+  //   so "missing from scrape" is meaningless — process what we saw, but do
+  //   NOT increment anyone's miss counter.
+  // seedMode: first run for a brand-new region — insert unseen listings as
+  //   'active' (existing inventory) instead of 'just_listed', so onboarding
+  //   a region doesn't mass-mail its entire backlog.
+  const { degraded = false, seedMode = false } = lifecycleOpts;
   const existingByZpid = new Map(existingRows.map(row => [String(row.zpid), row]));
   const currentByZpid = new Map();
   const nextRows = [];
@@ -364,6 +463,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
   let soldCount = 0;
   let glitchCount = 0;
   let pendingMissCount = 0;
+  let seededCount = 0;
 
   // Tier 2: a listing missing from one scrape is not enough evidence it's sold.
   // Wait until it's missing from this many CONSECUTIVE scrapes before flipping
@@ -382,7 +482,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
       glitchCount++;
       nextRows.push({
         zpid: scraped.zpid,
-        region: regionConfig.key,
+        region: existing.region || regionConfig.key,
         status: 'sold_archived',
         glitch_suspected: true,
         lastseenat: nowIso,
@@ -395,6 +495,10 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
       activeCount++;
       nextRows.push({
         ...scraped,
+        // First-owner-wins: overlapping region bounds mean two regions can
+        // scrape the same listing. Keep the region that first captured it so
+        // the row doesn't flap between regions on alternating runs.
+        region: existing.region || regionConfig.key,
         status: 'active',
         first_seen_at: existing.first_seen_at || scraped.first_seen_at,
         last_seen_at: nowIso,
@@ -418,6 +522,25 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
         missing_scrape_count: 0, // listing is back — reset the miss streak
         glitch_suspected: false,
       });
+    } else if (seedMode) {
+      // Seeding a new region: this is pre-existing inventory, not a fresh
+      // listing. Store as 'active' so it never triggers a just_listed
+      // postcard, but participates in sold-by-disappearance from now on.
+      seededCount++;
+      nextRows.push({
+        ...scraped,
+        status: 'active',
+        photo_fetch_attempts: 0,
+        photos_last_attempted_at: null,
+        furniture_needs_retry: false,
+        just_listed_postcard_sent_at: null,
+        sold_postcard_sent_at: null,
+        last_postcard_sent_at: null,
+        last_postcard_batch_id: null,
+        last_postcard_type_sent: null,
+        postcard_send_count: 0,
+        missing_scrape_count: 0,
+      });
     } else {
       justListedCount++;
       nextRows.push({
@@ -437,36 +560,40 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
     }
   }
 
-  for (const existing of existingRows) {
-    const zpid = String(existing.zpid);
-    if (currentByZpid.has(zpid)) continue;
-    if (!['active', 'just_listed'].includes(existing.status)) continue;
+  // Disappearance pass — skipped entirely on degraded scrapes so a flaky
+  // Apify run can't burn anyone's Tier-2 miss strikes.
+  if (!degraded) {
+    for (const existing of existingRows) {
+      const zpid = String(existing.zpid);
+      if (currentByZpid.has(zpid)) continue;
+      if (!['active', 'just_listed'].includes(existing.status)) continue;
 
-    const newMissingCount = (existing.missing_scrape_count || 0) + 1;
+      const newMissingCount = (existing.missing_scrape_count || 0) + 1;
 
-    if (newMissingCount >= REQUIRED_CONSECUTIVE_MISSES) {
-      // Confirmed missing across enough scrapes — flip to sold.
-      soldCount++;
-      nextRows.push({
-        zpid,
-        region: regionConfig.key,
-        status: 'sold',
-        lastseenat: nowIso,
-        missing_scrape_count: newMissingCount,
-        glitch_suspected: false,
-      });
-    } else {
-      // First (or sub-threshold) miss — bump the counter but don't flip status.
-      // The row stays active/just_listed and is NOT eligible for a sold
-      // postcard this run. We don't touch lastseenat — we didn't see it.
-      pendingMissCount++;
-      nextRows.push({
-        zpid,
-        region: regionConfig.key,
-        status: existing.status,
-        missing_scrape_count: newMissingCount,
-        glitch_suspected: false,
-      });
+      if (newMissingCount >= REQUIRED_CONSECUTIVE_MISSES) {
+        // Confirmed missing across enough scrapes — flip to sold.
+        soldCount++;
+        nextRows.push({
+          zpid,
+          region: existing.region || regionConfig.key,
+          status: 'sold',
+          lastseenat: nowIso,
+          missing_scrape_count: newMissingCount,
+          glitch_suspected: false,
+        });
+      } else {
+        // First (or sub-threshold) miss — bump the counter but don't flip status.
+        // The row stays active/just_listed and is NOT eligible for a sold
+        // postcard this run. We don't touch lastseenat — we didn't see it.
+        pendingMissCount++;
+        nextRows.push({
+          zpid,
+          region: existing.region || regionConfig.key,
+          status: existing.status,
+          missing_scrape_count: newMissingCount,
+          glitch_suspected: false,
+        });
+      }
     }
   }
 
@@ -479,6 +606,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso) {
       soldCount,
       glitchCount,
       pendingMissCount,
+      seededCount,
     },
   };
 }
@@ -534,11 +662,19 @@ async function run(options) {
   console.log(`  Bounds: W:${regionConfig.bounds.west}, E:${regionConfig.bounds.east}, S:${regionConfig.bounds.south}, N:${regionConfig.bounds.north}`);
   console.log(`  City filter: ${regionConfig.cities.length} cities`);
 
-  const searchUrl = buildZillowSearchUrl(regionConfig.bounds);
+  const grid = regionConfig.gridSplit || { rows: 2, cols: 2 };
+  const gridCells = splitBoundsIntoGrid(regionConfig.bounds, grid.rows, grid.cols);
+  const searchUrls = gridCells.map(cell => buildZillowSearchUrl(cell));
+  console.log(`  Grid: ${grid.rows}×${grid.cols} = ${searchUrls.length} sub-searches (full inventory, no doz window)`);
+
+  const seedMode = !!opts.seed;
+  if (seedMode) {
+    console.log('  SEED MODE: unseen listings will be stored as active (no just_listed postcards)');
+  }
 
   if (opts.dryRun) {
     console.log('\n  [DRY RUN] Would run:');
-    console.log('    Live URL:', searchUrl.slice(0, 120) + '...');
+    searchUrls.forEach((u, i) => console.log(`    Cell ${i + 1}: ${u.slice(0, 100)}...`));
     return [];
   }
 
@@ -550,7 +686,7 @@ async function run(options) {
 
   let liveResults = [];
   try {
-    liveResults = await runSearchScraper(token, searchUrl);
+    liveResults = await runSearchScraper(token, searchUrls);
   } catch (err) {
     console.error(`  Live scrape failed: ${err.message}`);
   }
@@ -576,11 +712,40 @@ async function run(options) {
     return [];
   }
 
-  const existingRows = await fetchExistingRegionListings(supabase, regionConfig);
-  console.log(`  Existing region records: ${existingRows.length}`);
+  const regionRows = await fetchExistingRegionListings(supabase, regionConfig);
+  console.log(`  Existing region records: ${regionRows.length}`);
 
-  const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso);
-  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (1 of ${2} scrapes — not yet sold)`);
+  // Also look up scraped zpids across ALL regions — overlapping bounds mean
+  // this scrape can include listings owned by a neighbouring region, and we
+  // must recognize them (preserving their postcard history) rather than
+  // re-inserting them as brand-new just_listed rows.
+  const regionZpids = new Set(regionRows.map(r => String(r.zpid)));
+  const crossRegionZpids = [...new Set(liveRows.map(r => String(r.zpid)))]
+    .filter(z => !regionZpids.has(z));
+  let existingRows = regionRows;
+  if (crossRegionZpids.length > 0) {
+    const crossRows = await fetchExistingByZpids(supabase, crossRegionZpids);
+    if (crossRows.length > 0) {
+      console.log(`  Found ${crossRows.length} scraped listing(s) already owned by another region — history preserved`);
+      existingRows = regionRows.concat(crossRows);
+    }
+  }
+
+  // Sanity gate: if this scrape returned far fewer listings than we know to
+  // be currently active, treat it as degraded — a partial Apify result must
+  // not increment miss counters (two degraded scrapes in a row would
+  // otherwise mass-flip healthy listings to sold).
+  const knownActive = existingRows.filter(r => ['active', 'just_listed'].includes(r.status)).length;
+  const SANITY_MIN_KNOWN = 20;
+  const SANITY_RATIO = 0.5;
+  const degraded = knownActive >= SANITY_MIN_KNOWN && liveRows.length < knownActive * SANITY_RATIO;
+  if (degraded) {
+    console.warn(`  WARNING: DEGRADED SCRAPE — got ${liveRows.length} listings but ${knownActive} are known active (<${SANITY_RATIO * 100}%).`);
+    console.warn('  Miss counters will NOT be incremented this run. Check Apify credits / actor health.');
+  }
+
+  const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso, { degraded, seedMode });
+  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (not yet sold)${summary.seededCount ? `, ${summary.seededCount} seeded` : ''}${degraded ? ' [DEGRADED — misses frozen]' : ''}`);
 
   console.log('\n  Upserting to Supabase...');
   const { upserted, errors } = await upsertListings(supabase, nextRows);
@@ -596,4 +761,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid };

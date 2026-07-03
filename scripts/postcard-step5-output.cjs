@@ -255,6 +255,135 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
   return { kept, rejected };
 }
 
+// ─── Sold-candidate verification ────────────────────────────────────────────
+// Disappearance from the scrape is a strong signal but can't distinguish
+// "sold" from "delisted/expired". Before spending print+postage on a sold
+// postcard, check each candidate's own Zillow detail page: if it still says
+// FOR_SALE / PENDING, the listing is alive — pull it from the batch and put
+// it back to active in the DB.
+//
+// FAIL-OPEN by design: any error (actor missing, credits out, timeout) logs
+// a warning and mails the batch as-is — verification can only ever remove
+// bad sends, never block good ones.
+const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail-scraper';
+const VERIFY_MAX_CANDIDATES = 60;
+const STILL_ON_MARKET = new Set(['FOR_SALE', 'PENDING', 'COMING_SOON', 'ACTIVE', 'FOR_RENT']);
+
+function apifyHttp(url, options = {}) {
+  const https = require('https');
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }, res => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(data) }); }
+        catch (e) { resolve({ status: res.statusCode, data }); }
+      });
+    });
+    req.on('error', reject);
+    req.setTimeout(120000, () => { req.destroy(); reject(new Error('Timeout')); });
+    if (options.body) req.write(JSON.stringify(options.body));
+    req.end();
+  });
+}
+
+function extractZpidFromResult(r) {
+  if (r?.zpid) return String(r.zpid);
+  for (const u of [r?.url, r?.detailUrl, r?.hdpUrl]) {
+    const m = typeof u === 'string' && u.match(/(\d+)_zpid/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function verifySoldCandidates(supabase, finalListings) {
+  const token = process.env.APIFY_TOKEN;
+  const candidates = finalListings.filter(l => l.status === 'sold' && l.detailurl).slice(0, VERIFY_MAX_CANDIDATES);
+  if (candidates.length === 0) return { kept: finalListings, pulled: [] };
+  if (!token) {
+    console.warn('  Sold verification skipped: APIFY_TOKEN not set');
+    return { kept: finalListings, pulled: [] };
+  }
+
+  console.log(`  Verifying ${candidates.length} sold candidate(s) against their Zillow detail pages...`);
+
+  try {
+    const start = await apifyHttp(
+      `https://api.apify.com/v2/acts/${DETAIL_ACTOR}/runs?token=${token}`,
+      { method: 'POST', body: { startUrls: candidates.map(l => ({ url: l.detailurl })) } }
+    );
+    if (start.status !== 200 && start.status !== 201) {
+      throw new Error(`start failed (${start.status}): ${JSON.stringify(start.data).slice(0, 200)}`);
+    }
+    const runId = start.data.data.id;
+    const datasetId = start.data.data.defaultDatasetId;
+
+    const deadline = Date.now() + 10 * 60 * 1000;
+    let status = 'RUNNING';
+    while (status === 'RUNNING' || status === 'READY') {
+      if (Date.now() > deadline) {
+        await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${token}`, { method: 'POST' }).catch(() => {});
+        throw new Error('verification run exceeded 10 minutes');
+      }
+      await new Promise(r => setTimeout(r, 10000));
+      const s = await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}?token=${token}`);
+      status = s?.data?.data?.status;
+    }
+    if (status !== 'SUCCEEDED') throw new Error(`verification run ended ${status}`);
+
+    const items = await apifyHttp(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`);
+    if (!Array.isArray(items.data)) throw new Error('verification dataset not an array');
+
+    const statusByZpid = new Map();
+    for (const r of items.data) {
+      const zpid = extractZpidFromResult(r);
+      const homeStatus = (r?.homeStatus || r?.hdpData?.homeInfo?.homeStatus || r?.status || '').toUpperCase();
+      if (zpid && homeStatus) statusByZpid.set(zpid, homeStatus);
+    }
+
+    const pulled = [];
+    const kept = [];
+    for (const l of finalListings) {
+      const verifiedStatus = l.status === 'sold' ? statusByZpid.get(String(l.zpid)) : null;
+      if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
+        pulled.push({ listing: l, verifiedStatus });
+      } else {
+        // No result for this zpid (page gone entirely — consistent with a
+        // real sale) or a non-active status: proceed with mailing.
+        kept.push(l);
+      }
+    }
+
+    for (const { listing, verifiedStatus } of pulled) {
+      console.log(`    PULLED zpid ${listing.zpid} — Zillow says ${verifiedStatus}, not sold (${listing.addressstreet}, ${listing.city})`);
+      await supabase
+        .from('listings')
+        .update({
+          status: 'active',
+          missing_scrape_count: 0,
+          postcard_skip_reason: `sold_verification_still_on_market: ${verifiedStatus}`,
+        })
+        .eq('zpid', listing.zpid);
+    }
+
+    if (pulled.length > 0) {
+      console.log(`  Sold verification pulled ${pulled.length}/${candidates.length} candidate(s) back to active`);
+    } else {
+      console.log(`  Sold verification: all ${candidates.length} candidate(s) confirmed off-market`);
+    }
+    return { kept, pulled };
+  } catch (err) {
+    console.warn(`  Sold verification failed (${err.message}) — mailing batch unverified`);
+    return { kept: finalListings, pulled: [] };
+  }
+}
+
 /**
  * Generate CSV file
  */
@@ -416,6 +545,14 @@ async function run(options) {
     }
     finalListings = kept;
     rejected = rejected.concat(addrRejected);
+  }
+
+  // Verify sold candidates against their live Zillow pages — pull any that
+  // are actually still on the market. Fail-open: errors mail the batch as-is.
+  if (!opts.dryRun && finalListings.some(l => l.status === 'sold')) {
+    const supabase = getSupabase();
+    const { kept } = await verifySoldCandidates(supabase, finalListings);
+    finalListings = kept;
   }
 
   // Persist skip reasons to Supabase (best-effort)

@@ -23,6 +23,7 @@ const REGION_CONFIG = {
       'Colchester', 'Maidstone', 'Wheatley',
     ],
     bounds: { west: -83.20, east: -82.45, south: 41.90, north: 42.45 },
+    gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '3608 Seminole Street, Unit 3',
@@ -49,6 +50,7 @@ const REGION_CONFIG = {
       "Mitchell's Bay", 'Lighthouse Cove', 'Erieau', 'Shrewsbury', 'Erie Beach',
     ],
     bounds: { west: -82.75, east: -81.75, south: 42.15, north: 42.70 },
+    gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '220 St Clair Street',
@@ -80,6 +82,7 @@ const REGION_CONFIG = {
       'Grand Bend', 'Lambton Shores', 'Port Franks', 'Ipperwash',
     ],
     bounds: { west: -82.60, east: -81.55, south: 42.60, north: 43.40 },
+    gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '390 Saskatoon St, Unit 207D',
@@ -104,8 +107,8 @@ const REGION_CONFIG = {
       'Glencoe', 'Newbury', 'Wardsville', 'Adelaide-Metcalfe', 'Southwest Middlesex',
       // Middlesex County central
       'Komoka', 'Middlesex Centre',
-      // Middlesex County east
-      'Dorchester', 'Thames Centre', 'Thamesford',
+      // Middlesex County east (Thamesford is owned by the Woodstock zone)
+      'Dorchester', 'Thames Centre',
       // Middlesex County south
       'Belmont',
       // Elgin County (St. Thomas, Lake Erie towns)
@@ -116,10 +119,12 @@ const REGION_CONFIG = {
       'Aylmer', 'Springfield', 'Malahide', 'Bayham', 'Vienna', 'Port Burwell',
       // Perth County
       'St. Marys',
-      // Oxford (shared with Woodstock zone)
-      'Ingersoll',
+      // NOTE: Ingersoll + Thamesford belong to the Woodstock zone; Aylmer
+      // belongs here. Every city must have exactly ONE owner region —
+      // duplicates cause listings to flip regions between runs.
     ],
     bounds: { west: -81.90, east: -80.75, south: 42.45, north: 43.30 },
+    gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '390 Saskatoon St, Unit 207D',
@@ -147,10 +152,10 @@ const REGION_CONFIG = {
       'Drumbo', 'Princeton', 'Plattsville', 'Bright',
       // Norfolk County (within bounds)
       'Delhi',
-      // Elgin (shared)
-      'Aylmer',
+      // NOTE: Aylmer is owned by the London zone (Elgin County).
     ],
     bounds: { west: -81.05, east: -80.45, south: 42.75, north: 43.40 },
+    gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '55 Cedar Drive',
@@ -183,6 +188,7 @@ const REGION_CONFIG = {
       'Paris',
     ],
     bounds: { west: -81.05, east: -80.10, south: 43.15, north: 43.85 },
+    gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '550 Parkside Drive, Unit B13',
@@ -201,6 +207,7 @@ const REGION_CONFIG = {
       'Stittsville', 'Barrhaven', 'Manotick', 'Rockland', 'Carp',
     ],
     bounds: { west: -76.40, east: -75.35, south: 45.10, north: 45.60 },
+    gridSplit: { rows: 4, cols: 4 },  // keep each cell under ~400 active listings
     returnAddressLines: [
       'Dexa Services',
       '4108-1100 Canadian Shield Avenue',
