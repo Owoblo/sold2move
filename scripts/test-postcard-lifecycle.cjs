@@ -8,6 +8,9 @@ const {
 const {
   applyOutputFilters,
 } = require('./postcard-step5-output.cjs');
+const {
+  filterJustListedSeenInCurrentScrape,
+} = require('./postcard-step1-filter.cjs');
 
 const region = { key: 'windsor', cities: ['Windsor'] };
 const now = '2026-07-03T12:00:00.000Z';
@@ -105,6 +108,26 @@ function testIncludeUnscannedIsExplicitOverride() {
   assert.equal(rejected.length, 0);
 }
 
+function testJustListedMustBeSeenInCurrentScrape() {
+  const rows = [
+    listing({ zpid: '100', status: 'just_listed' }),
+    listing({ zpid: '200', status: 'just_listed' }),
+    listing({ zpid: '300', status: 'sold' }),
+  ];
+  const { listings, rejected } = filterJustListedSeenInCurrentScrape(rows, [{ zpid: '100' }]);
+  assert.deepEqual(listings.map(l => l.zpid), ['100', '300']);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].zpid, '200');
+  assert.equal(rejected[0].reason, 'just_listed_not_seen_in_current_scrape');
+}
+
+function testSkipScrapeAllowsExistingJustListedRows() {
+  const rows = [listing({ zpid: '100', status: 'just_listed' })];
+  const { listings, rejected } = filterJustListedSeenInCurrentScrape(rows, [], { skipScrape: true });
+  assert.equal(listings.length, 1);
+  assert.equal(rejected.length, 0);
+}
+
 const tests = [
   testSeedModeStoresUnseenAsActive,
   testNewZpidAtKnownAddressIsNotJustListed,
@@ -113,6 +136,8 @@ const tests = [
   testAddressKeyFallsBackToCityWhenPostalMissing,
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
+  testJustListedMustBeSeenInCurrentScrape,
+  testSkipScrapeAllowsExistingJustListedRows,
 ];
 
 for (const test of tests) {

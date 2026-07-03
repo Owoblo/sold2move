@@ -15,6 +15,7 @@
 const https = require('https');
 const {
   getSupabase,
+  readPipelineFile,
   writePipelineFile,
   parseCliArgs,
   stepHeader,
@@ -95,6 +96,26 @@ async function fillMissingPostalsFromNominatim(supabase, listings) {
   }
 
   return { recovered, stillMissing };
+}
+
+function filterJustListedSeenInCurrentScrape(listings, currentScrapeRows, opts = {}) {
+  if (opts.skipScrape) {
+    return { listings, rejected: [] };
+  }
+
+  const seenZpids = new Set((currentScrapeRows || []).map(row => String(row.zpid)));
+  const kept = [];
+  const rejected = [];
+
+  for (const listing of listings) {
+    if (listing.status !== 'just_listed' || seenZpids.has(String(listing.zpid))) {
+      kept.push(listing);
+      continue;
+    }
+    rejected.push({ zpid: listing.zpid, reason: 'just_listed_not_seen_in_current_scrape' });
+  }
+
+  return { listings: kept, rejected };
 }
 
 async function run(options) {
@@ -201,6 +222,27 @@ async function run(options) {
   }
   allListings = Array.from(seen.values());
 
+  let currentScrapeRows = null;
+  if (!opts.skipScrape) {
+    try {
+      currentScrapeRows = readPipelineFile('step0-current.json');
+    } catch (e) {
+      throw new Error(`Current scrape marker missing; refusing to mail stale just_listed rows. ${e.message}`);
+    }
+  }
+
+  const currentSeenFilter = filterJustListedSeenInCurrentScrape(allListings, currentScrapeRows, opts);
+  allListings = currentSeenFilter.listings;
+  if (currentSeenFilter.rejected.length > 0) {
+    console.log(`  Removed ${currentSeenFilter.rejected.length} stale just_listed listings not seen in current full scrape`);
+    const zpids = currentSeenFilter.rejected.map(r => r.zpid);
+    for (let i = 0; i < zpids.length; i += 200) {
+      await supabase.from('listings')
+        .update({ postcard_skip_reason: 'just_listed_not_seen_in_current_scrape' })
+        .in('zpid', zpids.slice(i, i + 200));
+    }
+  }
+
   // Three-tier postal recovery, cheapest source first:
   //   1. The `address` field (e.g. "123 Oak St, Windsor, ON N9A 1B2")
   //   2. The Zillow `detailurl` slug
@@ -305,4 +347,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, filterJustListedSeenInCurrentScrape };

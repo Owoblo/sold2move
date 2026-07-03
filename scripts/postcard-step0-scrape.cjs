@@ -31,6 +31,7 @@ const {
   stepHeader,
   parseCliArgs,
   getRegionConfig,
+  writePipelineFile,
 } = require('./postcard-lib.cjs');
 
 const SEARCH_ACTOR = 'maxcopell~zillow-scraper';
@@ -793,6 +794,15 @@ async function run(options) {
 
   const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso, { degraded, seedMode });
   console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (not yet sold)${summary.seededCount ? `, ${summary.seededCount} seeded` : ''}${degraded ? ' [DEGRADED — misses frozen]' : ''}`);
+
+  writePipelineFile('step0-current.json', liveRows.map(row => ({
+    zpid: row.zpid,
+    addressstreet: row.addressstreet,
+    city: row.city || row.addresscity,
+    addresszipcode: row.addresszipcode || '',
+    seen_at: nowIso,
+    batch_id: opts.batchId || null,
+  })));
 
   console.log('\n  Upserting to Supabase...');
   const { upserted, errors } = await upsertListings(supabase, nextRows);
