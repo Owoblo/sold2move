@@ -286,16 +286,18 @@ function normalizeResult(r, regionConfig, nowIso) {
   if (!addr.addressstreet) return null;
 
   const rawCity = (addr.addresscity || r.city || '').trim();
-  // Try to match against known cities; store the raw city if it doesn't match
-  // so nothing is silently lost — step 1 does postcard-specific city filtering.
-  const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase()) || rawCity;
-  if (!matchedCity) return null;
+  const state = (addr.addressstate || 'ON').trim().toUpperCase();
+  if (state !== 'ON') {
+    if (!normalizeResult._outOfProvince) normalizeResult._outOfProvince = new Map();
+    normalizeResult._outOfProvince.set(state, (normalizeResult._outOfProvince.get(state) || 0) + 1);
+    return null;
+  }
 
-  // Log unknown cities so we can spot gaps in postcard-region-config.cjs
-  const isKnownCity = regionConfig.cities.some(c => c.toLowerCase() === rawCity.toLowerCase());
-  if (!isKnownCity && rawCity) {
+  const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase());
+  if (!matchedCity) {
     if (!normalizeResult._unknownCities) normalizeResult._unknownCities = new Set();
-    normalizeResult._unknownCities.add(rawCity);
+    normalizeResult._unknownCities.add(rawCity || '(blank)');
+    return null;
   }
 
   const rawPrice = r.price || r.listPrice || r.unformattedPrice || 0;
@@ -338,10 +340,10 @@ function normalizeResult(r, regionConfig, nowIso) {
     region: regionConfig.key,
     price,
     unformattedprice,
-    address: `${addr.addressstreet}, ${matchedCity}, ${addr.addressstate} ${addr.addresszipcode}`.trim(),
+    address: `${addr.addressstreet}, ${matchedCity}, ${state} ${addr.addresszipcode}`.trim(),
     addressstreet: addr.addressstreet,
     addresscity: matchedCity,
-    addressstate: addr.addressstate || 'ON',
+    addressstate: state,
     addresszipcode: addr.addresszipcode || '',
     city: matchedCity,
     beds: r.beds || r.bedrooms || null,
@@ -748,10 +750,18 @@ async function run(options) {
   // catch gaps like "Essex County" vs "Essex" before they become missed listings.
   if (normalizeResult._unknownCities && normalizeResult._unknownCities.size > 0) {
     const unknown = [...normalizeResult._unknownCities].sort();
-    console.warn(`\n  WARNING: ${unknown.length} city name(s) from Zillow didn't match our list (listings dropped):`);
+    console.warn(`\n  WARNING: ${unknown.length} city name(s) from Zillow didn't match ${regionConfig.key}'s list (listings dropped):`);
     unknown.forEach(c => console.warn(`    "${c}"`));
-    console.warn('  → Add any valid ones to postcard-region-config.cjs to capture those listings.');
+    console.warn('  → Add valid Ontario service-area names to postcard-region-config.cjs; ignore border spillover.');
     normalizeResult._unknownCities.clear();
+  }
+  if (normalizeResult._outOfProvince && normalizeResult._outOfProvince.size > 0) {
+    const summary = [...normalizeResult._outOfProvince.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([state, count]) => `${state}: ${count}`)
+      .join(', ');
+    console.warn(`  Dropped out-of-province listings: ${summary}`);
+    normalizeResult._outOfProvince.clear();
   }
 
   console.log(`\n  Normalised current listings: ${liveRows.length}`);
@@ -818,4 +828,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult };

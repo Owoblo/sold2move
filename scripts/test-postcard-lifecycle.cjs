@@ -4,6 +4,7 @@ const assert = require('assert/strict');
 const {
   buildLifecycleRows,
   normalizeAddressKey,
+  normalizeResult,
 } = require('./postcard-step0-scrape.cjs');
 const {
   applyOutputFilters,
@@ -128,6 +129,40 @@ function testSkipScrapeAllowsExistingJustListedRows() {
   assert.equal(rejected.length, 0);
 }
 
+function testNormalizeResultKeepsConfiguredOntarioCity() {
+  const row = normalizeResult({
+    zpid: '100',
+    streetAddress: '123 Main St',
+    city: 'Windsor',
+    state: 'ON',
+    price: '$499,000',
+  }, region, now);
+  assert.equal(row.city, 'Windsor');
+  assert.equal(row.addressstate, 'ON');
+}
+
+function testNormalizeResultDropsBorderSpillover() {
+  const row = normalizeResult({
+    zpid: '100',
+    streetAddress: '36 Longfellow St',
+    city: 'Detroit',
+    state: 'MI',
+    price: '$650,000',
+  }, region, now);
+  assert.equal(row, null);
+}
+
+function testNormalizeResultDropsUnknownOntarioCity() {
+  const row = normalizeResult({
+    zpid: '100',
+    streetAddress: '123 County Rd',
+    city: 'Essex County',
+    state: 'ON',
+    price: '$650,000',
+  }, region, now);
+  assert.equal(row, null);
+}
+
 const tests = [
   testSeedModeStoresUnseenAsActive,
   testNewZpidAtKnownAddressIsNotJustListed,
@@ -138,6 +173,9 @@ const tests = [
   testIncludeUnscannedIsExplicitOverride,
   testJustListedMustBeSeenInCurrentScrape,
   testSkipScrapeAllowsExistingJustListedRows,
+  testNormalizeResultKeepsConfiguredOntarioCity,
+  testNormalizeResultDropsBorderSpillover,
+  testNormalizeResultDropsUnknownOntarioCity,
 ];
 
 for (const test of tests) {
