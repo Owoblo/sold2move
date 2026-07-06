@@ -31,7 +31,7 @@ on:
       regions:
         description: 'Which regions to run (comma-separated: windsor,chatham,sarnia,london,woodstock,wkg,ottawa)'
         required: false
-        default: 'windsor,chatham,sarnia,london,woodstock,wkg'
+        default: 'windsor,chatham,sarnia,london,woodstock,wkg,ottawa'
 
 jobs:
   run-pipeline:
@@ -87,8 +87,7 @@ jobs:
         id: regions
         run: |
           REGIONS="${{ github.event.inputs.regions }}"
-          # Ottawa is currently paused; re-add 'ottawa' here and to the input default above to resume it.
-          if [ -z "$REGIONS" ]; then REGIONS="windsor,chatham,sarnia,london,woodstock,wkg"; fi
+          if [ -z "$REGIONS" ]; then REGIONS="windsor,chatham,sarnia,london,woodstock,wkg,ottawa"; fi
           echo "list=$REGIONS" >> $GITHUB_OUTPUT
 
       # ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
