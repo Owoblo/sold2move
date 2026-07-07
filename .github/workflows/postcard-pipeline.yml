@@ -65,6 +65,98 @@ jobs:
             echo "to=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check Apify actor updates
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RUN_ID: ${{ github.run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node -e "
+          const https = require('https');
+          const actors = [
+            { id: 'maxcopell~zillow-scraper', label: 'Zillow Search Scraper' },
+            { id: 'maxcopell~zillow-detail-scraper', label: 'Zillow Detail Scraper' },
+          ];
+          const windowMs = 72 * 60 * 60 * 1000;
+          function getJson(url) {
+            return new Promise((resolve, reject) => {
+              https.get(url, res => {
+                let data = '';
+                res.on('data', c => data += c);
+                res.on('end', () => {
+                  try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
+                });
+              }).on('error', reject);
+            });
+          }
+          function sendEmail(recent) {
+            if (!process.env.RESEND_API_KEY) {
+              console.log('RESEND_API_KEY not set; skipping actor update alert email.');
+              return Promise.resolve();
+            }
+            const rows = recent.map(a =>
+              '<tr><td style=\"padding:8px;border:1px solid #ddd\">' + a.label + '</td>' +
+              '<td style=\"padding:8px;border:1px solid #ddd\">' + a.modifiedAt + '</td>' +
+              '<td style=\"padding:8px;border:1px solid #ddd\">' + (a.buildNumber || '') + '</td></tr>'
+            ).join('');
+            const body = JSON.stringify({
+              from: 'Sold2Move Pipeline <postcards@sold2move.com>',
+              to: ['johnowolabi80@gmail.com'],
+              subject: 'Apify Zillow actor updated recently',
+              html:
+                '<div style=\"font-family:Arial,sans-serif;max-width:650px\">' +
+                  '<h2>Apify Zillow actor update detected</h2>' +
+                  '<p>One or more Zillow actors changed within the last 72 hours. Watch today\\'s postcard counts and logs for scrape behavior changes.</p>' +
+                  '<table style=\"border-collapse:collapse;width:100%;margin:16px 0\">' +
+                    '<tr><th style=\"padding:8px;border:1px solid #ddd;text-align:left\">Actor</th><th style=\"padding:8px;border:1px solid #ddd;text-align:left\">Modified</th><th style=\"padding:8px;border:1px solid #ddd;text-align:left\">Build</th></tr>' +
+                    rows +
+                  '</table>' +
+                  '<p><a href=\"https://github.com/' + process.env.REPOSITORY + '/actions/runs/' + process.env.RUN_ID + '\">Open workflow logs</a></p>' +
+                '</div>',
+            });
+            return new Promise((resolve, reject) => {
+              const req = https.request({
+                hostname: 'api.resend.com',
+                path: '/emails',
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer ' + process.env.RESEND_API_KEY,
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(body),
+                },
+              }, res => {
+                let data = '';
+                res.on('data', c => data += c);
+                res.on('end', () => {
+                  console.log('Actor update alert:', res.statusCode, data);
+                  resolve();
+                });
+              });
+              req.on('error', reject);
+              req.write(body);
+              req.end();
+            });
+          }
+          (async () => {
+            const now = Date.now();
+            const recent = [];
+            for (const actor of actors) {
+              const resp = await getJson('https://api.apify.com/v2/acts/' + actor.id);
+              const data = resp.data || {};
+              const modifiedAt = data.modifiedAt || data.taggedBuilds?.latest?.finishedAt;
+              const ageMs = modifiedAt ? now - new Date(modifiedAt).getTime() : Infinity;
+              const buildNumber = data.taggedBuilds?.latest?.buildNumber || '';
+              console.log(actor.label + ' modifiedAt=' + modifiedAt + ' build=' + buildNumber);
+              if (ageMs >= 0 && ageMs <= windowMs) {
+                recent.push({ ...actor, modifiedAt, buildNumber });
+              }
+            }
+            if (recent.length > 0) await sendEmail(recent);
+          })().catch(err => {
+            console.warn('Apify actor update check failed:', err.message);
+          });
+          "
+
       - name: Build pipeline flags
         id: flags
         run: |
