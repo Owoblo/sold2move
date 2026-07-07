@@ -126,6 +126,8 @@ async function run(options) {
   console.log(`  Min price: $${opts.minPrice.toLocaleString()}`);
   console.log(`  Statuses: ${opts.statuses.join(', ')}`);
   console.log(`  Region: ${opts.region} (${opts.cities.length} cities)`);
+  const targetState = (opts.state || opts.province || 'ON').trim().toUpperCase();
+  console.log(`  State/province boundary: ${targetState}`);
 
   if (opts.dryRun) {
     console.log('\n  [DRY RUN] Would query Supabase for matching listings.');
@@ -158,6 +160,27 @@ async function run(options) {
       allListings = allListings.concat(data);
       console.log(`  ${city}: ${data.length} listings`);
     }
+  }
+
+  const knownCities = opts.cities.map(c => `"${c}"`).join(',');
+  const { data: unmappedCityRows, error: unmappedCityError } = await supabase
+    .from('listings')
+    .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count')
+    .in('status', opts.statuses)
+    .eq('region', opts.region)
+    .not('city', 'in', `(${knownCities})`)
+    .eq('addressstate', targetState)
+    .eq('glitch_suspected', false)
+    .gte('lastseenat', `${opts.from}T00:00:00Z`)
+    .lte('lastseenat', `${opts.to}T23:59:59Z`)
+    .order('lastseenat', { ascending: false });
+
+  if (unmappedCityError) {
+    console.error(`  Error querying unmapped ${targetState} city labels:`, unmappedCityError.message);
+  } else if (unmappedCityRows && unmappedCityRows.length > 0) {
+    allListings = allListings.concat(unmappedCityRows);
+    const labels = [...new Set(unmappedCityRows.map(l => l.city || l.addresscity || 'Unknown'))].sort();
+    console.log(`  Unmapped ${targetState} city labels: ${unmappedCityRows.length} listings (${labels.join(', ')})`);
   }
 
   // Filter out sub-minimum-price listings — write skip reason so they're not silently lost

@@ -23,6 +23,10 @@ const REGION_CITIES = {
 // Pipeline data directory — set per region so Windsor and WKG never share files
 let PIPELINE_DIR = path.join(__dirname, '.pipeline-windsor');
 
+function getRegionState(regionConfig) {
+  return (regionConfig.state || regionConfig.province || 'ON').trim().toUpperCase();
+}
+
 function setPipelineRegion(region) {
   PIPELINE_DIR = path.join(__dirname, `.pipeline-${region || 'windsor'}`);
 }
@@ -128,6 +132,7 @@ function parseCliArgs(argv) {
     seed: false,
     region: 'windsor',
     cities: WINDSOR_CITIES,
+    state: getRegionState(getRegionConfig('windsor')),
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -173,6 +178,7 @@ function parseCliArgs(argv) {
         const regionConfig = getRegionConfig(r);
         options.region = r;
         options.cities = regionConfig.cities;
+        options.state = getRegionState(regionConfig);
         break;
       }
     }

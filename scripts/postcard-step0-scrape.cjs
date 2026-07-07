@@ -270,6 +270,27 @@ function extractAddress(r) {
   return { addressstreet: '', addresscity: '', addressstate: 'ON', addresszipcode: '' };
 }
 
+function normalizeCityKey(city) {
+  return (city || '').trim().toLowerCase();
+}
+
+function resolveRegionCity(rawCity, regionConfig) {
+  const key = normalizeCityKey(rawCity);
+  const direct = regionConfig.cities.find(c => normalizeCityKey(c) === key);
+  if (direct) return direct;
+
+  const aliases = regionConfig.cityAliases || {};
+  const alias = Object.entries(aliases).find(([name]) => normalizeCityKey(name) === key);
+  if (!alias) return null;
+
+  const canonical = alias[1];
+  return regionConfig.cities.find(c => normalizeCityKey(c) === normalizeCityKey(canonical)) || canonical;
+}
+
+function getRegionState(regionConfig) {
+  return (regionConfig.state || regionConfig.province || 'ON').trim().toUpperCase();
+}
+
 function normalizeResult(r, regionConfig, nowIso) {
   let zpid = r.zpid || r.id;
   if (!zpid && r.url) {
@@ -288,17 +309,21 @@ function normalizeResult(r, regionConfig, nowIso) {
 
   const rawCity = (addr.addresscity || r.city || '').trim();
   const state = (addr.addressstate || 'ON').trim().toUpperCase();
-  if (state !== 'ON') {
+  const targetState = getRegionState(regionConfig);
+  if (state !== targetState) {
     if (!normalizeResult._outOfProvince) normalizeResult._outOfProvince = new Map();
     normalizeResult._outOfProvince.set(state, (normalizeResult._outOfProvince.get(state) || 0) + 1);
     return null;
   }
 
-  const matchedCity = regionConfig.cities.find(c => c.toLowerCase() === rawCity.toLowerCase());
-  if (!matchedCity) {
-    if (!normalizeResult._unknownCities) normalizeResult._unknownCities = new Set();
-    normalizeResult._unknownCities.add(rawCity || '(blank)');
-    return null;
+  const matchedCity = resolveRegionCity(rawCity, regionConfig) || rawCity || 'Unknown';
+  if (!resolveRegionCity(rawCity, regionConfig)) {
+    if (!normalizeResult._acceptedRegionCities) normalizeResult._acceptedRegionCities = new Set();
+    normalizeResult._acceptedRegionCities.add(matchedCity);
+  }
+  if (rawCity && normalizeCityKey(rawCity) !== normalizeCityKey(matchedCity)) {
+    if (!normalizeResult._aliasedCities) normalizeResult._aliasedCities = new Map();
+    normalizeResult._aliasedCities.set(rawCity, matchedCity);
   }
 
   const rawPrice = r.price || r.listPrice || r.unformattedPrice || 0;
@@ -769,14 +794,23 @@ async function run(options) {
     .map(r => normalizeResult(r, regionConfig, nowIso))
     .filter(Boolean);
 
-  // Log any cities Zillow returned that didn't match our city list — helps
-  // catch gaps like "Essex County" vs "Essex" before they become missed listings.
-  if (normalizeResult._unknownCities && normalizeResult._unknownCities.size > 0) {
-    const unknown = [...normalizeResult._unknownCities].sort();
-    console.warn(`\n  WARNING: ${unknown.length} city name(s) from Zillow didn't match ${regionConfig.key}'s list (listings dropped):`);
-    unknown.forEach(c => console.warn(`    "${c}"`));
-    console.warn('  → Add valid Ontario service-area names to postcard-region-config.cjs; ignore border spillover.');
-    normalizeResult._unknownCities.clear();
+  // Keep in-bound city labels even if they are not in our configured list.
+  // Zillow often returns sublocalities ("East Harrow", "Colchester South")
+  // that are valid service-area rows and should not be lost at scale.
+  if (normalizeResult._acceptedRegionCities && normalizeResult._acceptedRegionCities.size > 0) {
+    const targetState = getRegionState(regionConfig);
+    const accepted = [...normalizeResult._acceptedRegionCities].sort();
+    console.warn(`\n  Accepted ${accepted.length} unmapped ${targetState} city name(s) for ${regionConfig.key}:`);
+    accepted.forEach(c => console.warn(`    "${c}"`));
+    console.warn(`  → Non-${targetState} border spillover is still dropped before this step.`);
+    normalizeResult._acceptedRegionCities.clear();
+  }
+  if (normalizeResult._aliasedCities && normalizeResult._aliasedCities.size > 0) {
+    const aliases = [...normalizeResult._aliasedCities.entries()]
+      .sort(([a], [b]) => a.localeCompare(b));
+    console.log(`  Normalised ${aliases.length} Zillow city alias(es) for ${regionConfig.key}:`);
+    aliases.forEach(([from, to]) => console.log(`    "${from}" → "${to}"`));
+    normalizeResult._aliasedCities.clear();
   }
   if (normalizeResult._outOfProvince && normalizeResult._outOfProvince.size > 0) {
     const summary = [...normalizeResult._outOfProvince.entries()]
@@ -851,4 +885,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, buildZillowSearchUrl };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, resolveRegionCity, buildZillowSearchUrl };

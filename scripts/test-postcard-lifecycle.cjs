@@ -5,6 +5,7 @@ const {
   buildLifecycleRows,
   normalizeAddressKey,
   normalizeResult,
+  resolveRegionCity,
   buildZillowSearchUrl,
 } = require('./postcard-step0-scrape.cjs');
 const {
@@ -174,7 +175,20 @@ function testNormalizeResultDropsBorderSpillover() {
   assert.equal(row, null);
 }
 
-function testNormalizeResultDropsUnknownOntarioCity() {
+function testNormalizeResultUsesConfiguredStateBoundary() {
+  const michiganRegion = { key: 'detroit', state: 'MI', cities: ['Detroit'] };
+  const row = normalizeResult({
+    zpid: '100',
+    streetAddress: '36 Longfellow St',
+    city: 'Detroit',
+    state: 'MI',
+    price: '$650,000',
+  }, michiganRegion, now);
+  assert.equal(row.city, 'Detroit');
+  assert.equal(row.addressstate, 'MI');
+}
+
+function testNormalizeResultKeepsUnmappedOntarioCity() {
   const row = normalizeResult({
     zpid: '100',
     streetAddress: '123 County Rd',
@@ -182,7 +196,17 @@ function testNormalizeResultDropsUnknownOntarioCity() {
     state: 'ON',
     price: '$650,000',
   }, region, now);
-  assert.equal(row, null);
+  assert.equal(row.city, 'Essex County');
+  assert.equal(row.addressstate, 'ON');
+}
+
+function testResolveRegionCityUsesAliasWhenConfigured() {
+  const aliasRegion = {
+    key: 'windsor',
+    cities: ['Harrow'],
+    cityAliases: { 'East Harrow': 'Harrow' },
+  };
+  assert.equal(resolveRegionCity('East Harrow', aliasRegion), 'Harrow');
 }
 
 function testSearchUrlSortsByNewestWithoutDaysFilter() {
@@ -206,7 +230,9 @@ const tests = [
   testSkipScrapeAllowsExistingJustListedRows,
   testNormalizeResultKeepsConfiguredOntarioCity,
   testNormalizeResultDropsBorderSpillover,
-  testNormalizeResultDropsUnknownOntarioCity,
+  testNormalizeResultUsesConfiguredStateBoundary,
+  testNormalizeResultKeepsUnmappedOntarioCity,
+  testResolveRegionCityUsesAliasWhenConfigured,
   testSearchUrlSortsByNewestWithoutDaysFilter,
 ];
 

@@ -6,6 +6,7 @@ const REGION_CONFIG = {
     label: 'Windsor / Essex County',
     outputPrefix: 'Windsor',
     printRecipientLabel: 'Windsor print batch',
+    state: 'ON',
     cities: [
       // City of Windsor
       'Windsor',
@@ -22,6 +23,12 @@ const REGION_CONFIG = {
       'Harrow', 'McGregor', 'Cottam', 'Ruthven',
       'Colchester', 'Maidstone', 'Wheatley',
     ],
+    cityAliases: {
+      'Colchester South': 'Colchester',
+      'East Harrow': 'Harrow',
+      'Gosfield North': 'Essex',
+      'South Talbot Kingsville': 'Kingsville',
+    },
     bounds: { west: -83.20, east: -82.45, south: 41.90, north: 42.45 },
     gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -37,6 +44,7 @@ const REGION_CONFIG = {
     label: 'Chatham-Kent',
     outputPrefix: 'Chatham',
     printRecipientLabel: 'Chatham print batch',
+    state: 'ON',
     cities: [
       // Chatham urban area
       'Chatham', 'Chatham Kent',
@@ -49,6 +57,10 @@ const REGION_CONFIG = {
       // Lake Erie shoreline
       "Mitchell's Bay", 'Lighthouse Cove', 'Erieau', 'Shrewsbury', 'Erie Beach',
     ],
+    cityAliases: {
+      'Chatham-Kent': 'Chatham Kent',
+      'Dufferin Tilbury': 'Tilbury',
+    },
     bounds: { west: -82.75, east: -81.75, south: 42.15, north: 42.70 },
     gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -64,6 +76,7 @@ const REGION_CONFIG = {
     label: 'Sarnia / Lambton County',
     outputPrefix: 'Sarnia',
     printRecipientLabel: 'Sarnia print batch',
+    state: 'ON',
     cities: [
       // Sarnia urban area
       'Sarnia', 'Point Edward', 'Brights Grove', 'Camlachie',
@@ -96,6 +109,7 @@ const REGION_CONFIG = {
     label: 'London / Middlesex',
     outputPrefix: 'London',
     printRecipientLabel: 'London print batch',
+    state: 'ON',
     cities: [
       // London urban
       'London',
@@ -138,6 +152,7 @@ const REGION_CONFIG = {
     label: 'Woodstock / Oxford County',
     outputPrefix: 'Woodstock',
     printRecipientLabel: 'Woodstock print batch',
+    state: 'ON',
     cities: [
       // Oxford County west
       'Woodstock', 'Ingersoll', 'Beachville',
@@ -169,6 +184,7 @@ const REGION_CONFIG = {
     label: 'Kitchener / Waterloo / Cambridge / Guelph',
     outputPrefix: 'WKG',
     printRecipientLabel: 'WKG print batch',
+    state: 'ON',
     cities: [
       // Waterloo Region core
       'Kitchener', 'Waterloo', 'Cambridge', 'Guelph',
@@ -202,6 +218,7 @@ const REGION_CONFIG = {
     label: 'Ottawa',
     outputPrefix: 'Ottawa',
     printRecipientLabel: 'Ottawa print batch',
+    state: 'ON',
     cities: [
       'Ottawa', 'Kanata', 'Nepean', 'Orleans', 'Gloucester',
       'Stittsville', 'Barrhaven', 'Manotick', 'Rockland', 'Carp',
