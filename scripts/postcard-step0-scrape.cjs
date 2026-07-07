@@ -678,6 +678,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
           status: 'sold',
           lastseenat: nowIso,
           missing_scrape_count: newMissingCount,
+          postcard_send_count: existing.postcard_send_count || 0,
           glitch_suspected: false,
         });
       } else {
@@ -690,6 +691,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
           region: existing.region || regionConfig.key,
           status: existing.status,
           missing_scrape_count: newMissingCount,
+          postcard_send_count: existing.postcard_send_count || 0,
           glitch_suspected: false,
         });
       }
@@ -710,6 +712,15 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
   };
 }
 
+function normalizeForUpsert(row) {
+  return {
+    ...row,
+    postcard_send_count: row.postcard_send_count ?? 0,
+    missing_scrape_count: row.missing_scrape_count ?? 0,
+    glitch_suspected: row.glitch_suspected ?? false,
+  };
+}
+
 async function upsertListings(supabase, rows) {
   const BATCH = 50;  // Smaller batch size to avoid statement timeouts
   const MAX_RETRIES = 3;
@@ -717,7 +728,7 @@ async function upsertListings(supabase, rows) {
   let errors = 0;
 
   for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH);
+    const batch = rows.slice(i, i + BATCH).map(normalizeForUpsert);
     const batchNum = Math.floor(i / BATCH) + 1;
     let success = false;
 
@@ -738,7 +749,21 @@ async function upsertListings(supabase, rows) {
         await new Promise(r => setTimeout(r, delay));
       } else {
         console.error(`  Upsert batch ${batchNum} failed after ${MAX_RETRIES} attempts: ${error.message}`);
-        errors += batch.length;
+      }
+    }
+
+    if (!success) {
+      console.error(`  Falling back to row-by-row upsert for batch ${batchNum}...`);
+      for (const row of batch) {
+        const { error } = await supabase
+          .from('listings')
+          .upsert(row, { onConflict: 'zpid', ignoreDuplicates: false });
+        if (error) {
+          errors++;
+          console.error(`    Row failed zpid ${row.zpid || '(missing)'}: ${error.message}`);
+        } else {
+          upserted++;
+        }
       }
     }
 

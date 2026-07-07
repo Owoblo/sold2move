@@ -63,11 +63,12 @@ function testNewZpidAtKnownAddressIsNotJustListed() {
 }
 
 function testMissingTwiceBecomesSold() {
-  const existing = [listing({ zpid: '100', status: 'active', missing_scrape_count: 1 })];
+  const existing = [listing({ zpid: '100', status: 'active', missing_scrape_count: 1, postcard_send_count: null })];
   const { nextRows, summary } = buildLifecycleRows([], existing, region, now);
   assert.equal(nextRows.length, 1);
   assert.equal(nextRows[0].status, 'sold');
   assert.equal(nextRows[0].missing_scrape_count, 2);
+  assert.equal(nextRows[0].postcard_send_count, 0);
   assert.equal(summary.soldCount, 1);
 }
 
