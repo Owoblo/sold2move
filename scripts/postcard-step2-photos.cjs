@@ -26,6 +26,7 @@ const {
 const MAX_BATCH = Infinity; // No cap — fetch photos for every listing that needs them
 const MIN_PHOTO_COUNT = 2;
 const APIFY_ACTOR = 'maxcopell~zillow-detail-scraper';
+const DETAIL_FRESHNESS_MAX_AGE_HOURS = 12;
 
 function getPhotoCount(listing) {
   let photos = listing.carouselphotos;
@@ -130,7 +131,28 @@ function extractPhotosFromApify(result) {
   return [];
 }
 
-async function fetchPhotosViaApify(listings, token) {
+function extractDetailFreshness(result) {
+  const rawDays = result.daysOnZillow ?? result.hdpData?.homeInfo?.daysOnZillow ?? null;
+  const days = Number.isFinite(Number(rawDays)) ? Number(rawDays) : null;
+  return {
+    detail_days_on_zillow: days,
+    detail_time_on_zillow: result.timeOnZillow || result.hdpData?.homeInfo?.timeOnZillow || null,
+    zillow_date_posted: result.datePostedString || result.hdpData?.homeInfo?.datePostedString || null,
+    zillow_detail_checked_at: new Date().toISOString(),
+  };
+}
+
+function needsDetailFreshness(listing) {
+  if (listing.status === 'sold') return false;
+  if (listing.detail_days_on_zillow == null) return true;
+  if (!listing.zillow_detail_checked_at) return true;
+  const checkedAt = new Date(listing.zillow_detail_checked_at).getTime();
+  if (!Number.isFinite(checkedAt)) return true;
+  const ageHours = (Date.now() - checkedAt) / (1000 * 60 * 60);
+  return ageHours > DETAIL_FRESHNESS_MAX_AGE_HOURS;
+}
+
+async function fetchDetailsViaApify(listings, token) {
   const addresses = listings.map(listing => {
     const street = listing.addressstreet || '';
     const city = listing.city || listing.addresscity || '';
@@ -205,7 +227,12 @@ async function fetchPhotosViaApify(listings, token) {
       const m = result.detailUrl.match(/(\d+)_zpid/);
       if (m) zpid = m[1];
     }
-    if (zpid) byZpid.set(String(zpid), extractPhotosFromApify(result));
+    if (zpid) {
+      byZpid.set(String(zpid), {
+        photos: extractPhotosFromApify(result),
+        freshness: extractDetailFreshness(result),
+      });
+    }
   }
 
   return byZpid;
@@ -251,15 +278,22 @@ async function run(options) {
     }
     return true;
   });
+  const needFreshness = justListedListings.filter(needsDetailFreshness);
+  const detailCandidatesByZpid = new Map();
+  for (const listing of needPhotos.concat(needFreshness)) {
+    detailCandidatesByZpid.set(String(listing.zpid), listing);
+  }
+  const detailCandidates = [...detailCandidatesByZpid.values()].slice(0, MAX_BATCH);
   const havePhotos = justListedListings.filter(l =>
     getPhotoCount(l) >= MIN_PHOTO_COUNT && !l.furniture_needs_retry
   );
 
   console.log(`  just_listed — already have photos: ${havePhotos.length}`);
   console.log(`  just_listed — need photos: ${needPhotos.length}`);
+  console.log(`  just_listed — need detail freshness: ${needFreshness.length}`);
 
   if (opts.dryRun) {
-    console.log(`\n  [DRY RUN] Would fetch photos for ${needPhotos.length} listings.`);
+    console.log(`\n  [DRY RUN] Would fetch detail pages for ${detailCandidates.length} listings.`);
     writePipelineFile('step2-photos.json', listings);
     return listings;
   }
@@ -275,45 +309,57 @@ async function run(options) {
   const supabase = getSupabase();
   const APIFY_CHUNK = 100; // Max listings per Apify actor run
   let fetched = 0;
+  let freshnessUpdated = 0;
   let failed = 0;
 
-  console.log(`  Fetching photos for ALL ${needPhotos.length} listings (${Math.ceil(needPhotos.length / APIFY_CHUNK)} Apify runs)...`);
+  console.log(`  Fetching detail pages for ${detailCandidates.length} listing(s) (${Math.ceil(detailCandidates.length / APIFY_CHUNK)} Apify runs)...`);
 
   // Process all listings in chunks so no listing is skipped
   const allApifyResults = new Map();
-  for (let i = 0; i < needPhotos.length; i += APIFY_CHUNK) {
-    const chunk = needPhotos.slice(i, i + APIFY_CHUNK);
+  for (let i = 0; i < detailCandidates.length; i += APIFY_CHUNK) {
+    const chunk = detailCandidates.slice(i, i + APIFY_CHUNK);
     const chunkNum = Math.floor(i / APIFY_CHUNK) + 1;
-    const totalChunks = Math.ceil(needPhotos.length / APIFY_CHUNK);
+    const totalChunks = Math.ceil(detailCandidates.length / APIFY_CHUNK);
     console.log(`\n  Apify chunk ${chunkNum}/${totalChunks} (${chunk.length} listings)...`);
     try {
-      const chunkResults = await fetchPhotosViaApify(chunk, apifyToken);
-      for (const [zpid, photos] of chunkResults) {
-        allApifyResults.set(zpid, photos);
+      const chunkResults = await fetchDetailsViaApify(chunk, apifyToken);
+      for (const [zpid, detail] of chunkResults) {
+        allApifyResults.set(zpid, detail);
       }
     } catch (err) {
       console.error(`  Apify chunk ${chunkNum} failed: ${err.message} — continuing with next chunk`);
     }
   }
 
-  for (const listing of needPhotos) {
-    let photos = allApifyResults.get(String(listing.zpid)) || [];
+  const needPhotosByZpid = new Set(needPhotos.map(l => String(l.zpid)));
+  for (const listing of detailCandidates) {
+    const result = allApifyResults.get(String(listing.zpid));
+    const photos = result?.photos || [];
+    const freshness = result?.freshness || null;
+    const update = {};
+
+    if (freshness) {
+      Object.assign(listing, freshness);
+      Object.assign(update, freshness);
+      freshnessUpdated++;
+    }
 
     if (photos.length > 0) {
       listing.carouselphotos = photos;
+      update.carouselphotos = photos;
+    }
 
-      const { error } = await supabase
-        .from('listings')
-        .update({ carouselphotos: photos })
-        .eq('zpid', listing.zpid);
-
+    if (Object.keys(update).length > 0) {
+      const { error } = await supabase.from('listings').update(update).eq('zpid', listing.zpid);
       if (error) {
-        console.error(`  Failed to cache photos for zpid ${listing.zpid}:`, error.message);
+        console.error(`  Failed to cache detail data for zpid ${listing.zpid}:`, error.message);
       }
+    }
 
+    if (photos.length > 0) {
       fetched++;
-      process.stdout.write(`  Saved ${fetched}/${needPhotos.length} (${photos.length} photos for zpid ${listing.zpid})\r`);
-    } else {
+      process.stdout.write(`  Saved ${fetched}/${needPhotos.length} photo set(s), ${freshnessUpdated} freshness row(s)\r`);
+    } else if (needPhotosByZpid.has(String(listing.zpid))) {
       // Stamp attempt time and increment counter — skip until scraper updates listing
       const newAttempts = (listing.photo_fetch_attempts || 0) + 1;
       const now = new Date().toISOString();
@@ -332,6 +378,7 @@ async function run(options) {
   }
 
   console.log(`\n  Photos fetched: ${fetched}, Failed: ${failed}`);
+  console.log(`  Detail freshness updated: ${freshnessUpdated}/${detailCandidates.length}`);
   console.log(`  Total listings with photos: ${listings.filter(l => getPhotoCount(l) > 0).length}/${listings.length}`);
 
   writePipelineFile('step2-photos.json', listings);
@@ -345,4 +392,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, extractDetailFreshness, needsDetailFreshness };

@@ -10,6 +10,7 @@ const {
 } = require('./postcard-step0-scrape.cjs');
 const {
   applyOutputFilters,
+  applyJustListedFreshnessGuard,
 } = require('./postcard-step5-output.cjs');
 const {
   filterJustListedSeenInCurrentScrape,
@@ -133,6 +134,52 @@ function testIncludeUnscannedIsExplicitOverride() {
   assert.equal(rejected.length, 0);
 }
 
+function testDetailFreshnessBlocksStaleJustListed() {
+  const rows = [listing({
+    zpid: '100',
+    status: 'just_listed',
+    is_furnished: true,
+    detail_days_on_zillow: 31,
+  })];
+  const filtered = applyOutputFilters(rows, { includeUnscanned: false });
+  const { kept, rejected, audit } = applyJustListedFreshnessGuard(filtered.finalListings);
+  assert.equal(kept.length, 0);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason, 'stale_detail_days_on_zillow: 31');
+  assert.equal(audit.length, 1);
+  assert.equal(audit[0]._freshness_action, 'blocked_over_30_days');
+}
+
+function testDetailFreshnessAuditsButKeepsFiveToThirtyDays() {
+  const rows = [listing({
+    zpid: '100',
+    status: 'just_listed',
+    is_furnished: true,
+    detail_days_on_zillow: 14,
+  })];
+  const filtered = applyOutputFilters(rows, { includeUnscanned: false });
+  const { kept, rejected, audit } = applyJustListedFreshnessGuard(filtered.finalListings);
+  assert.equal(kept.length, 1);
+  assert.equal(rejected.length, 0);
+  assert.equal(audit.length, 1);
+  assert.equal(kept[0]._freshness_audit, true);
+  assert.equal(audit[0]._freshness_action, 'sent_review_5_30_days');
+}
+
+function testDetailFreshnessDoesNotBlockSoldRows() {
+  const rows = [listing({
+    zpid: '100',
+    status: 'sold',
+    is_furnished: true,
+    detail_days_on_zillow: 124,
+  })];
+  const filtered = applyOutputFilters(rows, { includeUnscanned: false });
+  const { kept, rejected, audit } = applyJustListedFreshnessGuard(filtered.finalListings);
+  assert.equal(kept.length, 1);
+  assert.equal(rejected.length, 0);
+  assert.equal(audit.length, 0);
+}
+
 function testJustListedMustBeSeenInCurrentScrape() {
   const rows = [
     listing({ zpid: '100', status: 'just_listed' }),
@@ -227,6 +274,9 @@ const tests = [
   testAddressKeyFallsBackToCityWhenPostalMissing,
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
+  testDetailFreshnessBlocksStaleJustListed,
+  testDetailFreshnessAuditsButKeepsFiveToThirtyDays,
+  testDetailFreshnessDoesNotBlockSoldRows,
   testJustListedMustBeSeenInCurrentScrape,
   testSkipScrapeAllowsExistingJustListedRows,
   testNormalizeResultKeepsConfiguredOntarioCity,

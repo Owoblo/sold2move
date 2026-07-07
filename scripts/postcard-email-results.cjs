@@ -166,6 +166,76 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
   console.log(`  Sold-ready delivery report sent! ID: ${result.id}`);
 }
 
+async function sendFreshnessAuditEmail(region, regionLabel, auditRows, today) {
+  const Papa = require('papaparse');
+  if (!Array.isArray(auditRows) || auditRows.length === 0) {
+    console.log('  No just-listed freshness audit rows — skipping freshness audit email.');
+    return;
+  }
+
+  const sentReview = auditRows.filter(l => l._freshness_action === 'sent_review_5_30_days');
+  const blocked = auditRows.filter(l => l._freshness_action === 'blocked_over_30_days');
+  const csvData = auditRows.map(l => ({
+    Action: l._freshness_action || '',
+    Address: l.address || `${l.addressstreet || ''}, ${l.city || l.addresscity || ''}, ${l.addressstate || 'ON'} ${l.addresszipcode || ''}`.trim(),
+    Street: l.addressstreet || '',
+    City: l.city || l.addresscity || '',
+    Price: l.price || '',
+    DetailDaysOnZillow: l._freshness_days ?? l.detail_days_on_zillow ?? '',
+    DetailTimeOnZillow: l.detail_time_on_zillow || '',
+    DatePosted: l.zillow_date_posted || '',
+    ListingURL: l.detailurl || '',
+    ZPID: l.zpid || '',
+  }));
+  const csvText = Papa.unparse(csvData);
+  const csvContent = Buffer.from(csvText).toString('base64');
+  const csvName = `${region}_FreshnessAudit_${today}.csv`;
+
+  const rowsHtml = auditRows.map(l => {
+    const action = l._freshness_action === 'blocked_over_30_days' ? 'Blocked' : 'Sent + review';
+    const days = l._freshness_days ?? l.detail_days_on_zillow ?? '';
+    const url = l.detailurl ? `<a href="${l.detailurl}">Zillow</a>` : '';
+    return `
+      <tr>
+        <td style="padding: 5px 8px; border: 1px solid #eee;">${l.addressstreet || ''}</td>
+        <td style="padding: 5px 8px; border: 1px solid #eee;">${l.city || l.addresscity || ''}</td>
+        <td style="padding: 5px 8px; border: 1px solid #eee; text-align: center;">${days}</td>
+        <td style="padding: 5px 8px; border: 1px solid #eee;">${action}</td>
+        <td style="padding: 5px 8px; border: 1px solid #eee;">${url}</td>
+      </tr>`;
+  }).join('');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px;">
+      <h2 style="color: #1a1a1a;">Just-Listed Freshness Audit — ${regionLabel} — ${today}</h2>
+      <p>This is the owner-only review list from Zillow detail-page freshness.</p>
+      <p><strong>${sentReview.length}</strong> listing${sentReview.length !== 1 ? 's' : ''} were still sent but are 5-30 days on Zillow. <strong>${blocked.length}</strong> listing${blocked.length !== 1 ? 's' : ''} were blocked because they are over 30 days.</p>
+      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+        <tr style="background: #f5f5f5;">
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Address</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">City</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: center;">Days</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Action</th>
+          <th style="padding: 6px 8px; border: 1px solid #ddd; text-align: left;">Link</th>
+        </tr>
+        ${rowsHtml}
+      </table>
+      <p>The CSV is attached so you can cross-check these over the next few runs.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+      <p style="color: #888; font-size: 12px;">Automated by Sold2Move Postcard Pipeline — ${regionLabel}</p>
+    </div>
+  `;
+
+  console.log(`  Sending freshness audit (${auditRows.length} rows) to ${OWNER_EMAIL}...`);
+  const result = await sendEmail(
+    OWNER_EMAIL,
+    `Just-Listed Freshness Audit — ${regionLabel} — ${today} (${auditRows.length})`,
+    html,
+    [{ filename: csvName, content: csvContent }]
+  );
+  console.log(`  Freshness audit sent! ID: ${result.id}`);
+}
+
 async function sendPostcardEmail(region, csvPath, pdfPath) {
   region = (region || 'windsor').toLowerCase();
   const regionConfig = getRegionConfig(region);
@@ -331,6 +401,19 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     }
   } catch (e) {
     console.warn(`  Sold-ready report skipped: ${e.message}`);
+  }
+
+  // --- Just-listed freshness audit: sent 5-30 day rows and blocked >30 day rows ---
+  try {
+    const auditPath = path.join(pipelineDir, 'step5-freshness-audit.json');
+    if (!fs.existsSync(auditPath)) {
+      console.warn('  Freshness audit skipped: step5-freshness-audit.json not found');
+    } else {
+      const auditRows = JSON.parse(fs.readFileSync(auditPath, 'utf-8'));
+      await sendFreshnessAuditEmail(region, regionLabel, auditRows, today);
+    }
+  } catch (e) {
+    console.warn(`  Freshness audit skipped: ${e.message}`);
   }
 
   return ownerResult;

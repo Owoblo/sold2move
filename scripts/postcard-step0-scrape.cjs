@@ -341,6 +341,9 @@ function normalizeResult(r, regionConfig, nowIso) {
 
   // Capture listing description if Apify returns it
   const description = r.description || r.homeDescription || r.hdpData?.homeInfo?.description || null;
+  const searchDaysRaw = r.daysOnZillow ?? r.timeOnZillow ?? r.hdpData?.homeInfo?.daysOnZillow;
+  const searchDays = Number.isFinite(Number(searchDaysRaw)) ? Number(searchDaysRaw) : null;
+  const searchTime = r.timeOnZillow || r.hdpData?.homeInfo?.timeOnZillow || null;
 
   let carouselphotos = null;
   const photoArrays = [r.responsivePhotos, r.originalPhotos, r.photos, r.images, r.big];
@@ -384,10 +387,12 @@ function normalizeResult(r, regionConfig, nowIso) {
     last_seen_at: nowIso,
     lastseenat: nowIso,
     glitch_suspected: false,
+    search_days_on_zillow: searchDays,
+    search_time_on_zillow: searchTime,
   };
 }
 
-const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
 
 function normalizeAddressKey(listing) {
   const street = (listing.addressstreet || '').toString();
@@ -553,6 +558,12 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
         carouselphotos: scraped.carouselphotos || existing.carouselphotos || null,
         imgsrc: scraped.imgsrc || existing.imgsrc || null,
         detailurl: scraped.detailurl || existing.detailurl || null,
+        search_days_on_zillow: scraped.search_days_on_zillow,
+        search_time_on_zillow: scraped.search_time_on_zillow,
+        detail_days_on_zillow: existing.detail_days_on_zillow,
+        detail_time_on_zillow: existing.detail_time_on_zillow,
+        zillow_date_posted: existing.zillow_date_posted,
+        zillow_detail_checked_at: existing.zillow_detail_checked_at,
         just_listed_postcard_sent_at: existing.just_listed_postcard_sent_at,
         sold_postcard_sent_at: existing.sold_postcard_sent_at,
         last_postcard_sent_at: existing.last_postcard_sent_at,
@@ -587,6 +598,12 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
         carouselphotos: scraped.carouselphotos || existing.carouselphotos || null,
         imgsrc: scraped.imgsrc || existing.imgsrc || null,
         detailurl: scraped.detailurl || existing.detailurl || null,
+        search_days_on_zillow: scraped.search_days_on_zillow,
+        search_time_on_zillow: scraped.search_time_on_zillow,
+        detail_days_on_zillow: existing.detail_days_on_zillow,
+        detail_time_on_zillow: existing.detail_time_on_zillow,
+        zillow_date_posted: existing.zillow_date_posted,
+        zillow_detail_checked_at: existing.zillow_detail_checked_at,
         just_listed_postcard_sent_at: existing.just_listed_postcard_sent_at,
         sold_postcard_sent_at: existing.sold_postcard_sent_at,
         last_postcard_sent_at: existing.last_postcard_sent_at,
@@ -635,6 +652,10 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
           last_postcard_type_sent: null,
           postcard_send_count: 0,
           missing_scrape_count: 0,
+          detail_days_on_zillow: addressMatch.detail_days_on_zillow,
+          detail_time_on_zillow: addressMatch.detail_time_on_zillow,
+          zillow_date_posted: addressMatch.zillow_date_posted,
+          zillow_detail_checked_at: addressMatch.zillow_detail_checked_at,
           postcard_skip_reason: `known_address_relist: ${addressMatch.zpid}`,
         });
         continue;
@@ -892,6 +913,8 @@ async function run(options) {
     addressstreet: row.addressstreet,
     city: row.city || row.addresscity,
     addresszipcode: row.addresszipcode || '',
+    search_days_on_zillow: row.search_days_on_zillow,
+    search_time_on_zillow: row.search_time_on_zillow,
     seen_at: nowIso,
     batch_id: opts.batchId || null,
   })));

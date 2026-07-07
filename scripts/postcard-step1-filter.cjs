@@ -142,7 +142,7 @@ async function run(options) {
   for (const city of opts.cities) {
     const { data, error } = await supabase
       .from('listings')
-      .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count')
+      .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count')
       .in('status', opts.statuses)
       .eq('region', opts.region)
       .eq('city', city)
@@ -165,7 +165,7 @@ async function run(options) {
   const knownCities = opts.cities.map(c => `"${c}"`).join(',');
   const { data: unmappedCityRows, error: unmappedCityError } = await supabase
     .from('listings')
-    .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count')
+    .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count')
     .in('status', opts.statuses)
     .eq('region', opts.region)
     .not('city', 'in', `(${knownCities})`)

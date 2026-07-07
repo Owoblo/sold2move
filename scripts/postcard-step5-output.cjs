@@ -270,6 +270,8 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
 const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail-scraper';
 const VERIFY_MAX_CANDIDATES = 60;
 const STILL_ON_MARKET = new Set(['FOR_SALE', 'PENDING', 'COMING_SOON', 'ACTIVE', 'FOR_RENT']);
+const JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS = 5;
+const JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS = 30;
 
 function apifyHttp(url, options = {}) {
   const https = require('https');
@@ -302,6 +304,46 @@ function extractZpidFromResult(r) {
     if (m) return m[1];
   }
   return null;
+}
+
+function normalizeDaysOnZillow(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function applyJustListedFreshnessGuard(listings) {
+  const kept = [];
+  const rejected = [];
+  const audit = [];
+
+  for (const listing of listings) {
+    if (listing.status !== 'just_listed') {
+      kept.push(listing);
+      continue;
+    }
+
+    const days = normalizeDaysOnZillow(listing.detail_days_on_zillow);
+    if (days == null || days < 0) {
+      kept.push(listing);
+      continue;
+    }
+
+    if (days > JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS) {
+      rejected.push({ zpid: listing.zpid, reason: `stale_detail_days_on_zillow: ${days}` });
+      audit.push({ ...listing, _freshness_action: 'blocked_over_30_days', _freshness_days: days });
+      continue;
+    }
+
+    if (days >= JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS) {
+      listing._freshness_audit = true;
+      listing._freshness_days = days;
+      audit.push({ ...listing, _freshness_action: 'sent_review_5_30_days', _freshness_days: days });
+    }
+    kept.push(listing);
+  }
+
+  return { kept, rejected, audit };
 }
 
 async function verifySoldCandidates(supabase, finalListings) {
@@ -403,6 +445,10 @@ function generateCSV(listings, outputPath) {
     area: l.area,
     is_furnished: l.is_furnished != null ? (l.is_furnished ? 'Yes' : 'No') : 'Unknown',
     furniture_confidence: l.furniture_confidence != null ? l.furniture_confidence.toFixed(2) : '',
+    search_days_on_zillow: l.search_days_on_zillow ?? '',
+    detail_days_on_zillow: l.detail_days_on_zillow ?? '',
+    detail_time_on_zillow: l.detail_time_on_zillow || '',
+    zillow_date_posted: l.zillow_date_posted || '',
     address_verified: l._geocode_verified != null ? (l._geocode_verified ? 'Yes' : 'No') : 'Not checked',
     lastseenat: l.lastseenat,
   }));
@@ -535,6 +581,16 @@ async function run(options) {
   // Apply filters
   let { finalListings, rejected } = applyOutputFilters(listings, opts);
 
+  const freshness = applyJustListedFreshnessGuard(finalListings);
+  finalListings = freshness.kept;
+  rejected = rejected.concat(freshness.rejected);
+  if (freshness.rejected.length > 0) {
+    console.log(`  Detail freshness guard removed ${freshness.rejected.length} stale just_listed listing(s) over ${JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS} days`);
+  }
+  if (freshness.audit.length > 0) {
+    console.log(`  Detail freshness audit flagged ${freshness.audit.length} just_listed listing(s) at ${JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS}+ days`);
+  }
+
   // Address-level duplicate guard — block relists (new zpid, same address)
   // from getting a second postcard of the same type. Skipped in dry runs.
   if (!opts.dryRun && finalListings.length > 0) {
@@ -558,6 +614,7 @@ async function run(options) {
   }
 
   writePipelineFile('step5-final.json', finalListings);
+  writePipelineFile('step5-freshness-audit.json', freshness.audit);
 
   // Persist skip reasons to Supabase (best-effort)
   if (rejected.length > 0 && !opts.dryRun) {
@@ -626,4 +683,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, applyOutputFilters, normalizeAddressKey };
+module.exports = { run, applyOutputFilters, normalizeAddressKey, applyJustListedFreshnessGuard };
