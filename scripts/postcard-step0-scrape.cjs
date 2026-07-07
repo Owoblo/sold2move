@@ -85,6 +85,7 @@ function buildZillowSearchUrl(bounds) {
     isListVisible: true,
     mapBounds: bounds,
     filterState: {
+      sort: { value: 'days' },
       isForSaleByAgent: { value: true },
       isForSaleByOwner: { value: true },
       isNewConstruction: { value: false },
@@ -127,7 +128,7 @@ async function runSearchScraper(token, searchUrls) {
   const urls = Array.isArray(searchUrls) ? searchUrls : [searchUrls];
   const input = {
     searchUrls: urls.map(u => ({ url: u })),
-    extractionMethod: 'PAGINATION',
+    extractionMethod: 'PAGINATION_WITH_ZOOM_IN',
   };
 
   console.log(`  Starting Apify search run (${urls.length} grid cell${urls.length > 1 ? 's' : ''}, full active inventory)...`);
@@ -507,12 +508,34 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
     if (existing?.status === 'sold_archived') {
       glitchCount++;
       nextRows.push({
-        zpid: scraped.zpid,
+        ...scraped,
         region: existing.region || regionConfig.key,
-        status: 'sold_archived',
+        // If Zillow shows an archived-sold property as active again, keep it
+        // out of postcard eligibility but restore live inventory state. This
+        // prevents stale sold_archived rows from hiding active listings.
+        status: 'active',
+        first_seen_at: existing.first_seen_at || scraped.first_seen_at,
+        last_seen_at: nowIso,
         glitch_suspected: true,
         lastseenat: nowIso,
+        is_furnished: existing.is_furnished,
+        furniture_confidence: existing.furniture_confidence,
+        furniture_scan_date: existing.furniture_scan_date,
+        furniture_scan_method: existing.furniture_scan_method,
+        furniture_needs_retry: existing.furniture_needs_retry,
+        photo_fetch_attempts: existing.photo_fetch_attempts || 0,
+        photos_last_attempted_at: existing.photos_last_attempted_at,
+        carouselphotos: scraped.carouselphotos || existing.carouselphotos || null,
+        imgsrc: scraped.imgsrc || existing.imgsrc || null,
+        detailurl: scraped.detailurl || existing.detailurl || null,
+        just_listed_postcard_sent_at: existing.just_listed_postcard_sent_at,
+        sold_postcard_sent_at: existing.sold_postcard_sent_at,
+        last_postcard_sent_at: existing.last_postcard_sent_at,
+        last_postcard_batch_id: existing.last_postcard_batch_id,
+        last_postcard_type_sent: existing.last_postcard_type_sent,
+        postcard_send_count: existing.postcard_send_count || 0,
         missing_scrape_count: 0,
+        postcard_skip_reason: 'reappeared_after_sold_archive',
       });
       continue;
     }
@@ -828,4 +851,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, buildZillowSearchUrl };

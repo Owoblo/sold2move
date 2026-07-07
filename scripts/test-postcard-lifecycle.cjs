@@ -5,6 +5,7 @@ const {
   buildLifecycleRows,
   normalizeAddressKey,
   normalizeResult,
+  buildZillowSearchUrl,
 } = require('./postcard-step0-scrape.cjs');
 const {
   applyOutputFilters,
@@ -75,6 +76,27 @@ function testDegradedScrapeDoesNotBurnMiss() {
   assert.equal(nextRows.length, 0);
   assert.equal(summary.soldCount, 0);
   assert.equal(summary.pendingMissCount, 0);
+}
+
+function testSoldArchivedReappearanceReturnsToActiveInventory() {
+  const existing = [listing({
+    zpid: '100',
+    status: 'sold_archived',
+    just_listed_postcard_sent_at: '2026-06-19T16:34:52.307Z',
+    sold_postcard_sent_at: '2026-07-05T15:17:04.150Z',
+    last_postcard_sent_at: '2026-07-05T15:17:04.150Z',
+    postcard_send_count: 2,
+    is_furnished: true,
+  })];
+  const scraped = [listing({ zpid: '100', status: 'active', unformattedprice: 499900 })];
+  const { nextRows, summary } = buildLifecycleRows(scraped, existing, region, now);
+  assert.equal(nextRows.length, 1);
+  assert.equal(nextRows[0].status, 'active');
+  assert.equal(nextRows[0].glitch_suspected, true);
+  assert.equal(nextRows[0].postcard_skip_reason, 'reappeared_after_sold_archive');
+  assert.equal(nextRows[0].postcard_send_count, 2);
+  assert.equal(nextRows[0].sold_postcard_sent_at, '2026-07-05T15:17:04.150Z');
+  assert.equal(summary.glitchCount, 1);
 }
 
 function testAddressKeyFallsBackToCityWhenPostalMissing() {
@@ -163,11 +185,20 @@ function testNormalizeResultDropsUnknownOntarioCity() {
   assert.equal(row, null);
 }
 
+function testSearchUrlSortsByNewestWithoutDaysFilter() {
+  const url = buildZillowSearchUrl({ west: -83, east: -82, south: 42, north: 43 });
+  const rawState = decodeURIComponent(url.split('searchQueryState=')[1]);
+  const state = JSON.parse(rawState);
+  assert.equal(state.filterState.sort.value, 'days');
+  assert.equal(state.filterState.doz, undefined);
+}
+
 const tests = [
   testSeedModeStoresUnseenAsActive,
   testNewZpidAtKnownAddressIsNotJustListed,
   testMissingTwiceBecomesSold,
   testDegradedScrapeDoesNotBurnMiss,
+  testSoldArchivedReappearanceReturnsToActiveInventory,
   testAddressKeyFallsBackToCityWhenPostalMissing,
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
@@ -176,6 +207,7 @@ const tests = [
   testNormalizeResultKeepsConfiguredOntarioCity,
   testNormalizeResultDropsBorderSpillover,
   testNormalizeResultDropsUnknownOntarioCity,
+  testSearchUrlSortsByNewestWithoutDaysFilter,
 ];
 
 for (const test of tests) {
