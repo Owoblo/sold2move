@@ -268,7 +268,8 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
 // a warning and mails the batch as-is — verification can only ever remove
 // bad sends, never block good ones.
 const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail-scraper';
-const VERIFY_MAX_CANDIDATES = 60;
+const VERIFY_CHUNK_SIZE = Number.parseInt(process.env.SOLD_VERIFY_CHUNK_SIZE || '25', 10);
+const VERIFY_TIMEOUT_MINUTES = Number.parseInt(process.env.SOLD_VERIFY_TIMEOUT_MINUTES || '4', 10);
 const STILL_ON_MARKET = new Set(['FOR_SALE', 'PENDING', 'COMING_SOON', 'ACTIVE', 'FOR_RENT']);
 const JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS = 5;
 const JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS = 30;
@@ -348,84 +349,92 @@ function applyJustListedFreshnessGuard(listings) {
 
 async function verifySoldCandidates(supabase, finalListings) {
   const token = process.env.APIFY_TOKEN;
-  const candidates = finalListings.filter(l => l.status === 'sold' && l.detailurl).slice(0, VERIFY_MAX_CANDIDATES);
+  const candidates = finalListings.filter(l => l.status === 'sold' && l.detailurl);
   if (candidates.length === 0) return { kept: finalListings, pulled: [] };
   if (!token) {
     console.warn('  Sold verification skipped: APIFY_TOKEN not set');
     return { kept: finalListings, pulled: [] };
   }
 
-  console.log(`  Verifying ${candidates.length} sold candidate(s) against their Zillow detail pages...`);
+  console.log(`  Verifying ${candidates.length} sold candidate(s) against their Zillow detail pages in chunks of ${VERIFY_CHUNK_SIZE}...`);
 
-  try {
-    const start = await apifyHttp(
-      `https://api.apify.com/v2/acts/${DETAIL_ACTOR}/runs?token=${token}`,
-      { method: 'POST', body: { startUrls: candidates.map(l => ({ url: l.detailurl })) } }
-    );
-    if (start.status !== 200 && start.status !== 201) {
-      throw new Error(`start failed (${start.status}): ${JSON.stringify(start.data).slice(0, 200)}`);
-    }
-    const runId = start.data.data.id;
-    const datasetId = start.data.data.defaultDatasetId;
+  const statusByZpid = new Map();
+  let verifiedCount = 0;
+  for (let i = 0; i < candidates.length; i += VERIFY_CHUNK_SIZE) {
+    const chunk = candidates.slice(i, i + VERIFY_CHUNK_SIZE);
+    const chunkNum = Math.floor(i / VERIFY_CHUNK_SIZE) + 1;
+    const totalChunks = Math.ceil(candidates.length / VERIFY_CHUNK_SIZE);
+    console.log(`    Sold verification chunk ${chunkNum}/${totalChunks} (${chunk.length} candidate(s))...`);
 
-    const deadline = Date.now() + 10 * 60 * 1000;
-    let status = 'RUNNING';
-    while (status === 'RUNNING' || status === 'READY') {
-      if (Date.now() > deadline) {
-        await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${token}`, { method: 'POST' }).catch(() => {});
-        throw new Error('verification run exceeded 10 minutes');
+    try {
+      const start = await apifyHttp(
+        `https://api.apify.com/v2/acts/${DETAIL_ACTOR}/runs?token=${token}`,
+        { method: 'POST', body: { startUrls: chunk.map(l => ({ url: l.detailurl })) } }
+      );
+      if (start.status !== 200 && start.status !== 201) {
+        throw new Error(`start failed (${start.status}): ${JSON.stringify(start.data).slice(0, 200)}`);
       }
-      await new Promise(r => setTimeout(r, 10000));
-      const s = await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}?token=${token}`);
-      status = s?.data?.data?.status;
-    }
-    if (status !== 'SUCCEEDED') throw new Error(`verification run ended ${status}`);
+      const runId = start.data.data.id;
+      const datasetId = start.data.data.defaultDatasetId;
 
-    const items = await apifyHttp(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`);
-    if (!Array.isArray(items.data)) throw new Error('verification dataset not an array');
-
-    const statusByZpid = new Map();
-    for (const r of items.data) {
-      const zpid = extractZpidFromResult(r);
-      const homeStatus = (r?.homeStatus || r?.hdpData?.homeInfo?.homeStatus || r?.status || '').toUpperCase();
-      if (zpid && homeStatus) statusByZpid.set(zpid, homeStatus);
-    }
-
-    const pulled = [];
-    const kept = [];
-    for (const l of finalListings) {
-      const verifiedStatus = l.status === 'sold' ? statusByZpid.get(String(l.zpid)) : null;
-      if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
-        pulled.push({ listing: l, verifiedStatus });
-      } else {
-        // No result for this zpid (page gone entirely — consistent with a
-        // real sale) or a non-active status: proceed with mailing.
-        kept.push(l);
+      const deadline = Date.now() + VERIFY_TIMEOUT_MINUTES * 60 * 1000;
+      let status = 'RUNNING';
+      while (status === 'RUNNING' || status === 'READY') {
+        if (Date.now() > deadline) {
+          await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${token}`, { method: 'POST' }).catch(() => {});
+          throw new Error(`verification run exceeded ${VERIFY_TIMEOUT_MINUTES} minutes`);
+        }
+        await new Promise(r => setTimeout(r, 10000));
+        const s = await apifyHttp(`https://api.apify.com/v2/actor-runs/${runId}?token=${token}`);
+        status = s?.data?.data?.status;
       }
-    }
+      if (status !== 'SUCCEEDED') throw new Error(`verification run ended ${status}`);
 
-    for (const { listing, verifiedStatus } of pulled) {
-      console.log(`    PULLED zpid ${listing.zpid} — Zillow says ${verifiedStatus}, not sold (${listing.addressstreet}, ${listing.city})`);
-      await supabase
-        .from('listings')
-        .update({
-          status: 'active',
-          missing_scrape_count: 0,
-          postcard_skip_reason: `sold_verification_still_on_market: ${verifiedStatus}`,
-        })
-        .eq('zpid', listing.zpid);
-    }
+      const items = await apifyHttp(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`);
+      if (!Array.isArray(items.data)) throw new Error('verification dataset not an array');
 
-    if (pulled.length > 0) {
-      console.log(`  Sold verification pulled ${pulled.length}/${candidates.length} candidate(s) back to active`);
-    } else {
-      console.log(`  Sold verification: all ${candidates.length} candidate(s) confirmed off-market`);
+      for (const r of items.data) {
+        const zpid = extractZpidFromResult(r);
+        const homeStatus = (r?.homeStatus || r?.hdpData?.homeInfo?.homeStatus || r?.status || '').toUpperCase();
+        if (zpid && homeStatus) statusByZpid.set(zpid, homeStatus);
+      }
+      verifiedCount += chunk.length;
+    } catch (err) {
+      console.warn(`    Sold verification chunk ${chunkNum}/${totalChunks} failed (${err.message}) — keeping that chunk unverified`);
     }
-    return { kept, pulled };
-  } catch (err) {
-    console.warn(`  Sold verification failed (${err.message}) — mailing batch unverified`);
-    return { kept: finalListings, pulled: [] };
   }
+
+  const pulled = [];
+  const kept = [];
+  for (const l of finalListings) {
+    const verifiedStatus = l.status === 'sold' ? statusByZpid.get(String(l.zpid)) : null;
+    if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
+      pulled.push({ listing: l, verifiedStatus });
+    } else {
+      // No result for this zpid (page gone entirely — consistent with a
+      // real sale) or a non-active status: proceed with mailing.
+      kept.push(l);
+    }
+  }
+
+  for (const { listing, verifiedStatus } of pulled) {
+    console.log(`    PULLED zpid ${listing.zpid} — Zillow says ${verifiedStatus}, not sold (${listing.addressstreet}, ${listing.city})`);
+    await supabase
+      .from('listings')
+      .update({
+        status: 'active',
+        missing_scrape_count: 0,
+        postcard_skip_reason: `sold_verification_still_on_market: ${verifiedStatus}`,
+      })
+      .eq('zpid', listing.zpid);
+  }
+
+  if (pulled.length > 0) {
+    console.log(`  Sold verification pulled ${pulled.length}/${verifiedCount} verified candidate(s) back to active`);
+  } else {
+    console.log(`  Sold verification: no active/pending matches found across ${verifiedCount} verified candidate(s)`);
+  }
+  return { kept, pulled };
 }
 
 /**
@@ -590,6 +599,9 @@ async function run(options) {
   if (freshness.audit.length > 0) {
     console.log(`  Detail freshness audit flagged ${freshness.audit.length} just_listed listing(s) at ${JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS}+ days`);
   }
+  // Write this before the slower sold-verification step. Large regions can
+  // time out during verification; the freshness audit should survive anyway.
+  writePipelineFile('step5-freshness-audit.json', freshness.audit);
 
   // Address-level duplicate guard — block relists (new zpid, same address)
   // from getting a second postcard of the same type. Skipped in dry runs.
@@ -614,7 +626,6 @@ async function run(options) {
   }
 
   writePipelineFile('step5-final.json', finalListings);
-  writePipelineFile('step5-freshness-audit.json', freshness.audit);
 
   // Persist skip reasons to Supabase (best-effort)
   if (rejected.length > 0 && !opts.dryRun) {

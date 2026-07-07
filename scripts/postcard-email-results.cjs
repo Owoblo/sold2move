@@ -236,6 +236,24 @@ async function sendFreshnessAuditEmail(region, regionLabel, auditRows, today) {
   console.log(`  Freshness audit sent! ID: ${result.id}`);
 }
 
+async function sendFreshnessAuditFromPipeline(region) {
+  region = (region || 'windsor').toLowerCase();
+  const regionConfig = getRegionConfig(region);
+  const regionLabel = regionConfig.label;
+  const pipelineDir = path.join(__dirname, `.pipeline-${region}`);
+  const auditPath = path.join(pipelineDir, 'step5-freshness-audit.json');
+  const today = new Date().toISOString().split('T')[0];
+
+  if (!fs.existsSync(auditPath)) {
+    console.log(`  Freshness audit not found for ${region}: ${auditPath}`);
+    return null;
+  }
+
+  const auditRows = JSON.parse(fs.readFileSync(auditPath, 'utf-8'));
+  await sendFreshnessAuditEmail(region, regionLabel, auditRows, today);
+  return auditRows;
+}
+
 async function sendPostcardEmail(region, csvPath, pdfPath) {
   region = (region || 'windsor').toLowerCase();
   const regionConfig = getRegionConfig(region);
@@ -425,10 +443,13 @@ if (require.main === module) {
   let csvPath = null;
   let pdfPath = null;
   let region = 'windsor';
+  let freshnessAuditOnly = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--region') {
       region = args[++i];
+    } else if (args[i] === '--freshness-audit-only') {
+      freshnessAuditOnly = true;
     } else if (!csvPath) {
       csvPath = args[i];
     } else if (!pdfPath) {
@@ -436,8 +457,17 @@ if (require.main === module) {
     }
   }
 
+  if (freshnessAuditOnly) {
+    sendFreshnessAuditFromPipeline(region).catch(err => {
+      console.error('Freshness audit email failed:', err.message);
+      process.exit(1);
+    });
+    return;
+  }
+
   if (!csvPath || !pdfPath) {
     console.error('Usage: node scripts/postcard-email-results.cjs <csv-path> <pdf-path> [--region windsor|wkg|london]');
+    console.error('   or: node scripts/postcard-email-results.cjs --region ottawa --freshness-audit-only');
     process.exit(1);
   }
 
@@ -447,4 +477,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { sendPostcardEmail };
+module.exports = { sendPostcardEmail, sendFreshnessAuditFromPipeline };

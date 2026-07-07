@@ -1,0 +1,151 @@
+name: Postcard Pipeline — Ottawa Only
+
+on:
+  schedule:
+    # Runs after the core-region workflow so Ottawa has its own time budget.
+    - cron: '30 16 */2 * *'
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: 'Start date (YYYY-MM-DD), default: 2 days ago'
+        required: false
+      to_date:
+        description: 'End date (YYYY-MM-DD), default: today'
+        required: false
+      skip_photos:
+        description: 'Skip photo/detail fetching'
+        type: boolean
+        default: false
+      skip_furniture:
+        description: 'Skip furniture check'
+        type: boolean
+        default: false
+      include_unscanned:
+        description: 'Allow unscanned listings with enough photos into the postcard batch'
+        type: boolean
+        default: false
+      skip_scrape:
+        description: 'Skip Zillow scrape (use existing DB data)'
+        type: boolean
+        default: false
+
+jobs:
+  run-ottawa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Calculate date range
+        id: dates
+        run: |
+          if [ -n "${{ github.event.inputs.from_date }}" ]; then
+            echo "from=${{ github.event.inputs.from_date }}" >> $GITHUB_OUTPUT
+          else
+            echo "from=$(date -d '2 days ago' +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ github.event.inputs.to_date }}" ]; then
+            echo "to=${{ github.event.inputs.to_date }}" >> $GITHUB_OUTPUT
+          else
+            echo "to=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build pipeline flags
+        id: flags
+        run: |
+          FLAGS=""
+          if [ "${{ github.event.inputs.skip_photos }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-photos"
+          fi
+          if [ "${{ github.event.inputs.skip_furniture }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-furniture"
+          fi
+          if [ "${{ github.event.inputs.include_unscanned }}" = "true" ]; then
+            FLAGS="$FLAGS --include-unscanned"
+          fi
+          if [ "${{ github.event.inputs.skip_scrape }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-scrape"
+          fi
+          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
+
+      - name: Run Ottawa pipeline
+        id: ottawa_run
+        continue-on-error: true
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SOLD_VERIFY_CHUNK_SIZE: 25
+          SOLD_VERIFY_TIMEOUT_MINUTES: 4
+        run: |
+          timeout 210m node scripts/postcard-pipeline.cjs \
+            --region ottawa \
+            --from ${{ steps.dates.outputs.from }} \
+            --to ${{ steps.dates.outputs.to }} \
+            ${{ steps.flags.outputs.flags }}
+
+      - name: Find Ottawa output files
+        id: ottawa_files
+        if: always()
+        run: |
+          CSV=$(ls -t Ottawa_Postcards_*.csv 2>/dev/null | head -1)
+          PDF=$(ls -t Ottawa_Postcards_*.pdf 2>/dev/null | head -1)
+          if [ -z "$CSV" ] || [ -z "$PDF" ]; then
+            echo "No Ottawa output files"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "csv=$CSV" >> $GITHUB_OUTPUT
+            echo "pdf=$PDF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Email Ottawa results
+        if: steps.ottawa_files.outputs.found == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs \
+            "${{ steps.ottawa_files.outputs.csv }}" \
+            "${{ steps.ottawa_files.outputs.pdf }}" \
+            --region ottawa
+
+      - name: Email Ottawa freshness audit fallback
+        if: always() && steps.ottawa_files.outputs.found != 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs --region ottawa --freshness-audit-only
+
+      - name: Upload Ottawa artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ottawa-postcards-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
+          path: |
+            Ottawa_Postcards_*.csv
+            Ottawa_Postcards_*.pdf
+            scripts/.pipeline-ottawa/step5-freshness-audit.json
+            scripts/.pipeline-ottawa/step5-final.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Fail if Ottawa pipeline failed
+        if: steps.ottawa_run.outcome != 'success'
+        run: |
+          echo "Ottawa pipeline failed or timed out after fallback handling."
+          exit 1
