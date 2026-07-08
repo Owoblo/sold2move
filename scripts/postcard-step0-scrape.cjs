@@ -392,7 +392,7 @@ function normalizeResult(r, regionConfig, nowIso) {
   };
 }
 
-const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, carouselphotos, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
 
 function normalizeAddressKey(listing) {
   const street = (listing.addressstreet || '').toString();
@@ -734,12 +734,20 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
 }
 
 function normalizeForUpsert(row) {
-  return {
+  const normalized = {
     ...row,
     postcard_send_count: row.postcard_send_count ?? 0,
     missing_scrape_count: row.missing_scrape_count ?? 0,
     glitch_suspected: row.glitch_suspected ?? false,
   };
+  // Step 0 lifecycle lookups intentionally avoid the heavy carouselphotos JSONB
+  // column for large regions like Ottawa. If this row does not have fresh photo
+  // data from the current scrape, omit the column so Supabase preserves cached
+  // photos instead of overwriting them with null.
+  if (normalized.carouselphotos == null) {
+    delete normalized.carouselphotos;
+  }
+  return normalized;
 }
 
 async function upsertListings(supabase, rows) {
