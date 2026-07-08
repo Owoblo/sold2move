@@ -29,6 +29,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: postcard-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-ottawa:
     runs-on: ubuntu-latest

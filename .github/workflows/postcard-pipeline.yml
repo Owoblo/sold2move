@@ -33,6 +33,10 @@ on:
         required: false
         default: 'windsor,chatham,sarnia,london,woodstock,wkg'
 
+concurrency:
+  group: postcard-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
