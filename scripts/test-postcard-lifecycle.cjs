@@ -81,7 +81,7 @@ function testDegradedScrapeDoesNotBurnMiss() {
   assert.equal(summary.pendingMissCount, 0);
 }
 
-function testSoldArchivedReappearanceReturnsToActiveInventory() {
+function testSoldArchivedReappearanceRoutesToVerifiedJustListed() {
   const existing = [listing({
     zpid: '100',
     status: 'sold_archived',
@@ -94,8 +94,8 @@ function testSoldArchivedReappearanceReturnsToActiveInventory() {
   const scraped = [listing({ zpid: '100', status: 'active', unformattedprice: 499900 })];
   const { nextRows, summary } = buildLifecycleRows(scraped, existing, region, now);
   assert.equal(nextRows.length, 1);
-  assert.equal(nextRows[0].status, 'active');
-  assert.equal(nextRows[0].glitch_suspected, true);
+  assert.equal(nextRows[0].status, 'just_listed');
+  assert.equal(nextRows[0].glitch_suspected, false);
   assert.equal(nextRows[0].postcard_skip_reason, 'reappeared_after_sold_archive');
   assert.equal(nextRows[0].postcard_send_count, 2);
   assert.equal(nextRows[0].sold_postcard_sent_at, '2026-07-05T15:17:04.150Z');
@@ -178,6 +178,23 @@ function testDetailFreshnessDoesNotBlockSoldRows() {
   assert.equal(kept.length, 1);
   assert.equal(rejected.length, 0);
   assert.equal(audit.length, 0);
+}
+
+function testReappearedAfterSoldNeedsDetailFreshness() {
+  const rows = [listing({
+    zpid: '100',
+    status: 'just_listed',
+    is_furnished: true,
+    detail_days_on_zillow: null,
+    postcard_skip_reason: 'reappeared_after_sold_archive',
+  })];
+  const filtered = applyOutputFilters(rows, { includeUnscanned: false });
+  const { kept, rejected, audit } = applyJustListedFreshnessGuard(filtered.finalListings);
+  assert.equal(kept.length, 0);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason, 'reappeared_missing_detail_days_on_zillow');
+  assert.equal(audit.length, 1);
+  assert.equal(audit[0]._freshness_action, 'blocked_reappeared_missing_detail_days');
 }
 
 function testJustListedMustBeSeenInCurrentScrape() {
@@ -270,13 +287,14 @@ const tests = [
   testNewZpidAtKnownAddressIsNotJustListed,
   testMissingTwiceBecomesSold,
   testDegradedScrapeDoesNotBurnMiss,
-  testSoldArchivedReappearanceReturnsToActiveInventory,
+  testSoldArchivedReappearanceRoutesToVerifiedJustListed,
   testAddressKeyFallsBackToCityWhenPostalMissing,
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
   testDetailFreshnessBlocksStaleJustListed,
   testDetailFreshnessAuditsButKeepsFiveToThirtyDays,
   testDetailFreshnessDoesNotBlockSoldRows,
+  testReappearedAfterSoldNeedsDetailFreshness,
   testJustListedMustBeSeenInCurrentScrape,
   testSkipScrapeAllowsExistingJustListedRows,
   testNormalizeResultKeepsConfiguredOntarioCity,

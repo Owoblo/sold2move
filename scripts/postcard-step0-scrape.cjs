@@ -540,21 +540,21 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
       nextRows.push({
         ...scraped,
         region: existing.region || regionConfig.key,
-        // If Zillow shows an archived-sold property as active again, keep it
-        // out of postcard eligibility but restore live inventory state. This
-        // prevents stale sold_archived rows from hiding active listings.
-        status: 'active',
+        // If Zillow shows an archived-sold property as active again, route it
+        // through the just-listed detail-freshness guard. Step 5 requires a
+        // successful detail-page days-on-Zillow check before it can mail again.
+        status: 'just_listed',
         first_seen_at: existing.first_seen_at || scraped.first_seen_at,
         last_seen_at: nowIso,
-        glitch_suspected: true,
+        glitch_suspected: false,
         lastseenat: nowIso,
         is_furnished: existing.is_furnished,
         furniture_confidence: existing.furniture_confidence,
         furniture_scan_date: existing.furniture_scan_date,
         furniture_scan_method: existing.furniture_scan_method,
         furniture_needs_retry: existing.furniture_needs_retry,
-        photo_fetch_attempts: existing.photo_fetch_attempts || 0,
-        photos_last_attempted_at: existing.photos_last_attempted_at,
+        photo_fetch_attempts: 0,
+        photos_last_attempted_at: null,
         carouselphotos: scraped.carouselphotos || existing.carouselphotos || null,
         imgsrc: scraped.imgsrc || existing.imgsrc || null,
         detailurl: scraped.detailurl || existing.detailurl || null,

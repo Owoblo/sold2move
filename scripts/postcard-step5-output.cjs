@@ -324,8 +324,14 @@ function applyJustListedFreshnessGuard(listings) {
       continue;
     }
 
+    const isReappearedAfterSold = listing.postcard_skip_reason === 'reappeared_after_sold_archive';
     const days = normalizeDaysOnZillow(listing.detail_days_on_zillow);
     if (days == null || days < 0) {
+      if (isReappearedAfterSold) {
+        rejected.push({ zpid: listing.zpid, reason: 'reappeared_missing_detail_days_on_zillow' });
+        audit.push({ ...listing, _freshness_action: 'blocked_reappeared_missing_detail_days', _freshness_days: '' });
+        continue;
+      }
       kept.push(listing);
       continue;
     }
