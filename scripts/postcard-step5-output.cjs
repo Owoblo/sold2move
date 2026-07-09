@@ -353,6 +353,15 @@ function applyJustListedFreshnessGuard(listings) {
   return { kept, rejected, audit };
 }
 
+function countBy(items, keyFn) {
+  const counts = {};
+  for (const item of items || []) {
+    const key = keyFn(item) || 'unknown';
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
 async function verifySoldCandidates(supabase, finalListings) {
   const token = process.env.APIFY_TOKEN;
   const candidates = finalListings.filter(l => l.status === 'sold' && l.detailurl);
@@ -595,10 +604,12 @@ async function run(options) {
 
   // Apply filters
   let { finalListings, rejected } = applyOutputFilters(listings, opts);
+  const initialRejected = [...rejected];
 
   const freshness = applyJustListedFreshnessGuard(finalListings);
   finalListings = freshness.kept;
   rejected = rejected.concat(freshness.rejected);
+  const freshnessRejected = freshness.rejected;
   if (freshness.rejected.length > 0) {
     console.log(`  Detail freshness guard removed ${freshness.rejected.length} stale just_listed listing(s) over ${JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS} days`);
   }
@@ -622,16 +633,64 @@ async function run(options) {
     finalListings = kept;
     rejected = rejected.concat(addrRejected);
   }
+  const addressRejected = rejected.slice(initialRejected.length + freshnessRejected.length);
 
   // Verify sold candidates against their live Zillow pages — pull any that
   // are actually still on the market. Fail-open: errors mail the batch as-is.
+  let soldPulled = [];
   if (!opts.dryRun && finalListings.some(l => l.status === 'sold')) {
     const supabase = getSupabase();
-    const { kept } = await verifySoldCandidates(supabase, finalListings);
+    const { kept, pulled } = await verifySoldCandidates(supabase, finalListings);
     finalListings = kept;
+    soldPulled = pulled;
   }
 
   writePipelineFile('step5-final.json', finalListings);
+
+  const listingByZpid = new Map(listings.map(l => [String(l.zpid), l]));
+  const reappearedInput = listings.filter(l => l.postcard_skip_reason === 'reappeared_after_sold_archive');
+  const finalZpids = new Set(finalListings.map(l => String(l.zpid)));
+  const reappearedSent = reappearedInput.filter(l => finalZpids.has(String(l.zpid)));
+  const reappearedRejected = rejected.filter(r => {
+    const listing = listingByZpid.get(String(r.zpid));
+    return listing?.postcard_skip_reason === 'reappeared_after_sold_archive';
+  });
+  const healthSummary = {
+    generated_at: new Date().toISOString(),
+    region: opts.region || 'windsor',
+    batch_id: opts.batchId || null,
+    input_count: listings.length,
+    final_count: finalListings.length,
+    final_by_status: countBy(finalListings, l => l.status),
+    rejected_count: rejected.length,
+    rejected_by_reason: countBy(rejected, r => r.reason),
+    freshness: {
+      audit_count: freshness.audit.length,
+      audit_by_action: countBy(freshness.audit, r => r._freshness_action),
+      rejected_count: freshnessRejected.length,
+    },
+    address_duplicate_guard: {
+      rejected_count: addressRejected.length,
+      rejected_by_reason: countBy(addressRejected, r => r.reason),
+    },
+    sold_verification: {
+      candidates_before_verification: finalListings.filter(l => l.status === 'sold').length + soldPulled.length,
+      pulled_back_count: soldPulled.length,
+      pulled_back: soldPulled.map(({ listing, verifiedStatus }) => ({
+        zpid: listing.zpid,
+        address: listing.address || listing.addressstreet,
+        city: listing.city || listing.addresscity,
+        verified_status: verifiedStatus,
+      })),
+    },
+    reappeared_after_sold_archive: {
+      candidates: reappearedInput.length,
+      sent: reappearedSent.length,
+      blocked_or_filtered: reappearedRejected.length,
+      blocked_by_reason: countBy(reappearedRejected, r => r.reason),
+    },
+  };
+  writePipelineFile('step5-health-summary.json', healthSummary);
 
   // Persist skip reasons to Supabase (best-effort)
   if (rejected.length > 0 && !opts.dryRun) {

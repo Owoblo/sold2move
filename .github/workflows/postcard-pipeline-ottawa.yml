@@ -144,6 +144,7 @@ jobs:
             Ottawa_Postcards_*.csv
             Ottawa_Postcards_*.pdf
             scripts/.pipeline-ottawa/step5-freshness-audit.json
+            scripts/.pipeline-ottawa/step5-health-summary.json
             scripts/.pipeline-ottawa/step5-final.json
           if-no-files-found: ignore
           retention-days: 30

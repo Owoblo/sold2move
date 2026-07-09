@@ -74,6 +74,41 @@ function sendEmail(to, subject, html, attachments) {
   });
 }
 
+function renderHealthSummaryRows(health) {
+  if (!health) return '';
+
+  const finalByStatus = health.final_by_status || {};
+  const freshnessByAction = health.freshness?.audit_by_action || {};
+  const reappeared = health.reappeared_after_sold_archive || {};
+  const soldVerification = health.sold_verification || {};
+  const addressGuard = health.address_duplicate_guard || {};
+
+  const rows = [
+    ['Final postcards', health.final_count ?? 0],
+    ['Final just-listed', finalByStatus.just_listed || 0],
+    ['Final sold', finalByStatus.sold || 0],
+    ['Freshness audit 5-30 days', freshnessByAction.sent_review_5_30_days || 0],
+    ['Freshness blocked >30 days', freshnessByAction.blocked_over_30_days || 0],
+    ['Reappeared relists checked', reappeared.candidates || 0],
+    ['Reappeared relists sent', reappeared.sent || 0],
+    ['Reappeared relists blocked/filtered', reappeared.blocked_or_filtered || 0],
+    ['Address duplicate guard blocks', addressGuard.rejected_count || 0],
+    ['Sold candidates checked', soldVerification.candidates_before_verification || 0],
+    ['Sold pulled back active', soldVerification.pulled_back_count || 0],
+  ];
+
+  return `
+      <h3 style="color: #333; margin-bottom: 8px;">Health Checks</h3>
+      <table style="border-collapse: collapse; width: 100%; margin: 0 0 20px;">
+        ${rows.map(([label, value], idx) => `
+        <tr style="${idx % 2 === 0 ? 'background: #f5f5f5;' : ''}">
+          <td style="padding: 8px; border: 1px solid #ddd;">${label}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">${value}</td>
+        </tr>`).join('')}
+      </table>
+  `;
+}
+
 async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
   const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
   const Papa = require('papaparse');
@@ -282,6 +317,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   let step1Count = 0, withPhotos = 0, furnished = 0, unfurnished = 0, unknown = 0;
   let verified = 0, badAddress = 0;
   let cityCounts = {}, statusCounts = {};
+  let healthSummary = null;
 
   try {
     const step1 = JSON.parse(fs.readFileSync(path.join(pipelineDir, 'step1-filtered.json'), 'utf-8'));
@@ -303,6 +339,15 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     verified = step4.filter(l => l._geocode_verified === true).length;
     badAddress = step4.filter(l => l._geocode_verified === false).length;
   } catch (e) {}
+
+  try {
+    const healthPath = path.join(pipelineDir, 'step5-health-summary.json');
+    if (fs.existsSync(healthPath)) {
+      healthSummary = JSON.parse(fs.readFileSync(healthPath, 'utf-8'));
+    }
+  } catch (e) {
+    console.warn(`  Health summary skipped: ${e.message}`);
+  }
 
   // Build city breakdown rows
   const cityRows = Object.entries(cityCounts)
@@ -361,6 +406,8 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 18px;">${recordCount}</td>
         </tr>
       </table>
+
+      ${renderHealthSummaryRows(healthSummary)}
 
       ${cityRows ? `
       <h3 style="color: #333; margin-bottom: 8px;">By City</h3>
