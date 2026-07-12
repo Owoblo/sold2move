@@ -15,6 +15,9 @@ const {
 const {
   filterJustListedSeenInCurrentScrape,
 } = require('./postcard-step1-filter.cjs');
+const {
+  needsDetailFreshness,
+} = require('./postcard-step2-photos.cjs');
 
 const region = { key: 'windsor', cities: ['Windsor'] };
 const now = '2026-07-03T12:00:00.000Z';
@@ -150,6 +153,23 @@ function testDetailFreshnessBlocksStaleJustListed() {
   assert.equal(audit[0]._freshness_action, 'blocked_over_30_days');
 }
 
+function testCachedDetailFreshnessAgesForward() {
+  const checkedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const rows = [listing({
+    zpid: '100',
+    status: 'just_listed',
+    is_furnished: true,
+    detail_days_on_zillow: 29,
+    zillow_detail_checked_at: checkedAt,
+  })];
+  const filtered = applyOutputFilters(rows, { includeUnscanned: false });
+  const { kept, rejected, audit } = applyJustListedFreshnessGuard(filtered.finalListings);
+  assert.equal(kept.length, 0);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason, 'stale_detail_days_on_zillow: 31');
+  assert.equal(audit.length, 1);
+}
+
 function testDetailFreshnessAuditsButKeepsFiveToThirtyDays() {
   const rows = [listing({
     zpid: '100',
@@ -178,6 +198,21 @@ function testDetailFreshnessDoesNotBlockSoldRows() {
   assert.equal(kept.length, 1);
   assert.equal(rejected.length, 0);
   assert.equal(audit.length, 0);
+}
+
+function testNormalDetailFreshnessCacheLastsSevenDays() {
+  const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString();
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(needsDetailFreshness(listing({
+    status: 'just_listed',
+    detail_days_on_zillow: 1,
+    zillow_detail_checked_at: sixDaysAgo,
+  })), false);
+  assert.equal(needsDetailFreshness(listing({
+    status: 'just_listed',
+    detail_days_on_zillow: 1,
+    zillow_detail_checked_at: eightDaysAgo,
+  })), true);
 }
 
 function testReappearedAfterSoldNeedsDetailFreshness() {
@@ -292,8 +327,10 @@ const tests = [
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
   testDetailFreshnessBlocksStaleJustListed,
+  testCachedDetailFreshnessAgesForward,
   testDetailFreshnessAuditsButKeepsFiveToThirtyDays,
   testDetailFreshnessDoesNotBlockSoldRows,
+  testNormalDetailFreshnessCacheLastsSevenDays,
   testReappearedAfterSoldNeedsDetailFreshness,
   testJustListedMustBeSeenInCurrentScrape,
   testSkipScrapeAllowsExistingJustListedRows,

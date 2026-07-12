@@ -26,7 +26,8 @@ const {
 const MAX_BATCH = Infinity; // No cap — fetch photos for every listing that needs them
 const MIN_PHOTO_COUNT = 2;
 const APIFY_ACTOR = 'maxcopell~zillow-detail-scraper';
-const DETAIL_FRESHNESS_MAX_AGE_HOURS = 12;
+const DETAIL_FRESHNESS_MAX_AGE_HOURS = Number.parseInt(process.env.DETAIL_FRESHNESS_MAX_AGE_HOURS || '168', 10);
+const REAPPEARED_DETAIL_MAX_AGE_HOURS = Number.parseInt(process.env.REAPPEARED_DETAIL_MAX_AGE_HOURS || '24', 10);
 
 function getPhotoCount(listing) {
   let photos = listing.carouselphotos;
@@ -144,12 +145,21 @@ function extractDetailFreshness(result) {
 
 function needsDetailFreshness(listing) {
   if (listing.status === 'sold') return false;
+  const isReappearedAfterSold = listing.postcard_skip_reason === 'reappeared_after_sold_archive';
   if (listing.detail_days_on_zillow == null) return true;
   if (!listing.zillow_detail_checked_at) return true;
   const checkedAt = new Date(listing.zillow_detail_checked_at).getTime();
   if (!Number.isFinite(checkedAt)) return true;
   const ageHours = (Date.now() - checkedAt) / (1000 * 60 * 60);
-  return ageHours > DETAIL_FRESHNESS_MAX_AGE_HOURS;
+  const maxAgeHours = isReappearedAfterSold ? REAPPEARED_DETAIL_MAX_AGE_HOURS : DETAIL_FRESHNESS_MAX_AGE_HOURS;
+  return ageHours > maxAgeHours;
+}
+
+function hasCachedDetailFreshness(listing) {
+  return listing.status !== 'sold' &&
+    listing.detail_days_on_zillow != null &&
+    listing.zillow_detail_checked_at &&
+    !needsDetailFreshness(listing);
 }
 
 async function fetchDetailsViaApify(listings, token) {
@@ -279,6 +289,9 @@ async function run(options) {
     return true;
   });
   const needFreshness = justListedListings.filter(needsDetailFreshness);
+  const cachedFreshness = justListedListings.filter(hasCachedDetailFreshness);
+  const reappearedNeedFreshness = needFreshness.filter(l => l.postcard_skip_reason === 'reappeared_after_sold_archive');
+  const normalNeedFreshness = needFreshness.length - reappearedNeedFreshness.length;
   const detailCandidatesByZpid = new Map();
   for (const listing of needPhotos.concat(needFreshness)) {
     detailCandidatesByZpid.set(String(listing.zpid), listing);
@@ -290,10 +303,26 @@ async function run(options) {
 
   console.log(`  just_listed — already have photos: ${havePhotos.length}`);
   console.log(`  just_listed — need photos: ${needPhotos.length}`);
-  console.log(`  just_listed — need detail freshness: ${needFreshness.length}`);
+  console.log(`  just_listed — detail freshness cache usable: ${cachedFreshness.length} (${DETAIL_FRESHNESS_MAX_AGE_HOURS}h normal cache, ${REAPPEARED_DETAIL_MAX_AGE_HOURS}h reappeared cache)`);
+  console.log(`  just_listed — need detail freshness: ${needFreshness.length} (${normalNeedFreshness} normal, ${reappearedNeedFreshness.length} reappeared relist)`);
 
   if (opts.dryRun) {
     console.log(`\n  [DRY RUN] Would fetch detail pages for ${detailCandidates.length} listings.`);
+    writePipelineFile('step2-detail-summary.json', {
+      generated_at: new Date().toISOString(),
+      cache_max_age_hours: DETAIL_FRESHNESS_MAX_AGE_HOURS,
+      reappeared_cache_max_age_hours: REAPPEARED_DETAIL_MAX_AGE_HOURS,
+      just_listed_candidates: justListedListings.length,
+      cached_detail_freshness: cachedFreshness.length,
+      need_detail_freshness: needFreshness.length,
+      need_detail_freshness_normal: normalNeedFreshness,
+      need_detail_freshness_reappeared: reappearedNeedFreshness.length,
+      detail_candidates: detailCandidates.length,
+      detail_actor_runs: 0,
+      detail_freshness_updated: 0,
+      photo_sets_fetched: 0,
+      failed_photo_fetches: 0,
+    });
     writePipelineFile('step2-photos.json', listings);
     return listings;
   }
@@ -302,6 +331,22 @@ async function run(options) {
   if (!apifyToken) {
     console.log('  WARNING: APIFY_TOKEN not set - skipping photo fetch');
     console.log('  Proceeding with existing cached photos only.');
+    writePipelineFile('step2-detail-summary.json', {
+      generated_at: new Date().toISOString(),
+      cache_max_age_hours: DETAIL_FRESHNESS_MAX_AGE_HOURS,
+      reappeared_cache_max_age_hours: REAPPEARED_DETAIL_MAX_AGE_HOURS,
+      just_listed_candidates: justListedListings.length,
+      cached_detail_freshness: cachedFreshness.length,
+      need_detail_freshness: needFreshness.length,
+      need_detail_freshness_normal: normalNeedFreshness,
+      need_detail_freshness_reappeared: reappearedNeedFreshness.length,
+      detail_candidates: 0,
+      detail_actor_runs: 0,
+      detail_freshness_updated: 0,
+      photo_sets_fetched: 0,
+      failed_photo_fetches: 0,
+      skipped_reason: 'missing_apify_token',
+    });
     writePipelineFile('step2-photos.json', listings);
     return listings;
   }
@@ -311,6 +356,7 @@ async function run(options) {
   let fetched = 0;
   let freshnessUpdated = 0;
   let failed = 0;
+  let apifyRuns = 0;
 
   console.log(`  Fetching detail pages for ${detailCandidates.length} listing(s) (${Math.ceil(detailCandidates.length / APIFY_CHUNK)} Apify runs)...`);
 
@@ -322,6 +368,7 @@ async function run(options) {
     const totalChunks = Math.ceil(detailCandidates.length / APIFY_CHUNK);
     console.log(`\n  Apify chunk ${chunkNum}/${totalChunks} (${chunk.length} listings)...`);
     try {
+      apifyRuns++;
       const chunkResults = await fetchDetailsViaApify(chunk, apifyToken);
       for (const [zpid, detail] of chunkResults) {
         allApifyResults.set(zpid, detail);
@@ -379,7 +426,25 @@ async function run(options) {
 
   console.log(`\n  Photos fetched: ${fetched}, Failed: ${failed}`);
   console.log(`  Detail freshness updated: ${freshnessUpdated}/${detailCandidates.length}`);
+  console.log(`  Detail freshness reused from cache: ${cachedFreshness.length}`);
+  console.log(`  Apify detail actor runs: ${apifyRuns}`);
   console.log(`  Total listings with photos: ${listings.filter(l => getPhotoCount(l) > 0).length}/${listings.length}`);
+
+  writePipelineFile('step2-detail-summary.json', {
+    generated_at: new Date().toISOString(),
+    cache_max_age_hours: DETAIL_FRESHNESS_MAX_AGE_HOURS,
+    reappeared_cache_max_age_hours: REAPPEARED_DETAIL_MAX_AGE_HOURS,
+    just_listed_candidates: justListedListings.length,
+    cached_detail_freshness: cachedFreshness.length,
+    need_detail_freshness: needFreshness.length,
+    need_detail_freshness_normal: normalNeedFreshness,
+    need_detail_freshness_reappeared: reappearedNeedFreshness.length,
+    detail_candidates: detailCandidates.length,
+    detail_actor_runs: apifyRuns,
+    detail_freshness_updated: freshnessUpdated,
+    photo_sets_fetched: fetched,
+    failed_photo_fetches: failed,
+  });
 
   writePipelineFile('step2-photos.json', listings);
   return listings;

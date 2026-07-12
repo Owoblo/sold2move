@@ -313,6 +313,17 @@ function normalizeDaysOnZillow(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function effectiveDetailDaysOnZillow(listing) {
+  const days = normalizeDaysOnZillow(listing.detail_days_on_zillow);
+  if (days == null || days < 0) return days;
+  if (!listing.zillow_detail_checked_at) return days;
+
+  const checkedAt = new Date(listing.zillow_detail_checked_at).getTime();
+  if (!Number.isFinite(checkedAt)) return days;
+  const elapsedDays = Math.max(0, Math.floor((Date.now() - checkedAt) / (1000 * 60 * 60 * 24)));
+  return days + elapsedDays;
+}
+
 function applyJustListedFreshnessGuard(listings) {
   const kept = [];
   const rejected = [];
@@ -325,7 +336,7 @@ function applyJustListedFreshnessGuard(listings) {
     }
 
     const isReappearedAfterSold = listing.postcard_skip_reason === 'reappeared_after_sold_archive';
-    const days = normalizeDaysOnZillow(listing.detail_days_on_zillow);
+    const days = effectiveDetailDaysOnZillow(listing);
     if (days == null || days < 0) {
       if (isReappearedAfterSold) {
         rejected.push({ zpid: listing.zpid, reason: 'reappeared_missing_detail_days_on_zillow' });
@@ -648,6 +659,12 @@ async function run(options) {
   writePipelineFile('step5-final.json', finalListings);
 
   const listingByZpid = new Map(listings.map(l => [String(l.zpid), l]));
+  let detailCostSummary = null;
+  try {
+    detailCostSummary = readPipelineFile('step2-detail-summary.json');
+  } catch (e) {
+    detailCostSummary = null;
+  }
   const reappearedInput = listings.filter(l => l.postcard_skip_reason === 'reappeared_after_sold_archive');
   const finalZpids = new Set(finalListings.map(l => String(l.zpid)));
   const reappearedSent = reappearedInput.filter(l => finalZpids.has(String(l.zpid)));
@@ -669,6 +686,7 @@ async function run(options) {
       audit_by_action: countBy(freshness.audit, r => r._freshness_action),
       rejected_count: freshnessRejected.length,
     },
+    detail_cost_control: detailCostSummary,
     address_duplicate_guard: {
       rejected_count: addressRejected.length,
       rejected_by_reason: countBy(addressRejected, r => r.reason),

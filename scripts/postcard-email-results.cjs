@@ -82,11 +82,15 @@ function renderHealthSummaryRows(health) {
   const reappeared = health.reappeared_after_sold_archive || {};
   const soldVerification = health.sold_verification || {};
   const addressGuard = health.address_duplicate_guard || {};
+  const detailCost = health.detail_cost_control || {};
 
   const rows = [
     ['Final postcards', health.final_count ?? 0],
     ['Final just-listed', finalByStatus.just_listed || 0],
     ['Final sold', finalByStatus.sold || 0],
+    ['Detail freshness reused from cache', detailCost.cached_detail_freshness || 0],
+    ['Detail freshness scraped this run', detailCost.detail_freshness_updated || 0],
+    ['Detail actor runs', detailCost.detail_actor_runs || 0],
     ['Freshness audit 5-30 days', freshnessByAction.sent_review_5_30_days || 0],
     ['Freshness blocked >30 days', freshnessByAction.blocked_over_30_days || 0],
     ['Reappeared relists checked', reappeared.candidates || 0],
