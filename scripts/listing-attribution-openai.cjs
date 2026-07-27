@@ -63,9 +63,43 @@ function normalizeName(value) {
     .trim();
 }
 
-function deterministicValidation(result) {
+function normalizedEvidence(value) {
+  return decodeURIComponent(String(value || ''))
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(street|st)\b/g, 'st')
+    .replace(/\b(avenue|ave)\b/g, 'ave')
+    .replace(/\b(road|rd)\b/g, 'rd')
+    .replace(/\b(drive|dr)\b/g, 'dr')
+    .replace(/\b(place|pl)\b/g, 'pl')
+    .replace(/\b(trail|trl)\b/g, 'trl')
+    .replace(/\b(close|cl)\b/g, 'cl')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sourceEvidenceMatches(source, result, listing = {}) {
+  const haystack = normalizedEvidence(`${source.url || ''} ${source.evidence || ''}`);
+  const street = normalizedEvidence(
+    listing.addressstreet || String(result.normalized_address || '').split(',')[0]
+  );
+  const streetTokens = street.split(' ').filter(Boolean);
+  const addressMatch = streetTokens.length >= 2 &&
+    streetTokens.every(token => haystack.includes(token));
+  const mls = normalizedEvidence(result.discovered_mls_number || listing.listing_mls_id);
+  const mlsMatch = Boolean(mls && haystack.replace(/\s/g, '').includes(mls.replace(/\s/g, '')));
+  return {
+    address_match: Boolean(source.address_match || addressMatch),
+    mls_match: Boolean(source.mls_match || mlsMatch),
+  };
+}
+
+function deterministicValidation(result, listing = {}) {
   const sources = (result.sources || [])
-    .map(source => ({ ...source, url: cleanUrl(source.url) }))
+    .map(source => {
+      const clean = { ...source, url: cleanUrl(source.url) };
+      return { ...clean, ...sourceEvidenceMatches(clean, result, listing) };
+    })
     .filter(source => source.url);
   const exactSources = sources.filter(source => source.address_match || source.mls_match);
   const directHosts = new Set(exactSources.map(source => {
@@ -131,16 +165,19 @@ function extractCitedUrls(response) {
 }
 
 async function searchListingAttribution(listing, options = {}) {
-  const client = options.client || new OpenAI({ apiKey: options.apiKey });
+  const client = options.client || new OpenAI({ apiKey: options.apiKey, maxRetries: 0 });
   const response = await client.responses.create({
-    model: options.model || 'gpt-5-mini',
+    model: options.model || process.env.OPENAI_ATTRIBUTION_MODEL || 'gpt-4o-mini',
     tools: [{ type: 'web_search' }],
     input: buildPrompt(listing),
     text: { format: { type: 'json_schema', name: 'listing_attribution', strict: true, schema: OUTPUT_SCHEMA } },
   }, { timeout: options.timeoutMs || 90000 });
-  const result = deterministicValidation(JSON.parse(response.output_text));
+  const result = deterministicValidation(JSON.parse(response.output_text), listing);
   result.cited_urls = extractCitedUrls(response);
   return result;
 }
 
-module.exports = { OUTPUT_SCHEMA, buildPrompt, cleanUrl, deterministicValidation, extractCitedUrls, searchListingAttribution };
+module.exports = {
+  OUTPUT_SCHEMA, buildPrompt, cleanUrl, deterministicValidation, extractCitedUrls,
+  normalizedEvidence, searchListingAttribution, sourceEvidenceMatches,
+};

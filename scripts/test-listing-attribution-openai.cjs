@@ -24,6 +24,20 @@ const weak = deterministicValidation({
 });
 assert.strictEqual(weak.status, 'unresolved');
 assert.strictEqual(weak.accepted, false);
+const inferred = deterministicValidation({
+  normalized_address: '425 Queen Street, Lucan Biddulph, Ontario',
+  discovered_mls_number: 'X13593256',
+  listing_representatives: [{ name: 'Jordan Wilson', role: 'listing_agent', brokerage: null, phone: null }],
+  sources: [{
+    url: 'https://www.royallepage.ca/property/425-queen-street/mlsx13593256/',
+    publisher: 'Royal LePage', evidence: 'Jordan Wilson is the listing agent',
+    address_match: false, mls_match: false,
+  }],
+  conflicts: [],
+}, { addressstreet: '425 Queen St' });
+assert.strictEqual(inferred.status, 'verified');
+assert.strictEqual(inferred.sources[0].address_match, true);
+assert.strictEqual(inferred.sources[0].mls_match, true);
 assert.deepStrictEqual(extractCitedUrls({ output: [{ type: 'message', content: [{ annotations: [
   { type: 'url_citation', url: 'https://example.com/a?utm_source=chatgpt.com' },
   { type: 'url_citation', url_citation: { url: 'https://example.com/b' } },

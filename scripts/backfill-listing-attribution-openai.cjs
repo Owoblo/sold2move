@@ -50,8 +50,9 @@ async function main() {
   console.log(`[${region}] OpenAI candidates=${candidates.length}, dry_run=${dryRun}`);
   const summary = { candidates: candidates.length, verified: 0, high_confidence: 0, unresolved: 0, failed: 0 };
   let cursor = 0;
+  let quotaExhausted = false;
   async function worker() {
-    while (cursor < candidates.length) {
+    while (cursor < candidates.length && !quotaExhausted) {
       const listing = candidates[cursor++];
       const label = `${listing.zpid} ${listing.addressstreet}, ${listing.addresscity || listing.city}`;
       try {
@@ -72,12 +73,16 @@ async function main() {
       } catch (error) {
         summary.failed++;
         console.error(JSON.stringify({ listing: label, error: error.message }));
+        if (error.status === 429 && /quota|billing/i.test(error.message)) {
+          quotaExhausted = true;
+          console.error('OpenAI quota exhausted; stopping this batch without consuming more attempts.');
+        }
       }
     }
   }
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   console.log(JSON.stringify(summary));
-  if (summary.failed) process.exitCode = 1;
+  if (summary.failed && !dryRun) process.exitCode = 1;
 }
 main().catch(error => { console.error(error.message); process.exit(1); });
 module.exports = { attributionUpdate };
