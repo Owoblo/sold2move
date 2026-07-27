@@ -28,7 +28,6 @@ async function main() {
     .select('zpid,region,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_agent_names,listing_attribution_sources')
     .eq('listing_attribution_source', 'openai_web_search')
     .eq('listing_attribution_status', 'verified')
-    .order('listing_attribution_captured_at', { ascending: false })
     .limit(count * 4);
   if (error) throw new Error(`Audit query failed: ${error.message}`);
   // Spread the sample across the recent population instead of auditing one contiguous batch.
