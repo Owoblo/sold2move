@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { cleanUrl, deterministicValidation, extractCitedUrls } = require('./listing-attribution-openai.cjs');
+const { cleanUrl, deterministicValidation, extractCitedUrls, isPlausiblePersonName } = require('./listing-attribution-openai.cjs');
 
 assert.strictEqual(cleanUrl('[https://example.com/a?utm_source=chatgpt.com](https://example.com/a?utm_source=chatgpt.com)'), 'https://example.com/a');
 const verified = deterministicValidation({
@@ -24,6 +24,20 @@ const weak = deterministicValidation({
 });
 assert.strictEqual(weak.status, 'unresolved');
 assert.strictEqual(weak.accepted, false);
+assert.strictEqual(isPlausiblePersonName('Katherine Scott'), true);
+assert.strictEqual(isPlausiblePersonName("Michelle Donaldson-Rouleau"), true);
+assert.strictEqual(isPlausiblePersonName('RE/MAX Hallmark Realty Group'), false);
+assert.strictEqual(isPlausiblePersonName('Royal LePage Team Realty'), false);
+assert.strictEqual(isPlausiblePersonName('Not specified'), false);
+const organizationOnly = deterministicValidation({
+  normalized_address: '664 Cummings Avenue, Ottawa',
+  discovered_mls_number: 'X123',
+  listing_representatives: [{ name: 'RE/MAX Hallmark Realty Group', role: 'listing_agent', brokerage: null, phone: null }],
+  sources: [{ url: 'https://example.com/664-cummings-x123', publisher: 'Example', evidence: 'exact', address_match: true, mls_match: true }],
+  conflicts: [],
+});
+assert.strictEqual(organizationOnly.status, 'unresolved');
+assert.deepStrictEqual(organizationOnly.listing_representatives, []);
 const inferred = deterministicValidation({
   normalized_address: '425 Queen Street, Lucan Biddulph, Ontario',
   discovered_mls_number: 'X13593256',
