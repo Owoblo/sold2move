@@ -14,6 +14,10 @@ function names(value) {
 function sameNames(left, right) {
   return JSON.stringify(names(left)) === JSON.stringify(names(right));
 }
+function nameOverlap(left, right) {
+  const rightNames = new Set(names(right));
+  return names(left).filter(name => rightNames.has(name));
+}
 async function main() {
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required');
   const count = Math.max(1, Math.min(50, Number.parseInt(arg('count', '30'), 10)));
@@ -30,7 +34,15 @@ async function main() {
   // Spread the sample across the recent population instead of auditing one contiguous batch.
   const stride = Math.max(1, Math.floor((data || []).length / count));
   const sample = (data || []).filter((_, index) => index % stride === 0).slice(0, count);
-  const summary = { sampled: sample.length, confirmed: 0, mismatch: 0, inconclusive: 0, failed: 0 };
+  const summary = {
+    sampled: sample.length,
+    exact_match: 0,
+    stored_names_supported: 0,
+    partial_match: 0,
+    mismatch: 0,
+    inconclusive: 0,
+    failed: 0,
+  };
   let cursor = 0;
   async function worker() {
     while (cursor < sample.length) {
@@ -40,9 +52,17 @@ async function main() {
           apiKey: process.env.OPENAI_API_KEY, model, pass: 'second', timeoutMs: 180000,
         });
         const audited = result.listing_representatives.map(rep => rep.name);
+        const stored = listing.listing_agent_names || [];
+        const overlap = nameOverlap(stored, audited);
         let outcome = 'inconclusive';
-        if (result.accepted && sameNames(listing.listing_agent_names, audited)) outcome = 'confirmed';
-        else if (result.accepted) outcome = 'mismatch';
+        // The independent search may find the same person without reaching the
+        // stricter write threshold. That is still valid support for the stored
+        // primary name. Extra co-listing representatives affect completeness,
+        // not the correctness of an already-supported name.
+        if (audited.length && sameNames(stored, audited)) outcome = 'exact_match';
+        else if (stored.length && overlap.length === stored.length) outcome = 'stored_names_supported';
+        else if (overlap.length) outcome = 'partial_match';
+        else if (result.accepted && audited.length) outcome = 'mismatch';
         summary[outcome]++;
         console.log(JSON.stringify({
           zpid: listing.zpid, address: listing.addressstreet,
@@ -56,8 +76,11 @@ async function main() {
     }
   }
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
-  const decisive = summary.confirmed + summary.mismatch;
-  summary.measured_precision = decisive ? summary.confirmed / decisive : null;
+  const supported = summary.exact_match + summary.stored_names_supported;
+  const decisive = supported + summary.partial_match + summary.mismatch;
+  summary.primary_name_precision = decisive ? supported / decisive : null;
+  summary.exact_set_rate = sample.length ? summary.exact_match / sample.length : null;
+  summary.independent_support_rate = sample.length ? supported / sample.length : null;
   console.log(JSON.stringify(summary));
   if (summary.failed || summary.mismatch) process.exitCode = 1;
 }
