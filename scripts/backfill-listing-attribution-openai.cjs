@@ -19,7 +19,6 @@ async function loadCandidates(supabase, region, limit, retryHours, pass) {
   if (pass === 'second') {
     query = query
       .eq('listing_attribution_status', 'unresolved')
-      .not('listing_mls_id', 'is', null)
       .limit(limit);
   } else {
     query = query.limit(Math.min(1000, limit * 5));
@@ -29,7 +28,7 @@ async function loadCandidates(supabase, region, limit, retryHours, pass) {
   const retryMs = retryHours * 60 * 60 * 1000;
   return (data || []).filter(listing => {
     if (pass === 'second') {
-      return listing.listing_attribution_status === 'unresolved' && Boolean(listing.listing_mls_id);
+      return listing.listing_attribution_status === 'unresolved';
     }
     if (listing.listing_attribution_status !== 'unresolved') return true;
     const attempted = new Date(listing.listing_attribution_attempted_at).getTime();
