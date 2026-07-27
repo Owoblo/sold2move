@@ -134,20 +134,29 @@ function deterministicValidation(result, listing = {}) {
     accepted: status === 'verified' || status === 'high_confidence' };
 }
 
-function buildPrompt(listing) {
+function buildPrompt(listing, options = {}) {
   const address = [listing.addressstreet, listing.addresscity || listing.city,
     listing.addressstate || 'Ontario', listing.addresszipcode, 'Canada'].filter(Boolean).join(', ');
+  const priorSources = Array.isArray(listing.listing_attribution_sources)
+    ? listing.listing_attribution_sources.map(source => source.url).filter(Boolean).slice(0, 8)
+    : [];
+  const secondPass = options.pass === 'second';
   return `Find every listing REALTOR or listing agent for this active Canadian property.
 
 Address: ${address}
 Known Zillow property ID: ${listing.zpid || 'unknown'}
 Known MLS number: ${listing.listing_mls_id || 'unknown'}
+${priorSources.length ? `Previously discovered property sources:\n${priorSources.join('\n')}` : ''}
 
 Search the exact address, Zillow ID, and any discovered MLS number. Prioritize direct
 property pages from REALTOR.ca, Zillow, the listing brokerage, REW, Royal LePage, RE/MAX,
 and other Canadian listing sites. A contact or suggested buyer agent is not a listing agent.
 Only return a person explicitly tied to this exact property as the listing or co-listing agent.
-Return conflicts instead of guessing. Include only sources actually used.`;
+Return conflicts instead of guessing. Include only sources actually used.
+${secondPass ? `This is a second-pass investigation. Open the property-specific sources and search
+the exact MLS number with "listing agent", "salesperson", and "listed by". Look for embedded
+listing cards and brokerage mirrors. Do not return an agent unless a source explicitly connects
+that person's name to this exact MLS number or address.` : ''}`;
 }
 
 function extractCitedUrls(response) {
@@ -169,7 +178,7 @@ async function searchListingAttribution(listing, options = {}) {
   const response = await client.responses.create({
     model: options.model || process.env.OPENAI_ATTRIBUTION_MODEL || 'gpt-4o-mini',
     tools: [{ type: 'web_search' }],
-    input: buildPrompt(listing),
+    input: buildPrompt(listing, options),
     text: { format: { type: 'json_schema', name: 'listing_attribution', strict: true, schema: OUTPUT_SCHEMA } },
   }, { timeout: options.timeoutMs || 90000 });
   const result = deterministicValidation(JSON.parse(response.output_text), listing);
