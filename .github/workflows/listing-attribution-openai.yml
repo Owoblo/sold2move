@@ -1,0 +1,49 @@
+name: OpenAI Listing Attribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Region to enrich'
+        type: choice
+        options: [london, windsor, wkg, ottawa]
+        default: london
+      limit:
+        description: 'Maximum unresolved listings (start small)'
+        default: '10'
+      concurrency:
+        description: 'Parallel OpenAI searches (1-5)'
+        default: '2'
+      dry_run:
+        description: 'Search without updating Supabase'
+        type: boolean
+        default: true
+
+concurrency:
+  group: listing-attribution-openai-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Enrich active listing representatives
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          FLAGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then FLAGS="--dry-run"; fi
+          node scripts/backfill-listing-attribution-openai.cjs \
+            --region "${{ inputs.region }}" \
+            --limit "${{ inputs.limit }}" \
+            --concurrency "${{ inputs.concurrency }}" \
+            $FLAGS
