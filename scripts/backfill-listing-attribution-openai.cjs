@@ -9,9 +9,9 @@ function arg(name, fallback) {
   const index = process.argv.indexOf(`--${name}`);
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
-async function loadCandidates(supabase, region, limit, retryHours) {
+async function loadCandidates(supabase, region, limit, retryHours, pass) {
   const { data, error } = await supabase.from('listings')
-    .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts,listing_attribution_attempted_at,listing_attribution_status')
+    .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts,listing_attribution_attempted_at,listing_attribution_status,listing_attribution_sources')
     .eq('region', region)
     .in('status', ['active', 'just_listed'])
     .or('listing_representatives.is.null,listing_representatives.eq.[]')
@@ -20,6 +20,9 @@ async function loadCandidates(supabase, region, limit, retryHours) {
   if (error) throw new Error(`Candidate query failed: ${error.message}`);
   const retryMs = retryHours * 60 * 60 * 1000;
   return (data || []).filter(listing => {
+    if (pass === 'second') {
+      return listing.listing_attribution_status === 'unresolved' && Boolean(listing.listing_mls_id);
+    }
     if (listing.listing_attribution_status !== 'unresolved') return true;
     const attempted = new Date(listing.listing_attribution_attempted_at).getTime();
     return !Number.isFinite(attempted) || Date.now() - attempted >= retryMs;
@@ -49,11 +52,14 @@ async function main() {
   const limit = Math.max(1, Math.min(100, Number.parseInt(arg('limit', '10'), 10)));
   const concurrency = Math.max(1, Math.min(5, Number.parseInt(arg('concurrency', '2'), 10)));
   const retryHours = Math.max(1, Number.parseInt(arg('retry-hours', '72'), 10));
+  const pass = arg('pass', 'first');
+  if (!['first', 'second'].includes(pass)) throw new Error('--pass must be first or second');
+  const model = arg('model', pass === 'second' ? 'gpt-5-mini' : 'gpt-4o-mini');
   const dryRun = process.argv.includes('--dry-run');
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required');
   const supabase = getSupabase();
-  const candidates = await loadCandidates(supabase, region, limit, retryHours);
-  console.log(`[${region}] OpenAI candidates=${candidates.length}, dry_run=${dryRun}`);
+  const candidates = await loadCandidates(supabase, region, limit, retryHours, pass);
+  console.log(`[${region}] OpenAI candidates=${candidates.length}, pass=${pass}, model=${model}, dry_run=${dryRun}`);
   const summary = { candidates: candidates.length, verified: 0, high_confidence: 0, unresolved: 0, failed: 0 };
   let cursor = 0;
   let quotaExhausted = false;
@@ -62,7 +68,10 @@ async function main() {
       const listing = candidates[cursor++];
       const label = `${listing.zpid} ${listing.addressstreet}, ${listing.addresscity || listing.city}`;
       try {
-        const result = await searchListingAttribution(listing, { apiKey: process.env.OPENAI_API_KEY });
+        const result = await searchListingAttribution(listing, {
+          apiKey: process.env.OPENAI_API_KEY, model, pass,
+          timeoutMs: pass === 'second' ? 180000 : 90000,
+        });
         summary[result.status]++;
         console.log(JSON.stringify({
           listing: label, status: result.status, confidence: result.confidence,

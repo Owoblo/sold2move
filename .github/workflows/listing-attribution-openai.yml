@@ -14,6 +14,14 @@ on:
       concurrency:
         description: 'Parallel OpenAI searches (1-5)'
         default: '2'
+      pass:
+        description: 'First pass or stronger unresolved-only second pass'
+        type: choice
+        options: [first, second]
+        default: first
+      model:
+        description: 'OpenAI model override'
+        default: 'gpt-4o-mini'
       dry_run:
         description: 'Search without updating Supabase'
         type: boolean
@@ -47,4 +55,6 @@ jobs:
             --limit "${{ inputs.limit }}" \
             --concurrency "${{ inputs.concurrency }}" \
             --retry-hours 72 \
+            --pass "${{ inputs.pass }}" \
+            --model "${{ inputs.model }}" \
             $FLAGS
