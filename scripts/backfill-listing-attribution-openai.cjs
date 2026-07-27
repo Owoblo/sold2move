@@ -10,13 +10,21 @@ function arg(name, fallback) {
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
 async function loadCandidates(supabase, region, limit, retryHours, pass) {
-  const { data, error } = await supabase.from('listings')
+  let query = supabase.from('listings')
     .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts,listing_attribution_attempted_at,listing_attribution_status,listing_attribution_sources')
     .eq('region', region)
     .in('status', ['active', 'just_listed'])
     .or('listing_representatives.is.null,listing_representatives.eq.[]')
-    .order('first_seen_at', { ascending: false, nullsFirst: false })
-    .limit(Math.min(1000, limit * 5));
+    .order('first_seen_at', { ascending: false, nullsFirst: false });
+  if (pass === 'second') {
+    query = query
+      .eq('listing_attribution_status', 'unresolved')
+      .not('listing_mls_id', 'is', null)
+      .limit(limit);
+  } else {
+    query = query.limit(Math.min(1000, limit * 5));
+  }
+  const { data, error } = await query;
   if (error) throw new Error(`Candidate query failed: ${error.message}`);
   const retryMs = retryHours * 60 * 60 * 1000;
   return (data || []).filter(listing => {
