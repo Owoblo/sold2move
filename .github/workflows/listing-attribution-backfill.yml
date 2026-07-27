@@ -1,0 +1,45 @@
+name: One-Time Listing Attribution Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Region to backfill'
+        type: choice
+        options: [windsor, london, wkg, ottawa]
+        default: windsor
+      limit:
+        description: 'Maximum records this run'
+        default: '500'
+      chunk_size:
+        description: 'Listings per Apify actor run'
+        default: '50'
+
+# Same group as both postcard workflows: they can never scrape concurrently.
+concurrency:
+  group: postcard-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Backfill active listing representatives
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node scripts/backfill-listing-attribution.cjs \
+            --region "${{ inputs.region }}" \
+            --limit "${{ inputs.limit }}" \
+            --chunk-size "${{ inputs.chunk_size }}" \
+            --retry-hours 72 \
+            --max-attempts 3
