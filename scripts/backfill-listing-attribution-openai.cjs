@@ -9,16 +9,21 @@ function arg(name, fallback) {
   const index = process.argv.indexOf(`--${name}`);
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
-async function loadCandidates(supabase, region, limit) {
+async function loadCandidates(supabase, region, limit, retryHours) {
   const { data, error } = await supabase.from('listings')
-    .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts')
+    .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts,listing_attribution_attempted_at,listing_attribution_status')
     .eq('region', region)
     .in('status', ['active', 'just_listed'])
     .or('listing_representatives.is.null,listing_representatives.eq.[]')
     .order('first_seen_at', { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .limit(Math.min(1000, limit * 5));
   if (error) throw new Error(`Candidate query failed: ${error.message}`);
-  return data || [];
+  const retryMs = retryHours * 60 * 60 * 1000;
+  return (data || []).filter(listing => {
+    if (listing.listing_attribution_status !== 'unresolved') return true;
+    const attempted = new Date(listing.listing_attribution_attempted_at).getTime();
+    return !Number.isFinite(attempted) || Date.now() - attempted >= retryMs;
+  }).slice(0, limit);
 }
 function attributionUpdate(listing, result) {
   const now = new Date().toISOString();
@@ -43,10 +48,11 @@ async function main() {
   if (!ALLOWED_REGIONS.has(region)) throw new Error(`Unsupported region: ${region}`);
   const limit = Math.max(1, Math.min(100, Number.parseInt(arg('limit', '10'), 10)));
   const concurrency = Math.max(1, Math.min(5, Number.parseInt(arg('concurrency', '2'), 10)));
+  const retryHours = Math.max(1, Number.parseInt(arg('retry-hours', '72'), 10));
   const dryRun = process.argv.includes('--dry-run');
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required');
   const supabase = getSupabase();
-  const candidates = await loadCandidates(supabase, region, limit);
+  const candidates = await loadCandidates(supabase, region, limit, retryHours);
   console.log(`[${region}] OpenAI candidates=${candidates.length}, dry_run=${dryRun}`);
   const summary = { candidates: candidates.length, verified: 0, high_confidence: 0, unresolved: 0, failed: 0 };
   let cursor = 0;

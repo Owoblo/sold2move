@@ -46,4 +46,5 @@ jobs:
             --region "${{ inputs.region }}" \
             --limit "${{ inputs.limit }}" \
             --concurrency "${{ inputs.concurrency }}" \
+            --retry-hours 72 \
             $FLAGS
