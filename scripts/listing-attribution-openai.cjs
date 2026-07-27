@@ -63,6 +63,17 @@ function normalizeName(value) {
     .trim();
 }
 
+function isPlausiblePersonName(value) {
+  const name = normalizeName(value);
+  if (!name || /^(?:not specified|unknown|n\/a|none|null)$/i.test(name)) return false;
+  if (/\b(?:realty|real estate|brokerage|re\/?max|royal lepage|keller williams|century 21|sutton|property management)\b/i.test(name)) {
+    return false;
+  }
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 7) return false;
+  return words.every(word => /^[\p{L}][\p{L}'’.-]*$/u.test(word));
+}
+
 function normalizedEvidence(value) {
   return decodeURIComponent(String(value || ''))
     .toLowerCase()
@@ -113,7 +124,7 @@ function deterministicValidation(result, listing = {}) {
     .map(rep => ({ ...rep, name: normalizeName(rep.name) }))
     .filter(rep => {
       const key = rep.name.toLowerCase();
-      if (!rep.name || seen.has(key)) return false;
+      if (!isPlausiblePersonName(rep.name) || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
@@ -188,5 +199,5 @@ async function searchListingAttribution(listing, options = {}) {
 
 module.exports = {
   OUTPUT_SCHEMA, buildPrompt, cleanUrl, deterministicValidation, extractCitedUrls,
-  normalizedEvidence, searchListingAttribution, sourceEvidenceMatches,
+  isPlausiblePersonName, normalizedEvidence, searchListingAttribution, sourceEvidenceMatches,
 };
