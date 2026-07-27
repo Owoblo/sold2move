@@ -6,7 +6,7 @@ on:
       region:
         description: 'Region to backfill'
         type: choice
-        options: [windsor, london, wkg, ottawa]
+        options: [all, windsor, london, wkg, ottawa]
         default: windsor
       limit:
         description: 'Maximum records this run'
@@ -37,9 +37,20 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: |
-          node scripts/backfill-listing-attribution.cjs \
-            --region "${{ inputs.region }}" \
-            --limit "${{ inputs.limit }}" \
-            --chunk-size "${{ inputs.chunk_size }}" \
-            --retry-hours 72 \
-            --max-attempts 3
+          if [ "${{ inputs.region }}" = "all" ]; then
+            for REGION in windsor london wkg ottawa; do
+              node scripts/backfill-listing-attribution.cjs \
+                --region "$REGION" \
+                --limit "${{ inputs.limit }}" \
+                --chunk-size "${{ inputs.chunk_size }}" \
+                --retry-hours 72 \
+                --max-attempts 3
+            done
+          else
+            node scripts/backfill-listing-attribution.cjs \
+              --region "${{ inputs.region }}" \
+              --limit "${{ inputs.limit }}" \
+              --chunk-size "${{ inputs.chunk_size }}" \
+              --retry-hours 72 \
+              --max-attempts 3
+          fi

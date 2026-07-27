@@ -39,4 +39,28 @@ const deduped = extractListingAttribution({
 });
 assert.equal(deduped.listing_representatives.length, 1);
 
+const nestedAgents = extractListingAttribution({
+  attributionInfo: {
+    agentName: 'Primary Nested, Sales Person',
+    brokerName: 'Nested Realty',
+    listingAgents: [
+      { associatedAgentType: 'listAgent', memberFullName: 'Primary Nested, Sales Person' },
+      { associatedAgentType: 'coListAgent', memberFullName: 'Second Nested, Realtor®' },
+    ],
+  },
+  agent: {
+    name: 'Primary Nested, Sales Person',
+    coAgentName: 'Third Nested',
+    coAgentNumber: '519-555-0102',
+  },
+});
+assert.deepEqual(
+  nestedAgents.listing_agent_names,
+  ['Primary Nested', 'Second Nested', 'Third Nested']
+);
+assert.deepEqual(
+  nestedAgents.listing_representatives.map(rep => rep.role),
+  ['listing_agent', 'co_listing_agent', 'co_listing_agent']
+);
+
 console.log('listing attribution tests passed');

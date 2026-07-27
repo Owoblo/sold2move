@@ -191,10 +191,30 @@ function extractListingAttribution(result) {
     result.hdpData?.homeInfo?.attributionInfo ||
     null;
   if (attribution) add(attribution, 'listing_agent');
+  if (Array.isArray(attribution?.listingAgents)) {
+    attribution.listingAgents.forEach((agent, index) => {
+      const type = String(agent?.associatedAgentType || '').toLowerCase();
+      add(
+        {
+          ...agent,
+          name: agent?.memberFullName || agent?.name,
+          brokerage: agent?.officeName || attribution?.brokerName || null,
+        },
+        index === 0 && !type.includes('co') ? 'listing_agent' : 'co_listing_agent'
+      );
+    });
+  }
 
   const primary = result.listing_agent || result.listingAgent ||
-    result.primaryAgent || result.listedBy;
+    result.primaryAgent || result.listedBy || result.agent;
   add(primary, 'listing_agent');
+  if (result.agent?.coAgentName) {
+    add({
+      name: result.agent.coAgentName,
+      phone: result.agent.coAgentNumber,
+      brokerage: attribution?.brokerName || result.broker?.name || null,
+    }, 'co_listing_agent');
+  }
 
   const coAgents = [
     result.co_listing_agent,
