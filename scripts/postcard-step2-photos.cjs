@@ -143,6 +143,98 @@ function extractDetailFreshness(result) {
   };
 }
 
+function extractDescription(result) {
+  const value = result.description ||
+    result.homeDescription ||
+    result.hdpData?.homeInfo?.description ||
+    null;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function cleanRepresentativeName(value) {
+  if (typeof value !== 'string') return null;
+  const cleaned = value
+    .replace(/,\s*(?:broker(?:\s+of\s+record)?|sales\s*person|salesperson|realtor®?|representative)\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/,+$/, '')
+    .trim();
+  return cleaned || null;
+}
+
+function extractListingAttribution(result) {
+  const representatives = [];
+  const seen = new Set();
+  const add = (candidate, role = 'listing_agent') => {
+    if (!candidate) return;
+    if (typeof candidate === 'string') candidate = { name: candidate };
+    const name = cleanRepresentativeName(
+      candidate.name || candidate.agentName || candidate.display_name ||
+      candidate.displayName || candidate.fullName
+    );
+    if (!name) return;
+    const key = name.toLocaleLowerCase('en-CA');
+    if (seen.has(key)) return;
+    seen.add(key);
+    representatives.push({
+      name,
+      role,
+      phone: candidate.phone || candidate.agentPhoneNumber || candidate.phoneNumber || null,
+      email: candidate.email || candidate.agentEmail || null,
+      brokerage: candidate.brokerage || candidate.brokerName ||
+        candidate.office || candidate.business_name || null,
+    });
+  };
+
+  const attribution = result.attributionInfo ||
+    result.hdpData?.attributionInfo ||
+    result.hdpData?.homeInfo?.attributionInfo ||
+    null;
+  if (attribution) add(attribution, 'listing_agent');
+
+  const primary = result.listing_agent || result.listingAgent ||
+    result.primaryAgent || result.listedBy;
+  add(primary, 'listing_agent');
+
+  const coAgents = [
+    result.co_listing_agent,
+    result.coListingAgent,
+    ...(Array.isArray(result.co_listing_agents) ? result.co_listing_agents : []),
+    ...(Array.isArray(result.coListingAgents) ? result.coListingAgents : []),
+    ...(Array.isArray(result.listingAgents) ? result.listingAgents.slice(1) : []),
+  ];
+  coAgents.forEach(agent => add(agent, 'co_listing_agent'));
+
+  // Some Zillow payloads expose every recipient used by the seller-agent
+  // contact form. Only accept seller/listing-agent recipients, never generic
+  // buyer-agent lead routing.
+  const recipients = result.contact_recipients ||
+    result.contactRecipients ||
+    result.hdpData?.contact_recipients ||
+    [];
+  if (Array.isArray(recipients)) {
+    recipients
+      .filter(recipient => {
+        const form = String(recipient?.form_identifier || recipient?.formIdentifier || '').toLowerCase();
+        return !form || form.includes('seller') || form.includes('listing');
+      })
+      .forEach((recipient, index) => add(
+        recipient,
+        representatives.length || index ? 'co_listing_agent' : 'listing_agent'
+      ));
+  }
+
+  const mlsId = attribution?.mlsId || result.mlsId || result.mlsid ||
+    result.hdpData?.homeInfo?.mlsId || null;
+  return {
+    listing_representatives: representatives,
+    listing_agent_names: representatives.map(rep => rep.name),
+    listing_mls_id: mlsId ? String(mlsId) : null,
+    listing_attribution_source: representatives.length ? 'zillow_detail_apify' : null,
+    listing_attribution_captured_at: representatives.length ? new Date().toISOString() : null,
+  };
+}
+
 function needsDetailFreshness(listing) {
   if (listing.status === 'sold') return false;
   const isReappearedAfterSold = listing.postcard_skip_reason === 'reappeared_after_sold_archive';
@@ -241,6 +333,8 @@ async function fetchDetailsViaApify(listings, token) {
       byZpid.set(String(zpid), {
         photos: extractPhotosFromApify(result),
         freshness: extractDetailFreshness(result),
+        description: extractDescription(result),
+        attribution: extractListingAttribution(result),
       });
     }
   }
@@ -289,10 +383,19 @@ async function run(options) {
     return true;
   });
   const needFreshness = justListedListings.filter(needsDetailFreshness);
+  const needAttribution = justListedListings.filter(listing => {
+    let reps = listing.listing_representatives;
+    if (typeof reps === 'string') {
+      try { reps = JSON.parse(reps); } catch (_) { reps = []; }
+    }
+    return !Array.isArray(reps) || reps.length === 0;
+  });
   const cachedFreshness = justListedListings.filter(hasCachedDetailFreshness);
   const reappearedNeedFreshness = needFreshness.filter(l => l.postcard_skip_reason === 'reappeared_after_sold_archive');
   const normalNeedFreshness = needFreshness.length - reappearedNeedFreshness.length;
   const detailCandidatesByZpid = new Map();
+  // Attribution rides along with detail requests the pipeline already needs
+  // for photos/freshness. Do not create a second bulk crawl or extra actor run.
   for (const listing of needPhotos.concat(needFreshness)) {
     detailCandidatesByZpid.set(String(listing.zpid), listing);
   }
@@ -305,6 +408,10 @@ async function run(options) {
   console.log(`  just_listed — need photos: ${needPhotos.length}`);
   console.log(`  just_listed — detail freshness cache usable: ${cachedFreshness.length} (${DETAIL_FRESHNESS_MAX_AGE_HOURS}h normal cache, ${REAPPEARED_DETAIL_MAX_AGE_HOURS}h reappeared cache)`);
   console.log(`  just_listed — need detail freshness: ${needFreshness.length} (${normalNeedFreshness} normal, ${reappearedNeedFreshness.length} reappeared relist)`);
+  const attributionCandidates = detailCandidates.filter(listing =>
+    needAttribution.some(candidate => String(candidate.zpid) === String(listing.zpid))
+  );
+  console.log(`  just_listed — attribution captured on existing detail work: ${attributionCandidates.length}`);
 
   if (opts.dryRun) {
     console.log(`\n  [DRY RUN] Would fetch detail pages for ${detailCandidates.length} listings.`);
@@ -383,6 +490,8 @@ async function run(options) {
     const result = allApifyResults.get(String(listing.zpid));
     const photos = result?.photos || [];
     const freshness = result?.freshness || null;
+    const description = result?.description || null;
+    const attribution = result?.attribution || null;
     const update = {};
 
     if (freshness) {
@@ -394,6 +503,23 @@ async function run(options) {
     if (photos.length > 0) {
       listing.carouselphotos = photos;
       update.carouselphotos = photos;
+    }
+    if (description) {
+      listing.description = description;
+      update.description = description;
+    }
+    // First capture wins. Never erase historical attribution when a listing
+    // later becomes sold/off-market or a detail response omits agent data.
+    let existingRepresentatives = listing.listing_representatives;
+    if (typeof existingRepresentatives === 'string') {
+      try { existingRepresentatives = JSON.parse(existingRepresentatives); } catch (_) { existingRepresentatives = []; }
+    }
+    if (
+      attribution?.listing_representatives?.length > 0 &&
+      !(Array.isArray(existingRepresentatives) && existingRepresentatives.length > 0)
+    ) {
+      Object.assign(listing, attribution);
+      Object.assign(update, attribution);
     }
 
     if (Object.keys(update).length > 0) {
@@ -457,4 +583,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, extractDetailFreshness, needsDetailFreshness };
+module.exports = {
+  run,
+  extractDetailFreshness,
+  extractDescription,
+  extractListingAttribution,
+  cleanRepresentativeName,
+  fetchDetailsViaApify,
+  needsDetailFreshness,
+};
