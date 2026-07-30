@@ -6,12 +6,16 @@ const { buildMarketWorkbook } = require('./market-xlsx-report.cjs');
   const buffer = await buildMarketWorkbook('rental', [{
     source: 'zillow', source_listing_id: 'abc', city: 'Windsor',
     street_address: '1 Test St', province: 'ON', monthly_price: 2100,
+    occupancy_state: 'furnished', classification_confidence: 0.91,
+    classification_evidence: ['sofa and bed visible', 'advertised furnished'],
     listing_categories: ['rental', 'furnished'], source_url: 'https://example.com',
   }], [{ source: 'zillow', source_listing_id: 'abc', event_type: 'just_listed' }]);
   const workbook = await JSZip.loadAsync(buffer);
   const sheet = await workbook.file('xl/worksheets/sheet1.xml').async('string');
   assert.match(sheet, /just_listed/);
   assert.match(sheet, /Rental Inventory|1 Test St/);
+  assert.match(sheet, /furnished/);
+  assert.match(sheet, /AI Evidence/);
   assert.ok(workbook.file('[Content_Types].xml'));
 
   const commercial = await buildMarketWorkbook('commercial', [
