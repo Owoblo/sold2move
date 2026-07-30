@@ -93,7 +93,17 @@ const REGION_CONFIG = {
       // North Lambton (Lake Huron shore)
       'Arkona', 'Forest', 'Thedford',
       'Grand Bend', 'Lambton Shores', 'Port Franks', 'Ipperwash',
+      // Additional verified Lambton/Huron communities observed in inventory
+      'Bluewater', 'Dashwood', 'Enniskillen', 'Kettle Point',
     ],
+    cityAliases: {
+      'Brooke Alvinston': 'Brooke-Alvinston',
+      'Dawn Euphemia': 'Dawn-Euphemia',
+      'Kettle Pt 44': 'Kettle Point',
+      'Plympton Wyoming': 'Plympton-Wyoming',
+      'Pt Edward': 'Point Edward',
+      'Saint Clair': 'St. Clair',
+    },
     bounds: { west: -82.60, east: -81.55, south: 42.60, north: 43.40 },
     gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -129,14 +139,26 @@ const REGION_CONFIG = {
       'St. Thomas', 'Central Elgin', 'Southwold', 'Talbotville',
       'Shedden', 'Fingal', 'Port Stanley', 'Dutton', 'Dutton-Dunwich',
       'West Lorne', 'Rodney',
+      'Wallacetown', 'West Elgin',
       // Elgin County east
       'Aylmer', 'Springfield', 'Malahide', 'Bayham', 'Vienna', 'Port Burwell',
       // Perth County
       'St. Marys',
+      'Arva', 'Delaware', 'Perth South', 'South Huron',
       // NOTE: Ingersoll + Thamesford belong to the Woodstock zone; Aylmer
       // belongs here. Every city must have exactly ONE owner region —
       // duplicates cause listings to flip regions between runs.
     ],
+    cityAliases: {
+      'Adelaide Metcalfe': 'Adelaide-Metcalfe',
+      'Central Elgin Munic': 'Central Elgin',
+      'Dutton/dunwich': 'Dutton-Dunwich',
+      'Lucan Biddulph': 'Lucan Biddulph',
+      'Pt Stanley': 'Port Stanley',
+      'Saint Marys': 'St. Marys',
+      'Saint Thomas': 'St. Thomas',
+      'Strathroy Caradoc': 'Strathroy-Caradoc',
+    },
     bounds: { west: -81.90, east: -80.75, south: 42.45, north: 43.30 },
     gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -167,8 +189,15 @@ const REGION_CONFIG = {
       'Drumbo', 'Princeton', 'Plattsville', 'Bright',
       // Norfolk County (within bounds)
       'Delhi',
+      'Burford', 'Cathcart', 'Milldale', 'Norfolk County',
+      'South-West Oxford', 'Shakespeare',
       // NOTE: Aylmer is owned by the London zone (Elgin County).
     ],
+    cityAliases: {
+      'Blandford Blenheim': 'Blandford-Blenheim',
+      'East Zorra Tavistock': 'East Zorra-Tavistock',
+      'South West Oxford': 'South-West Oxford',
+    },
     bounds: { west: -81.05, east: -80.45, south: 42.75, north: 43.40 },
     gridSplit: { rows: 2, cols: 2 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -198,11 +227,19 @@ const REGION_CONFIG = {
       'Fergus', 'Elora', 'Centre Wellington',
       'Drayton', 'Mapleton', 'Arthur',
       'Palmerston',
+      'Arkell', 'Belwood', 'Conestogo Lake', 'Erin',
+      'Minto', 'Milverton', 'Moorefield', 'Morriston',
+      'North Perth', 'Perth East', 'Wellington North',
       // Perth County (within bounds)
       'Stratford', 'Listowel',
       // Brant County
       'Paris',
+      'Brantford', 'Brant', 'East Garafraxa',
     ],
+    cityAliases: {
+      'East Zorra Tavistock': 'East Zorra-Tavistock',
+      'Guelph/eramosa': 'Guelph-Eramosa',
+    },
     bounds: { west: -81.05, east: -80.10, south: 43.15, north: 43.85 },
     gridSplit: { rows: 3, cols: 3 },  // keep each cell under ~400 active listings
     returnAddressLines: [
@@ -222,7 +259,17 @@ const REGION_CONFIG = {
     cities: [
       'Ottawa', 'Kanata', 'Nepean', 'Orleans', 'Gloucester',
       'Stittsville', 'Barrhaven', 'Manotick', 'Rockland', 'Carp',
+      'Arnprior', 'Beckwith', 'Carleton Place', 'Lanark Highlands',
+      'Mississippi Mills', 'North Dundas', 'North Grenville', 'Russell',
+      'Richmond', 'McNab/Braeside',
     ],
+    cityAliases: {
+      'McNab/braeside': 'McNab/Braeside',
+      'Greely Metcalfe Osgoode Vernon And Area': 'Ottawa',
+      'Lower Town Sandy Hill': 'Ottawa',
+      'Pineview': 'Ottawa',
+      'Stittsville Munster Richmond': 'Ottawa',
+    },
     bounds: { west: -76.40, east: -75.35, south: 45.10, north: 45.60 },
     gridSplit: { rows: 4, cols: 4 },  // keep each cell under ~400 active listings
     returnAddressLines: [

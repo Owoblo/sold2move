@@ -549,8 +549,7 @@ export async function fetchAvailableCities(countryCode = null) {
     while (hasMore && batchCount < MAX_BATCHES) {
       let query = supabase
         .from('listings')
-        .select('lastcity, addressstate')
-        .not('lastcity', 'is', null)
+        .select('lastcity, city, addresscity, addressstate')
         .not('addressstate', 'is', null)
         .range(batchCount * BATCH_SIZE, (batchCount + 1) * BATCH_SIZE - 1);
 
@@ -580,14 +579,15 @@ export async function fetchAvailableCities(countryCode = null) {
     // Deduplicate and count occurrences in JavaScript
     const cityMap = new Map();
     allData.forEach(row => {
-      if (row.lastcity && row.addressstate) {
-        const key = `${row.lastcity}-${row.addressstate}`;
+      const listingCity = row.lastcity || row.city || row.addresscity;
+      if (listingCity && row.addressstate) {
+        const key = `${listingCity.toLowerCase()}-${row.addressstate}`;
         const existing = cityMap.get(key);
         if (existing) {
           existing.count += 1;
         } else {
           cityMap.set(key, {
-            city: row.lastcity,
+            city: listingCity,
             state: row.addressstate,
             count: 1
           });
