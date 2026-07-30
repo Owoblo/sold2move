@@ -49,5 +49,6 @@ jobs:
         with:
           name: commercial-market-${{ github.run_id }}
           path: scripts/.pipeline-commercial/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30

@@ -51,5 +51,6 @@ jobs:
         with:
           name: rental-market-${{ github.run_id }}
           path: scripts/.pipeline-rentals/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
