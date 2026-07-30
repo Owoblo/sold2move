@@ -52,6 +52,7 @@ async function main() {
     'Photo coverage': `${Math.round(100 * inventory.filter(row => row.photo_urls?.length).length / Math.max(1, inventory.length))}%`,
     'AI classified this run': ai.classified || 0,
     'AI classification failures': ai.failed || 0,
+    'AI quota available': ai.quota_blocked ? 'NO — classifications left unknown' : 'yes',
   };
   await send({
     from: process.env.MARKET_EMAIL_FROM || 'Sold2Move Market Radar <postcards@sold2move.com>',
