@@ -2,6 +2,9 @@ const JSZip = require('jszip');
 
 const RENTAL_COLUMNS = [
   ['Lifecycle', row => row.lifecycle_status || 'active'],
+  ['Occupancy / Furnishing', row => row.occupancy_state || 'unknown'],
+  ['AI Confidence', row => row.classification_confidence],
+  ['AI Evidence', row => row.classification_evidence],
   ['Contact', row => row.contact_name],
   ['Phone', row => row.contact_phone],
   ['Company', row => row.contact_company],
@@ -21,6 +24,9 @@ const RENTAL_COLUMNS = [
 
 const COMMERCIAL_COLUMNS = [
   ['Lifecycle', row => row.lifecycle_status || 'active'],
+  ['Occupancy / Fit-out', row => row.occupancy_state || 'unknown'],
+  ['AI Confidence', row => row.classification_confidence],
+  ['AI Evidence', row => row.classification_evidence],
   ['Agent', row => row.agent_name],
   ['Phone', row => row.agent_phone],
   ['Brokerage', row => row.brokerage_name],
@@ -139,4 +145,9 @@ async function buildMarketWorkbook(lane, records, lifecycleEvents = []) {
   return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 }
 
-module.exports = { buildMarketWorkbook };
+function recordsForEvents(events) {
+  return events.map(event => ({ ...(event.record || {}), source: event.source,
+    source_listing_id: event.source_listing_id, city: event.city }));
+}
+
+module.exports = { buildMarketWorkbook, recordsForEvents };

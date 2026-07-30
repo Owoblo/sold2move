@@ -285,7 +285,12 @@ async function applyLifecycle(previous) {
 
 (async () => {
   const previous = await query(`
-    SELECT r.source, r.source_listing_id, p.city, r.active, r.missing_run_count
+    SELECT r.source, r.source_listing_id, r.source_url, r.monthly_price,
+      r.bedrooms, r.bathrooms, r.photo_urls, r.contact_name, r.contact_phone,
+      r.contact_company, r.occupancy_state, r.classification_confidence,
+      r.classification_evidence, r.classification_method, r.classified_at,
+      p.street_address, p.city, p.province, p.postal_code,
+      p.listing_categories, p.property_signals, r.active, r.missing_run_count
     FROM rental_source_records r
     LEFT JOIN rental_properties p ON p.id = r.rental_property_id;
   `);

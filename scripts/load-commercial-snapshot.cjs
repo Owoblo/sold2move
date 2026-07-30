@@ -173,7 +173,13 @@ async function applyLifecycle(previous) {
 
 (async () => {
   const previous = await query(`
-    SELECT r.source, r.source_listing_id, p.city, r.transaction_types,
+    SELECT r.source, r.source_listing_id, r.source_url, r.title,
+      r.transaction_types, r.asset_type, r.asking_price, r.lease_rate,
+      r.lease_rate_unit, r.space_size_sqft_min, r.space_size_sqft_max,
+      r.agent_name, r.agent_phone, r.brokerage_name, r.photo_urls,
+      r.occupancy_state, r.classification_confidence,
+      r.classification_evidence, r.classification_method, r.classified_at,
+      p.street_address, p.city, p.province, p.postal_code,
       r.active, r.missing_run_count
     FROM commercial_source_records r
     LEFT JOIN commercial_properties p ON p.id = r.commercial_property_id;
