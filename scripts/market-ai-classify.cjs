@@ -98,7 +98,7 @@ async function classify(openai, row) {
         Object.assign(row, result);
         await query(`UPDATE ${table} SET occupancy_state=${sqlText(result.occupancy_state)},
           classification_confidence=${result.classification_confidence},
-          classification_evidence=ARRAY[${result.classification_evidence.map(sqlText).join(',')}],
+          classification_evidence=ARRAY[${result.classification_evidence.map(sqlText).join(',')}]::text[],
           classification_method=${sqlText(result.classification_method)}, classified_at=now()
           WHERE source=${sqlText(row.source)} AND source_listing_id=${sqlText(row.source_listing_id)};`);
         classified++;
