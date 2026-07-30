@@ -367,6 +367,7 @@ function normalizeResult(r, regionConfig, nowIso) {
   return {
     zpid: String(zpid),
     region: regionConfig.key,
+    lastcity: matchedCity,
     price,
     unformattedprice,
     address: `${addr.addressstreet}, ${matchedCity}, ${state} ${addr.addresszipcode}`.trim(),
@@ -392,7 +393,7 @@ function normalizeResult(r, regionConfig, nowIso) {
   };
 }
 
-const LIVE_COLUMNS = 'zpid, region, status, address, city, addressstreet, addresscity, addressstate, addresszipcode, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, photo_fetch_attempts, photos_last_attempted_at, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+const LIVE_COLUMNS = 'zpid, region, status, address, city, lastcity, addressstreet, addresscity, addressstate, addresszipcode, description, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, market_segment, listing_categories, occupancy_state, outreach_target, property_signals, classification_confidence, classification_reasons, property_classified_at, property_classification_method, photo_fetch_attempts, photos_last_attempted_at, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, listing_representatives, listing_agent_names, listing_mls_id, listing_attribution_source, listing_attribution_captured_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
 
 function normalizeAddressKey(listing) {
   const street = (listing.addressstreet || '').toString();
@@ -403,6 +404,21 @@ function normalizeAddressKey(listing) {
   if (!streetKey) return '';
   const postalKey = clean(postal);
   return postalKey ? `${streetKey}|${postalKey}` : `${streetKey}|${clean(city)}`;
+}
+
+function carryClassification(existing) {
+  if (!existing) return {};
+  return {
+    market_segment: existing.market_segment,
+    listing_categories: existing.listing_categories,
+    occupancy_state: existing.occupancy_state,
+    outreach_target: existing.outreach_target,
+    property_signals: existing.property_signals,
+    classification_confidence: existing.classification_confidence,
+    classification_reasons: existing.classification_reasons,
+    property_classified_at: existing.property_classified_at,
+    property_classification_method: existing.property_classification_method,
+  };
 }
 
 /**
@@ -539,6 +555,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
       glitchCount++;
       nextRows.push({
         ...scraped,
+        ...carryClassification(existing),
         region: existing.region || regionConfig.key,
         // If Zillow shows an archived-sold property as active again, route it
         // through the just-listed detail-freshness guard. Step 5 requires a
@@ -580,6 +597,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
       activeCount++;
       nextRows.push({
         ...scraped,
+        ...carryClassification(existing),
         // First-owner-wins: overlapping region bounds mean two regions can
         // scrape the same listing. Keep the region that first captured it so
         // the row doesn't flap between regions on alternating runs.
@@ -638,6 +656,7 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
         activeCount++;
         nextRows.push({
           ...scraped,
+          ...carryClassification(addressMatch),
           // New zpid at a known physical address is a relist or scraper identity
           // change, not a genuinely new market opportunity.
           region: addressMatch.region || regionConfig.key,
@@ -941,4 +960,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, resolveRegionCity, buildZillowSearchUrl };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };

@@ -1,0 +1,53 @@
+name: Commercial Market Pipeline
+
+on:
+  schedule:
+    - cron: '30 18 */2 * *'
+  workflow_dispatch:
+
+concurrency:
+  group: commercial-market-pipeline
+  cancel-in-progress: false
+
+jobs:
+  scrape-diff-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Validate lifecycle logic
+        run: node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs
+      - name: Apply commercial lifecycle schema
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260723_commercial_market_hub.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
+      - name: Scrape and categorize commercial inventory
+        run: node scripts/commercial-pipeline.cjs
+      - name: Persist and diff commercial inventory
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/load-commercial-snapshot.cjs
+      - name: Email commercial report
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MARKET_REPORT_EMAIL: business@starmovers.ca
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
+          node scripts/market-email-results.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
+      - name: Upload commercial audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-market-${{ github.run_id }}
+          path: scripts/.pipeline-commercial/
+          if-no-files-found: warn
+          retention-days: 30
