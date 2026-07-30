@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const https = require('node:https');
 const path = require('node:path');
+const { buildMarketWorkbook } = require('./market-xlsx-report.cjs');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 function send(body) {
@@ -37,7 +38,8 @@ async function main() {
   const lifecycle = fs.existsSync(lifecyclePath)
     ? JSON.parse(fs.readFileSync(lifecyclePath, 'utf8')) : { summary: { baseline_inventory: summary.totals?.canonical_properties || 0 } };
   const inventoryFile = lane === 'rental' ? 'normalized-source-records.json' : 'source-records.json';
-  const inventory = fs.readFileSync(path.join(runDir, inventoryFile));
+  const inventory = JSON.parse(fs.readFileSync(path.join(runDir, inventoryFile), 'utf8'));
+  const workbook = await buildMarketWorkbook(lane, inventory, lifecycle.events || []);
   const rows = Object.entries(lifecycle.summary || {}).map(([label, value]) =>
     `<tr><td style="padding:8px;border:1px solid #ddd">${label.replaceAll('_', ' ')}</td><td style="padding:8px;border:1px solid #ddd">${value}</td></tr>`
   ).join('');
@@ -48,8 +50,8 @@ async function main() {
     subject: `${lane === 'rental' ? 'Rental' : 'Commercial'} market scrape — ${new Date().toISOString().slice(0, 10)}`,
     html: `<div style="font-family:Arial,sans-serif;max-width:700px"><h2>${lane} market radar</h2><p>The scrape, categorization and lifecycle comparison completed. Disappearances are inferred and require two successful misses.</p><table style="border-collapse:collapse">${rows}</table></div>`,
     attachments: [{
-      filename: `${lane}-inventory-${new Date().toISOString().slice(0, 10)}.json`,
-      content: inventory.toString('base64'),
+      filename: `${lane}-market-report-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      content: workbook.toString('base64'),
     }],
   });
   console.log(`Sent ${lane} market report`);
