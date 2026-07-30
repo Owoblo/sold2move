@@ -80,21 +80,22 @@ async function loadRecordsAndSpaces() {
         commercial_property_id, source, source_family, source_listing_id,
         source_url, transaction_types, asset_types, title, asking_price,
         lease_rate, lease_rate_unit, space_size_sqft_min, space_size_sqft_max,
-        brokerage_name, agent_name, agent_phone, photo_urls,
+        brokerage_name, agent_name, agent_phone, photo_urls, acquisition_scope,
         first_seen_at, last_seen_at, active
       )
       SELECT p.id, x.source, x.source_family, x.source_listing_id, x.source_url,
         ARRAY[x.transaction_type], ARRAY[x.asset_type], x.title, x.asking_price,
         x.lease_rate, x.lease_rate_unit, x.space_size_sqft_min,
         x.space_size_sqft_max, x.brokerage_name, x.agent_name, x.agent_phone,
-        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)), now(), now(), true
+        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)), x.acquisition_scope,
+        now(), now(), true
       FROM jsonb_to_recordset(${literal(batch)}) AS x(
         source text, source_family text, source_listing_id text, source_url text,
         transaction_type text, asset_type text, title text, address_key text,
         city text, province text, asking_price numeric, lease_rate numeric,
         lease_rate_unit text, space_size_sqft_min numeric,
         space_size_sqft_max numeric, brokerage_name text, agent_name text,
-        agent_phone text, photo_urls jsonb
+        agent_phone text, photo_urls jsonb, acquisition_scope text
       )
       JOIN commercial_properties p ON p.address_key = x.address_key
         AND p.city = x.city AND p.province = x.province AND p.country_code = 'CA'
@@ -105,6 +106,7 @@ async function loadRecordsAndSpaces() {
         asking_price = EXCLUDED.asking_price, lease_rate = EXCLUDED.lease_rate,
         brokerage_name = EXCLUDED.brokerage_name, photo_urls = EXCLUDED.photo_urls,
         agent_name = EXCLUDED.agent_name, agent_phone = EXCLUDED.agent_phone,
+        acquisition_scope = EXCLUDED.acquisition_scope,
         last_seen_at = now(), active = true, missing_run_count = 0,
         lifecycle_status = 'active';
 
@@ -140,10 +142,17 @@ async function loadRecordsAndSpaces() {
 }
 
 async function applyLifecycle(previous) {
-  const successfulScopes = [
-    ...summary.cities.filter(item => item.status === 'ok' && item.spacelist_pages > 0)
-      .map(item => ({ source: 'spacelist', city: item.city })),
-  ];
+  const successfulScopes = [];
+  for (const region of summary.regions || []) {
+    const cityChecks = summary.cities.filter(item => item.region === region.region);
+    if (cityChecks.length && cityChecks.every(item => item.status === 'ok')) {
+      successfulScopes.push({ source: 'spacelist', city: region.region });
+    }
+    const realtorChecks = (summary.realtor_runs || []).filter(item => item.region === region.region);
+    if (realtorChecks.length === 2 && realtorChecks.every(item => item.status === 'ok')) {
+      successfulScopes.push({ source: 'realtor_ca_commercial', city: region.region });
+    }
+  }
   const lifecycle = diffInventory({
     lane: 'commercial', current: records, previous, successfulScopes,
   });
@@ -179,6 +188,7 @@ async function applyLifecycle(previous) {
       r.agent_name, r.agent_phone, r.brokerage_name, r.photo_urls,
       r.occupancy_state, r.classification_confidence,
       r.classification_evidence, r.classification_method, r.classified_at,
+      r.acquisition_scope,
       p.street_address, p.city, p.province, p.postal_code,
       r.active, r.missing_run_count
     FROM commercial_source_records r

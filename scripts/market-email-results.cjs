@@ -41,12 +41,16 @@ async function main() {
   const ai = fs.existsSync(aiPath) ? JSON.parse(fs.readFileSync(aiPath, 'utf8')) : { counts: {} };
   const date = new Date().toISOString().slice(0, 10);
   const label = lane === 'rental' ? 'Rental' : 'Commercial';
-  const fullWorkbook = await buildMarketWorkbook(lane, inventory, lifecycle.events || []);
+  const fullWorkbook = await buildMarketWorkbook(lane, inventory, lifecycle.events || [], summary.cities || []);
   const contacts = lane === 'rental'
     ? { 'Contact names': inventory.filter(row => row.contact_name).length, 'Phone numbers': inventory.filter(row => row.contact_phone).length, Companies: inventory.filter(row => row.contact_company).length }
     : { 'Agent names': inventory.filter(row => row.agent_name).length, 'Phone numbers': inventory.filter(row => row.agent_phone).length, Brokerages: inventory.filter(row => row.brokerage_name).length };
   const cities = inventory.reduce((counts, row) => { counts[row.city || 'Unknown'] = (counts[row.city || 'Unknown'] || 0) + 1; return counts; }, {});
   const cityTop = Object.fromEntries(Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 12));
+  const regionCoverage = Object.fromEntries((summary.regions || []).map(region => [
+    region.label || region.region,
+    `${region.source_records ?? (region.spacelist_records || 0) + (region.realtor_records || 0)} records / ${region.requested_cities} requested places`,
+  ]));
   const health = {
     'Source records': inventory.length,
     'Photo coverage': `${Math.round(100 * inventory.filter(row => row.photo_urls?.length).length / Math.max(1, inventory.length))}%`,
@@ -58,7 +62,7 @@ async function main() {
     from: process.env.MARKET_EMAIL_FROM || 'Sold2Move Market Radar <postcards@sold2move.com>',
     to: [process.env.MARKET_REPORT_EMAIL || 'business@starmovers.ca'], reply_to: 'business@starmovers.ca',
     subject: `${label} Full Scrape — Just Listed + Lifecycle — ${date}`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:760px;color:#17324d"><h2>${label} Market Radar — Full Scrape</h2><p>This is the complete inventory delivery. A disappearance becomes reportable only after two successful misses; it does not prove a lease or sale.</p><h3>Lifecycle</h3><table style="border-collapse:collapse">${tableRows(lifecycle.summary || {})}</table><h3>AI occupancy / furnishing</h3><table style="border-collapse:collapse">${tableRows(ai.counts || {})}</table><h3>Contact coverage</h3><table style="border-collapse:collapse">${tableRows(contacts)}</table><h3>Health checks</h3><table style="border-collapse:collapse">${tableRows(health)}</table><h3>Largest city inventories</h3><table style="border-collapse:collapse">${tableRows(cityTop)}</table><p style="color:#52697d">The attached XLSX includes lifecycle, occupancy/furnishing state, AI confidence, evidence, contacts, source URLs and listing details.</p></div>`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:760px;color:#17324d"><h2>${label} Market Radar — Full Scrape</h2><p>This is the complete inventory delivery. A disappearance becomes reportable only after two successful misses; it does not prove a lease or sale.</p><h3>Lifecycle</h3><table style="border-collapse:collapse">${tableRows(lifecycle.summary || {})}</table><h3>Six-region acquisition coverage</h3><table style="border-collapse:collapse">${tableRows(regionCoverage)}</table><p>Every requested city and community—including zero-result and failed searches—is listed in the workbook’s <b>Market Coverage</b> sheet. Absence is never silently hidden.</p><h3>AI occupancy / furnishing</h3><table style="border-collapse:collapse">${tableRows(ai.counts || {})}</table><h3>Contact coverage</h3><table style="border-collapse:collapse">${tableRows(contacts)}</table><h3>Health checks</h3><table style="border-collapse:collapse">${tableRows(health)}</table><h3>Largest returned city inventories</h3><table style="border-collapse:collapse">${tableRows(cityTop)}</table><p style="color:#52697d">The attached XLSX includes lifecycle, occupancy/furnishing state, AI confidence, evidence, contacts, source URLs, listing details and the complete requested-city coverage ledger.</p></div>`,
     attachments: [{ filename: `${lane}-full-market-report-${date}.xlsx`, content: fullWorkbook.toString('base64') }],
   });
 

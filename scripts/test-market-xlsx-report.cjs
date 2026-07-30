@@ -9,7 +9,8 @@ const { buildMarketWorkbook } = require('./market-xlsx-report.cjs');
     occupancy_state: 'furnished', classification_confidence: 0.91,
     classification_evidence: ['sofa and bed visible', 'advertised furnished'],
     listing_categories: ['rental', 'furnished'], source_url: 'https://example.com',
-  }], [{ source: 'zillow', source_listing_id: 'abc', event_type: 'just_listed' }]);
+  }], [{ source: 'zillow', source_listing_id: 'abc', event_type: 'just_listed' }],
+  [{ region_label: 'Kitchener / Waterloo / Cambridge / Guelph', city: 'Kitchener', status: 'covered', source_records: 12 }]);
   const workbook = await JSZip.loadAsync(buffer);
   const sheet = await workbook.file('xl/worksheets/sheet1.xml').async('string');
   assert.match(sheet, /just_listed/);
@@ -17,6 +18,9 @@ const { buildMarketWorkbook } = require('./market-xlsx-report.cjs');
   assert.match(sheet, /furnished/);
   assert.match(sheet, /AI Evidence/);
   assert.ok(workbook.file('[Content_Types].xml'));
+  const coverage = await workbook.file('xl/worksheets/sheet2.xml').async('string');
+  assert.match(coverage, /Kitchener/);
+  assert.match(coverage, /covered/);
 
   const commercial = await buildMarketWorkbook('commercial', [
     { source: 'spacelist', source_listing_id: 'no-contact', city: 'Windsor' },

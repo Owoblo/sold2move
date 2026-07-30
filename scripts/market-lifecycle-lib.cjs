@@ -38,7 +38,7 @@ function diffInventory({ lane, current, previous, successfulScopes, missingThres
 
   for (const [key, row] of before) {
     if (now.has(key) || !row.active) continue;
-    if (!scopes.has(scopeKey(row.source, row.city))) continue;
+    if (!scopes.has(scopeKey(row.source, row.acquisition_scope || row.city))) continue;
     const missingRunCount = Number(row.missing_run_count || 0) + 1;
     const terminal = missingRunCount >= missingThreshold;
     missingUpdates.push({ ...row, missing_run_count: missingRunCount, terminal });
