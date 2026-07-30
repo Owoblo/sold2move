@@ -22,4 +22,11 @@ const failedScope = diffInventory({
   lane: 'rental', current: [], previous: [oldRent], successfulScopes: [],
 });
 assert.equal(failedScope.events.length, 0);
+
+const scopedOld = { ...oldRent, acquisition_scope: 'wkg' };
+const scoped = diffInventory({
+  lane: 'rental', current: [], previous: [scopedOld],
+  successfulScopes: [{ source: 'zillow', city: 'wkg' }],
+});
+assert.equal(scoped.events[0].event_type, 'leased_or_withdrawn');
 console.log('Market lifecycle tests passed.');
