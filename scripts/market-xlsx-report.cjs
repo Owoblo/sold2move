@@ -2,6 +2,9 @@ const JSZip = require('jszip');
 
 const RENTAL_COLUMNS = [
   ['Lifecycle', row => row.lifecycle_status || 'active'],
+  ['Contact', row => row.contact_name],
+  ['Phone', row => row.contact_phone],
+  ['Company', row => row.contact_company],
   ['Source', row => row.source],
   ['Source Listing ID', row => row.source_listing_id],
   ['Address', row => [row.street_address, row.city, row.province, row.postal_code].filter(Boolean).join(', ')],
@@ -11,9 +14,6 @@ const RENTAL_COLUMNS = [
   ['Bathrooms', row => row.bathrooms],
   ['Categories', row => row.listing_categories],
   ['Property Signals', row => row.property_signals],
-  ['Contact', row => row.contact_name],
-  ['Company', row => row.contact_company],
-  ['Phone', row => row.contact_phone],
   ['Units Available', row => row.units_available],
   ['Listing URL', row => row.source_url],
   ['Description', row => row.description],
@@ -21,6 +21,9 @@ const RENTAL_COLUMNS = [
 
 const COMMERCIAL_COLUMNS = [
   ['Lifecycle', row => row.lifecycle_status || 'active'],
+  ['Agent', row => row.agent_name],
+  ['Phone', row => row.agent_phone],
+  ['Brokerage', row => row.brokerage_name],
   ['Source', row => row.source],
   ['Source Listing ID', row => row.source_listing_id],
   ['Address', row => [row.street_address, row.city, row.province, row.postal_code].filter(Boolean).join(', ')],
@@ -33,9 +36,6 @@ const COMMERCIAL_COLUMNS = [
   ['Lease Rate Unit', row => row.lease_rate_unit],
   ['Size Min Sq Ft', row => row.space_size_sqft_min],
   ['Size Max Sq Ft', row => row.space_size_sqft_max],
-  ['Brokerage', row => row.brokerage_name],
-  ['Agent', row => row.agent_name],
-  ['Phone', row => row.agent_phone],
   ['Listing URL', row => row.source_url],
 ];
 
@@ -78,7 +78,13 @@ async function buildMarketWorkbook(lane, records, lifecycleEvents = []) {
   const rows = records.map(record => ({
     ...record,
     lifecycle_status: lifecycleByRecord.get(`${record.source}|${record.source_listing_id}`) || 'still_active',
-  }));
+  })).sort((a, b) => {
+    const aContact = Number(Boolean(a.agent_phone || a.contact_phone || a.agent_name || a.contact_name));
+    const bContact = Number(Boolean(b.agent_phone || b.contact_phone || b.agent_name || b.contact_name));
+    if (aContact !== bContact) return bContact - aContact;
+    return String(a.city || '').localeCompare(String(b.city || '')) ||
+      String(a.source || '').localeCompare(String(b.source || ''));
+  });
   const header = columns.map(([label], index) => cellXml(label, `${columnName(index)}1`, 1)).join('');
   const body = rows.map((row, rowIndex) => {
     const cells = columns.map(([, getter], columnIndex) =>
