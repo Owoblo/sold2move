@@ -90,6 +90,7 @@ async function classify(openai, row) {
   const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
   let classified = 0;
   let failed = 0;
+  let quotaBlocked = false;
   if (openai) {
     for (const row of candidates) {
       try {
@@ -104,6 +105,11 @@ async function classify(openai, row) {
       } catch (error) {
         failed++;
         console.error(`Classification failed for ${key(row)}: ${error.message}`);
+        if (error.status === 429 && /quota|billing/i.test(error.message)) {
+          quotaBlocked = true;
+          console.error('OpenAI quota is unavailable; stopping this run without fabricating classifications.');
+          break;
+        }
       }
     }
   }
@@ -114,6 +120,6 @@ async function classify(openai, row) {
     return acc;
   }, {});
   fs.writeFileSync(path.join(runDir, 'ai-classification-summary.json'),
-    `${JSON.stringify({ model: process.env.MARKET_AI_MODEL || 'gpt-4o', candidates: candidates.length, classified, failed, counts }, null, 2)}\n`);
-  console.log(JSON.stringify({ lane, candidates: candidates.length, classified, failed, counts }));
+    `${JSON.stringify({ model: process.env.MARKET_AI_MODEL || 'gpt-4o', candidates: candidates.length, classified, failed, quota_blocked: quotaBlocked, counts }, null, 2)}\n`);
+  console.log(JSON.stringify({ lane, candidates: candidates.length, classified, failed, quota_blocked: quotaBlocked, counts }));
 })().catch(error => { console.error(error.stack || error.message); process.exitCode = 1; });
