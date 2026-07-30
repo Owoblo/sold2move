@@ -40,7 +40,18 @@ async function main() {
   const inventoryFile = lane === 'rental' ? 'normalized-source-records.json' : 'source-records.json';
   const inventory = JSON.parse(fs.readFileSync(path.join(runDir, inventoryFile), 'utf8'));
   const workbook = await buildMarketWorkbook(lane, inventory, lifecycle.events || []);
-  const rows = Object.entries(lifecycle.summary || {}).map(([label, value]) =>
+  const contactCoverage = lane === 'rental'
+    ? {
+        'records with contact name': inventory.filter(row => row.contact_name).length,
+        'records with phone': inventory.filter(row => row.contact_phone).length,
+        'records with company': inventory.filter(row => row.contact_company).length,
+      }
+    : {
+        'records with agent name': inventory.filter(row => row.agent_name).length,
+        'records with phone': inventory.filter(row => row.agent_phone).length,
+        'records with brokerage': inventory.filter(row => row.brokerage_name).length,
+      };
+  const rows = Object.entries({ ...(lifecycle.summary || {}), ...contactCoverage }).map(([label, value]) =>
     `<tr><td style="padding:8px;border:1px solid #ddd">${label.replaceAll('_', ' ')}</td><td style="padding:8px;border:1px solid #ddd">${value}</td></tr>`
   ).join('');
   await send({
