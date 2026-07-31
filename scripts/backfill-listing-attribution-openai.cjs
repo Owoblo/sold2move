@@ -4,18 +4,21 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { getSupabase } = require('./postcard-lib.cjs');
 const { searchListingAttribution } = require('./listing-attribution-openai.cjs');
 
-const ALLOWED_REGIONS = new Set(['windsor', 'london', 'wkg', 'ottawa']);
+const ALLOWED_REGIONS = new Set(['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg', 'ottawa']);
 function arg(name, fallback) {
   const index = process.argv.indexOf(`--${name}`);
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
-async function loadCandidates(supabase, region, limit, retryHours, pass) {
+async function loadCandidates(supabase, region, limit, retryHours, pass, statuses, sinceDays) {
   let query = supabase.from('listings')
     .select('zpid,region,status,addressstreet,addresscity,addressstate,addresszipcode,city,listing_mls_id,listing_representatives,listing_attribution_attempts,listing_attribution_attempted_at,listing_attribution_status,listing_attribution_sources')
     .eq('region', region)
-    .in('status', ['active', 'just_listed'])
+    .in('status', statuses)
     .or('listing_representatives.is.null,listing_representatives.eq.[]')
-    .order('first_seen_at', { ascending: false, nullsFirst: false });
+    .order(statuses.includes('sold_archived') ? 'sold_postcard_sent_at' : 'first_seen_at', { ascending: false, nullsFirst: false });
+  if (statuses.includes('sold_archived') && sinceDays > 0) {
+    query = query.gte('sold_postcard_sent_at', new Date(Date.now() - sinceDays * 86400000).toISOString());
+  }
   if (pass === 'second') {
     query = query
       .eq('listing_attribution_status', 'unresolved')
@@ -62,11 +65,17 @@ async function main() {
   const pass = arg('pass', 'first');
   if (!['first', 'second'].includes(pass)) throw new Error('--pass must be first or second');
   const model = arg('model', pass === 'second' ? 'gpt-5-mini' : 'gpt-4o-mini');
+  const statuses = arg('statuses', 'active,just_listed').split(',').map(value => value.trim()).filter(Boolean);
+  const allowedStatuses = new Set(['active', 'just_listed', 'sold', 'sold_archived']);
+  if (!statuses.length || statuses.some(status => !allowedStatuses.has(status))) {
+    throw new Error('--statuses contains an unsupported listing status');
+  }
+  const sinceDays = Math.max(0, Number.parseInt(arg('since-days', '0'), 10));
   const dryRun = process.argv.includes('--dry-run');
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required');
   const supabase = getSupabase();
-  const candidates = await loadCandidates(supabase, region, limit, retryHours, pass);
-  console.log(`[${region}] OpenAI candidates=${candidates.length}, pass=${pass}, model=${model}, dry_run=${dryRun}`);
+  const candidates = await loadCandidates(supabase, region, limit, retryHours, pass, statuses, sinceDays);
+  console.log(`[${region}] OpenAI candidates=${candidates.length}, statuses=${statuses.join(',')}, pass=${pass}, model=${model}, dry_run=${dryRun}`);
   const summary = { candidates: candidates.length, verified: 0, high_confidence: 0, unresolved: 0, failed: 0 };
   let cursor = 0;
   let quotaExhausted = false;
