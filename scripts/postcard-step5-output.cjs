@@ -10,7 +10,6 @@
  * Output: Windsor_Postcards_YYYY-MM-DD.csv + .pdf in project root
  */
 
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const Papa = require('papaparse');
 const fs = require('fs');
 const path = require('path');
@@ -26,40 +25,7 @@ const {
   formatCanadianPostal,
   formatRecipientDeliveryLine,
 } = require('./postcard-lib.cjs');
-
-// Postcard dimensions: 9.5" x 4.125"
-const PAGE_WIDTH = 9.5 * 72;
-const PAGE_HEIGHT = 4.125 * 72;
-const MARGIN = 0.5 * 72;
-
-const STAMP_PATHS = [
-  path.join(__dirname, 'assets', 'canada-post-stamp.jpeg'),
-  '/tmp/dotx_extract/word/media/image1.jpeg',
-];
-const TEMPLATE_PATH = '/Users/admin/Downloads/Saturn Star Services - standard(home.dotx';
-
-async function getStampImage() {
-  // Check committed asset first (works on CI), then local fallbacks
-  for (const p of STAMP_PATHS) {
-    if (fs.existsSync(p)) {
-      console.log(`  Stamp: loaded from ${path.basename(p)}`);
-      return fs.readFileSync(p);
-    }
-  }
-  try {
-    const JSZip = require('jszip');
-    if (fs.existsSync(TEMPLATE_PATH)) {
-      const templateBuffer = fs.readFileSync(TEMPLATE_PATH);
-      const zip = await JSZip.loadAsync(templateBuffer);
-      const imageFile = zip.file('word/media/image1.jpeg');
-      if (imageFile) return await imageFile.async('nodebuffer');
-    }
-  } catch (e) {
-    // Stamp is optional
-  }
-  console.warn('  Stamp: not found — postcard will be generated without it');
-  return null;
-}
+const { generatePremiumEnvelopes } = require('./generate-premium-envelopes.cjs');
 
 /**
  * Apply final filters to determine which listings get postcards.
@@ -493,101 +459,22 @@ function generateCSV(listings, outputPath) {
   console.log(`  CSV: ${path.basename(outputPath)} (${listings.length} records)`);
 }
 
-/**
- * Generate PDF postcards
- */
+/** Generate the approved premium A7 envelope artwork for each mailing row. */
 async function generatePDF(listings, outputPath, opts) {
-  const pdfDoc = await PDFDocument.create();
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const addressFont = await pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
-  const regionConfig = getRegionConfig(opts.region);
-
-  // Load stamp
-  const stampBytes = await getStampImage();
-  let stampImage = null;
-  if (stampBytes) {
-    try {
-      stampImage = await pdfDoc.embedJpg(stampBytes);
-    } catch (e) {
-      // Stamp embedding failed, continue without
-    }
-  }
-
-  let missingPostal = 0;
-
-  for (let i = 0; i < listings.length; i++) {
-    const row = listings[i];
-    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-
-    // Return address (top-left)
-    const returnFontSize = 9;
-    const returnLineHeight = 12;
-    let returnY = PAGE_HEIGHT - MARGIN;
-
-    const returnAddr = regionConfig.returnAddressLines;
-
-    for (const line of returnAddr) {
-      page.drawText(line, {
-        x: MARGIN, y: returnY, size: returnFontSize, font: boldFont, color: rgb(0, 0, 0),
-      });
-      returnY -= returnLineHeight;
-    }
-
-    // Stamp (top-right)
-    if (stampImage) {
-      const stampWidth = 90;
-      const stampHeight = 62;
-      page.drawImage(stampImage, {
-        x: PAGE_WIDTH - MARGIN - stampWidth,
-        y: PAGE_HEIGHT - MARGIN - stampHeight + 10,
-        width: stampWidth,
-        height: stampHeight,
-      });
-    }
-
-    // Recipient address (centered) — Canada Post machine-readable format:
-    //   NAME
-    //   STREET ADDRESS
-    //   CITY PROVINCE  POSTAL CODE
-    // All uppercase, two spaces before postal code, postal code with space between FSA and LDU.
-    const addrFontSize = 16;
-    const addrLineHeight = 22;
-
-    const name = 'HOMEOWNER';
-    const street = (row.addressstreet || '').trim().toUpperCase();
-    const city = row.city || row.addresscity || '';
-    const province = row.addressstate || 'ON';
-    const postal = formatCanadianPostal(row.addresszipcode);
-    if (!postal) {
-      missingPostal++;
-      console.warn(`  WARNING: zpid ${row.zpid} — missing postal code ("${row.addressstreet}, ${city}")`);
-    }
-    const cityLine = formatRecipientDeliveryLine(city, province, postal);
-    const lines = [name, street, cityLine].filter(Boolean);
-
-    const totalTextHeight = lines.length * addrLineHeight;
-    let addrY = (PAGE_HEIGHT / 2) + (totalTextHeight / 2) - 10;
-
-    for (const line of lines) {
-      const textWidth = addressFont.widthOfTextAtSize(line, addrFontSize);
-      const textX = (PAGE_WIDTH - textWidth) / 2;
-      page.drawText(line, {
-        x: textX, y: addrY, size: addrFontSize, font: addressFont, color: rgb(0, 0, 0),
-      });
-      addrY -= addrLineHeight;
-    }
-
-    if ((i + 1) % 50 === 0) {
-      console.log(`  Generated ${i + 1}/${listings.length} postcards...`);
-    }
-  }
-
-  const pdfBytes = await pdfDoc.save();
-  fs.writeFileSync(outputPath, pdfBytes);
-  console.log(`  PDF: ${path.basename(outputPath)} (${listings.length} postcards)`);
-  if (missingPostal > 0) {
-    console.warn(`  WARNING: ${missingPostal} postcard(s) printed without postal code — Canada Post sorting will be delayed`);
-  }
+  await generatePremiumEnvelopes({
+    records: listings,
+    recipientName: 'The Residents',
+    logoPath: path.join(__dirname, 'assets', 'brand-svg', 'SaturnStarMovers_Wordmark_DeepNavy_NoDescriptor.png'),
+    brandTreatment: 'lockup',
+    addressTreatment: 'editorial',
+    editorialSide: 'right',
+    includeBack: false,
+    includeFrontReturn: true,
+    usePaperStock: true,
+    region: opts.region || 'windsor',
+    outputPath,
+  });
+  console.log(`  PDF: ${path.basename(outputPath)} (${listings.length} premium envelopes)`);
 }
 
 async function run(options) {
@@ -777,4 +664,10 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, applyOutputFilters, normalizeAddressKey, applyJustListedFreshnessGuard };
+module.exports = {
+  run,
+  applyOutputFilters,
+  normalizeAddressKey,
+  applyJustListedFreshnessGuard,
+  generatePDF,
+};
