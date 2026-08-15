@@ -32,6 +32,7 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_relocation_engine.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_transition_ai_v2.sql
       - name: Scrape and categorize commercial inventory
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
@@ -46,7 +47,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          MARKET_AI_BACKFILL_LIMIT: 150
+          MARKET_AI_BACKFILL_LIMIT: 600
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
           node scripts/market-ai-classify.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
