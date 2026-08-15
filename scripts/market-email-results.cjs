@@ -38,6 +38,10 @@ async function main() {
     ? JSON.parse(fs.readFileSync(lifecyclePath, 'utf8')) : { summary: { baseline_inventory: summary.totals?.canonical_properties || 0 } };
   const inventoryFile = lane === 'rental' ? 'normalized-source-records.json' : 'source-records.json';
   const inventory = fs.readFileSync(path.join(runDir, inventoryFile));
+  const relocationPath = lane === 'commercial' ? path.join(runDir, 'relocation-candidates.json') : null;
+  const relocationCandidates = relocationPath && fs.existsSync(relocationPath)
+    ? JSON.parse(fs.readFileSync(relocationPath, 'utf8')) : [];
+  const reviewQueuePath = lane === 'commercial' ? path.join(runDir, 'relocation-review-queue.csv') : null;
   const rows = Object.entries(lifecycle.summary || {}).map(([label, value]) =>
     `<tr><td style="padding:8px;border:1px solid #ddd">${label.replaceAll('_', ' ')}</td><td style="padding:8px;border:1px solid #ddd">${value}</td></tr>`
   ).join('');
@@ -46,11 +50,17 @@ async function main() {
     to: [process.env.MARKET_REPORT_EMAIL || 'business@starmovers.ca'],
     reply_to: 'business@starmovers.ca',
     subject: `${lane === 'rental' ? 'Rental' : 'Commercial'} market scrape — ${new Date().toISOString().slice(0, 10)}`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:700px"><h2>${lane} market radar</h2><p>The scrape, categorization and lifecycle comparison completed. Disappearances are inferred and require two successful misses.</p><table style="border-collapse:collapse">${rows}</table></div>`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:700px"><h2>${lane} market radar</h2><p>The scrape, categorization and lifecycle comparison completed. Disappearances are inferred and require two successful misses.</p>${lane === 'commercial' ? `<p><strong>Direct relocation candidates requiring human review: ${relocationCandidates.length}</strong>. Generic property listings remain market intelligence only.</p>` : ''}<table style="border-collapse:collapse">${rows}</table></div>`,
     attachments: [{
       filename: `${lane}-inventory-${new Date().toISOString().slice(0, 10)}.json`,
       content: inventory.toString('base64'),
-    }],
+    }, ...(lane === 'commercial' ? [{
+      filename: `commercial-relocation-candidates-${new Date().toISOString().slice(0, 10)}.json`,
+      content: Buffer.from(JSON.stringify(relocationCandidates, null, 2)).toString('base64'),
+    }, ...(reviewQueuePath && fs.existsSync(reviewQueuePath) ? [{
+      filename: `commercial-relocation-review-${new Date().toISOString().slice(0, 10)}.csv`,
+      content: fs.readFileSync(reviewQueuePath).toString('base64'),
+    }] : [])] : [])],
   });
   console.log(`Sent ${lane} market report`);
 }

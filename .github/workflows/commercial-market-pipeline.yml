@@ -29,6 +29,7 @@ jobs:
         run: |
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260723_commercial_market_hub.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_relocation_engine.sql
       - name: Scrape and categorize commercial inventory
         run: node scripts/commercial-pipeline.cjs
       - name: Persist and diff commercial inventory

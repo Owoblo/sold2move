@@ -78,23 +78,35 @@ async function loadRecordsAndSpaces() {
     await query(`
       INSERT INTO commercial_source_records (
         commercial_property_id, source, source_family, source_listing_id,
-        source_url, transaction_types, asset_types, title, asking_price,
+        source_url, transaction_types, asset_types, title, description, asking_price,
         lease_rate, lease_rate_unit, space_size_sqft_min, space_size_sqft_max,
         brokerage_name, agent_name, agent_phone, photo_urls,
+        listing_scope, unit_label, current_occupant_name, occupant_confidence,
+        availability_date, transition_evidence, relocation_probability,
+        direct_relocation_candidate, relocation_reasons, outreach_status,
         first_seen_at, last_seen_at, active
       )
       SELECT p.id, x.source, x.source_family, x.source_listing_id, x.source_url,
-        ARRAY[x.transaction_type], ARRAY[x.asset_type], x.title, x.asking_price,
+        ARRAY[x.transaction_type], ARRAY[x.asset_type], x.title, x.description, x.asking_price,
         x.lease_rate, x.lease_rate_unit, x.space_size_sqft_min,
         x.space_size_sqft_max, x.brokerage_name, x.agent_name, x.agent_phone,
-        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)), now(), now(), true
+        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)),
+        x.listing_scope, x.unit_label, x.current_occupant_name,
+        x.occupant_confidence, x.availability_date, x.transition_evidence,
+        x.relocation_probability, x.direct_relocation_candidate,
+        x.relocation_reasons, x.outreach_status, now(), now(), true
       FROM jsonb_to_recordset(${literal(batch)}) AS x(
         source text, source_family text, source_listing_id text, source_url text,
-        transaction_type text, asset_type text, title text, address_key text,
+        transaction_type text, asset_type text, title text, description text, address_key text,
         city text, province text, asking_price numeric, lease_rate numeric,
         lease_rate_unit text, space_size_sqft_min numeric,
         space_size_sqft_max numeric, brokerage_name text, agent_name text,
         agent_phone text, photo_urls jsonb
+        , listing_scope text, unit_label text, current_occupant_name text,
+        occupant_confidence numeric, availability_date text,
+        transition_evidence jsonb, relocation_probability integer,
+        direct_relocation_candidate boolean, relocation_reasons jsonb,
+        outreach_status text
       )
       JOIN commercial_properties p ON p.address_key = x.address_key
         AND p.city = x.city AND p.province = x.province AND p.country_code = 'CA'
@@ -102,9 +114,19 @@ async function loadRecordsAndSpaces() {
         commercial_property_id = EXCLUDED.commercial_property_id,
         transaction_types = EXCLUDED.transaction_types,
         asset_types = EXCLUDED.asset_types, title = EXCLUDED.title,
+        description = EXCLUDED.description,
         asking_price = EXCLUDED.asking_price, lease_rate = EXCLUDED.lease_rate,
         brokerage_name = EXCLUDED.brokerage_name, photo_urls = EXCLUDED.photo_urls,
         agent_name = EXCLUDED.agent_name, agent_phone = EXCLUDED.agent_phone,
+        listing_scope = EXCLUDED.listing_scope, unit_label = EXCLUDED.unit_label,
+        current_occupant_name = EXCLUDED.current_occupant_name,
+        occupant_confidence = EXCLUDED.occupant_confidence,
+        availability_date = EXCLUDED.availability_date,
+        transition_evidence = EXCLUDED.transition_evidence,
+        relocation_probability = EXCLUDED.relocation_probability,
+        direct_relocation_candidate = EXCLUDED.direct_relocation_candidate,
+        relocation_reasons = EXCLUDED.relocation_reasons,
+        outreach_status = EXCLUDED.outreach_status,
         last_seen_at = now(), active = true, missing_run_count = 0,
         lifecycle_status = 'active';
 
@@ -112,16 +134,22 @@ async function loadRecordsAndSpaces() {
         commercial_property_id, source_record_id, source, source_listing_id,
         transaction_type, asset_type, available_sqft_min, available_sqft_max,
         asking_price, lease_rate, lease_rate_unit, availability_status,
+        unit_label, availability_date, current_occupant_name,
+        relocation_probability, direct_relocation_candidate,
         first_seen_at, last_seen_at
       )
       SELECT sr.commercial_property_id, sr.id, x.source, x.source_listing_id,
         x.transaction_type, x.asset_type, x.space_size_sqft_min,
         x.space_size_sqft_max, x.asking_price, x.lease_rate, x.lease_rate_unit,
-        'available', now(), now()
+        'available', x.unit_label, x.availability_date,
+        x.current_occupant_name, x.relocation_probability,
+        x.direct_relocation_candidate, now(), now()
       FROM jsonb_to_recordset(${literal(batch)}) AS x(
         source text, source_listing_id text, transaction_type text,
         asset_type text, space_size_sqft_min numeric, space_size_sqft_max numeric,
-        asking_price numeric, lease_rate numeric, lease_rate_unit text
+        asking_price numeric, lease_rate numeric, lease_rate_unit text,
+        unit_label text, availability_date text, current_occupant_name text,
+        relocation_probability integer, direct_relocation_candidate boolean
       )
       JOIN commercial_source_records sr ON sr.source = x.source
         AND sr.source_listing_id = x.source_listing_id
@@ -134,6 +162,11 @@ async function loadRecordsAndSpaces() {
         available_sqft_max = EXCLUDED.available_sqft_max,
         asking_price = EXCLUDED.asking_price, lease_rate = EXCLUDED.lease_rate,
         lease_rate_unit = EXCLUDED.lease_rate_unit,
+        unit_label = EXCLUDED.unit_label,
+        availability_date = EXCLUDED.availability_date,
+        current_occupant_name = EXCLUDED.current_occupant_name,
+        relocation_probability = EXCLUDED.relocation_probability,
+        direct_relocation_candidate = EXCLUDED.direct_relocation_candidate,
         availability_status = 'available', last_seen_at = now();
     `);
   }
