@@ -180,7 +180,8 @@ async function applyLifecycle(previous) {
     if (cityChecks.length && cityChecks.every(item => item.status === 'ok')) {
       successfulScopes.push({ source: 'spacelist', city: region.region });
     }
-    const realtorChecks = (summary.realtor_runs || []).filter(item => item.region === region.region);
+    const realtorChecks = (summary.realtor_runs || []).filter(item => item.region === region.region
+      && item.scope_level === 'broad_region' && ['sale', 'lease'].includes(item.deal_type));
     if (realtorChecks.length === 2 && realtorChecks.every(item => item.status === 'ok')) {
       successfulScopes.push({ source: 'realtor_ca_commercial', city: region.region });
     }
