@@ -103,4 +103,32 @@ const neighbouringUnit = classifyCommercialRelocation({
 assert.equal(neighbouringUnit.direct_relocation_candidate, false);
 assert.equal(neighbouringUnit.current_occupant_name, null);
 
+const furnishedUnit = classifyCommercialRelocation({
+  title: 'Unit 22 - 100 Main Street', street_address: '100 Main Street', unit_label: '22',
+  transaction_type: 'lease', asset_type: 'office', space_size_sqft_min: 2400,
+  occupancy_state: 'occupied_furnished', classification_confidence: 0.9,
+  advertised_unit_visible: true, transition_direction: 'move_out_likely', transition_confidence: 0.85,
+});
+assert.equal(furnishedUnit.direct_relocation_candidate, true);
+assert.equal(furnishedUnit.relocation_candidate_type, 'outgoing_tenant');
+assert.ok(furnishedUnit.relocation_probability >= 70);
+
+const vacantUnit = classifyCommercialRelocation({
+  title: 'Unit 5 - 100 Main Street', street_address: '100 Main Street', unit_label: '5',
+  transaction_type: 'lease', asset_type: 'industrial', space_size_sqft_min: 5000,
+  occupancy_state: 'vacant', classification_confidence: 0.9,
+  advertised_unit_visible: true, transition_direction: 'move_in_opportunity', transition_confidence: 0.9,
+});
+assert.equal(vacantUnit.direct_relocation_candidate, true);
+assert.equal(vacantUnit.relocation_candidate_type, 'incoming_tenant_opportunity');
+
+const exteriorOnly = classifyCommercialRelocation({
+  title: 'Unit 9 - 100 Main Street', street_address: '100 Main Street', unit_label: '9',
+  transaction_type: 'lease', asset_type: 'retail', space_size_sqft_min: 1800,
+  occupancy_state: 'occupied', classification_confidence: 0.9,
+  advertised_unit_visible: false, furniture_visible: false,
+  transition_direction: 'unclear', transition_confidence: 0.2,
+});
+assert.equal(exteriorOnly.direct_relocation_candidate, false);
+
 console.log('Commercial relocation engine tests passed.');

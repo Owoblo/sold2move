@@ -109,6 +109,15 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
   const occupied = addEvidence('currently_occupied', /\b(?:currently\s+occupied|occupied\s+until|current\s+tenant)\b[^.;]{0,80}/i);
   const datedAvailability = addEvidence('availability', /\b(?:available|availability|possession|occupancy)\b[^.;]{0,80}/i);
 
+  const aiConfidence = Math.max(0, Math.min(1, Number(record.classification_confidence) || 0));
+  const transitionConfidence = Math.max(0, Math.min(1, Number(record.transition_confidence) || 0));
+  const occupiedVisual = ['occupied', 'occupied_furnished'].includes(record.occupancy_state) && aiConfidence >= 0.65;
+  const furnishedVisual = record.occupancy_state === 'occupied_furnished' && aiConfidence >= 0.65;
+  const incomingVisual = ['vacant', 'shell', 'construction'].includes(record.occupancy_state) && aiConfidence >= 0.7;
+  const unitVisualConfirmed = record.advertised_unit_visible === true || furnishedVisual;
+  const aiMoveOut = record.transition_direction === 'move_out_likely' && transitionConfidence >= 0.65;
+  const aiMoveIn = record.transition_direction === 'move_in_opportunity' && transitionConfidence >= 0.65;
+
   let score = 0;
   const reasons = [];
   if (scope === 'unit') { score += 25; reasons.push('specific unit identified'); }
@@ -121,15 +130,26 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
   if (explicitRelocation) { score += 35; reasons.push('explicit tenant relocation language'); }
   if (leaseExpiry) { score += 20; reasons.push('lease-expiry transition language'); }
   if (sublease) { score += 15; reasons.push('sublease transition language'); }
+  if (occupiedVisual) { score += furnishedVisual ? 35 : 25; reasons.push(furnishedVisual ? 'furniture visible in occupied space' : 'AI sees present occupancy'); }
+  if (unitVisualConfirmed) { score += 10; reasons.push('visual evidence tied to advertised unit'); }
+  if (aiMoveOut) { score += 25; reasons.push('AI finds move-out transition likely'); }
+  if (incomingVisual || aiMoveIn) { score += 15; reasons.push('vacant or transitioning space suggests incoming move'); }
   if (scope === 'land' || scope === 'business_sale') score = 0;
   if (record.transaction_type === 'sale' && !record.transaction_types?.includes?.('lease')) score = Math.min(score, 20);
   if (!unit) score = Math.min(score, 35);
-  if (!occupant.name) score = Math.min(score, 55);
-  if (!(explicitRelocation || leaseExpiry || sublease || availabilityDate || datedAvailability)) score = Math.min(score, 45);
+  if (!occupant.name && !occupiedVisual && !incomingVisual && !aiMoveOut && !aiMoveIn) score = Math.min(score, 55);
+  if (!(explicitRelocation || leaseExpiry || sublease || availabilityDate || datedAvailability || occupiedVisual || incomingVisual || aiMoveOut || aiMoveIn)) score = Math.min(score, 45);
   score = Math.max(0, Math.min(100, score));
 
-  const hardGate = scope === 'unit' && Boolean(occupant.name) &&
-    Boolean(explicitRelocation || leaseExpiry || sublease || availabilityDate || datedAvailability);
+  const outgoingEvidence = explicitRelocation || leaseExpiry || sublease ||
+    (occupiedVisual && (unitVisualConfirmed || aiMoveOut));
+  const incomingEvidence = incomingVisual || aiMoveIn;
+  const candidateType = scope === 'unit' && record.transaction_type === 'lease' && outgoingEvidence
+    ? 'outgoing_tenant'
+    : scope === 'unit' && record.transaction_type === 'lease' && incomingEvidence
+      ? 'incoming_tenant_opportunity'
+      : 'market_intelligence';
+  const hardGate = candidateType !== 'market_intelligence';
   return {
     listing_scope: scope,
     unit_label: unit || null,
@@ -139,6 +159,7 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
     transition_evidence: evidence,
     relocation_probability: score,
     direct_relocation_candidate: hardGate && score >= 70,
+    relocation_candidate_type: candidateType,
     relocation_reasons: reasons,
     outreach_status: hardGate && score >= 70 ? 'eligible_for_human_review' : 'market_intelligence_only',
   };
