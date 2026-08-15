@@ -3,9 +3,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const https = require('node:https');
+const Papa = require('papaparse');
 const {
   canonicalizeCommercial,
+  classifyCommercialRelocation,
   normalizeRealtorCommercial,
+  parseSpacelistDetail,
   parseSpacelistPage,
 } = require('./commercial-market-lib.cjs');
 const { REGION_CONFIG } = require('./postcard-region-config.cjs');
@@ -115,6 +118,24 @@ async function scrapeCity(city, slug, maxPages = 50) {
   };
 }
 
+async function enrichSpacelistUnitDetails(records) {
+  const results = [];
+  for (const record of records) {
+    if (record.transaction_type !== 'lease' || !record.unit_label || record.description) {
+      results.push(record);
+      continue;
+    }
+    try {
+      const detail = parseSpacelistDetail(await fetchText(record.source_url));
+      results.push({ ...record, description: detail.description, detail_enrichment_status: detail.description ? 'enriched' : 'no_evidence_text' });
+    } catch (error) {
+      results.push({ ...record, detail_enrichment_status: 'error', detail_enrichment_error: error.message });
+    }
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+  return results;
+}
+
 function percent(records, predicate) {
   return Number((records.filter(predicate).length / Math.max(records.length, 1) * 100).toFixed(1));
 }
@@ -137,7 +158,11 @@ async function run() {
       cityResults.push({ city: input.city, region: input.region, pages: 0, records: [], status: 'error', error: error.message });
     }
   }
-  const spacelistRecords = cityResults.flatMap(result => result.records);
+  const detailEnrichmentEnabled = process.env.COMMERCIAL_DETAIL_ENRICHMENT === '1';
+  const spacelistBaseRecords = cityResults.flatMap(result => result.records);
+  const spacelistRecords = detailEnrichmentEnabled
+    ? await enrichSpacelistUnitDetails(spacelistBaseRecords)
+    : spacelistBaseRecords;
   const realtorRecords = [];
   const realtorRuns = [];
   if (process.env.APIFY_TOKEN) {
@@ -164,8 +189,16 @@ async function run() {
   }
   const records = [...new Map([...spacelistRecords, ...realtorRecords]
     .filter(record => record.address_key && record.province === 'ON')
-    .map(record => [`${record.source}|${record.source_listing_id}`, record])).values()];
+    .map(record => [`${record.source}|${record.source_listing_id}`, {
+      ...record,
+      ...classifyCommercialRelocation(record),
+    }])).values()];
   const properties = canonicalizeCommercial(records);
+  const relocationCandidates = records.filter(record => record.direct_relocation_candidate)
+    .sort((a, b) => b.relocation_probability - a.relocation_probability);
+  const relocationReviewQueue = records.filter(record =>
+    record.listing_scope === 'unit' && (record.relocation_probability >= 40 || record.transition_evidence.length > 0)
+  ).sort((a, b) => b.relocation_probability - a.relocation_probability);
   const byTransaction = {};
   const byAssetType = {};
   for (const record of records) {
@@ -185,6 +218,21 @@ async function run() {
       source_records: records.length,
       canonical_properties: properties.length,
       collapsed_same_property_spaces: records.length - properties.length,
+      direct_relocation_candidates: relocationCandidates.length,
+      market_intelligence_only: records.length - relocationCandidates.length,
+    },
+    relocation_engine: {
+      outreach_threshold: 70,
+      hard_gate: ['specific_unit', 'identified_current_occupant', 'explicit_transition_or_availability_evidence'],
+      by_scope: Object.fromEntries([...new Set(records.map(record => record.listing_scope))]
+        .map(scope => [scope, records.filter(record => record.listing_scope === scope).length])),
+      named_occupants: records.filter(record => record.current_occupant_name).length,
+      transition_evidence_found: records.filter(record => record.transition_evidence.length > 0).length,
+      candidates: relocationCandidates.length,
+      human_review_queue: relocationReviewQueue.length,
+      detail_pages_enriched: records.filter(record => record.detail_enrichment_status === 'enriched').length,
+      detail_pages_without_evidence_text: records.filter(record => record.detail_enrichment_status === 'no_evidence_text').length,
+      detail_enrichment_enabled: detailEnrichmentEnabled,
     },
     by_transaction: byTransaction,
     by_asset_type: byAssetType,
@@ -227,10 +275,40 @@ async function run() {
         : 'REALTOR.ca is using stored fallback datasets; those records cannot drive disappearance lifecycle.',
       'Only exact normalized-address and parent-property duplicates are collapsed; low-confidence matches remain separate.',
       'Commercial lease rate can legitimately be undisclosed/contact-for-pricing.',
+      'Direct relocation outreach is blocked unless a specific unit, named occupant, and explicit transition/availability evidence are all present.',
     ],
   };
   fs.writeFileSync(path.join(outputDir, 'source-records.json'), `${JSON.stringify(records, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, 'canonical-properties.json'), `${JSON.stringify(properties, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, 'relocation-candidates.json'), `${JSON.stringify(relocationCandidates, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, 'relocation-review-queue.json'), `${JSON.stringify(relocationReviewQueue, null, 2)}\n`);
+  const reviewCsv = relocationReviewQueue.map(record => ({
+    source: record.source,
+    source_listing_id: record.source_listing_id,
+    listing_url: record.source_url,
+    listing_scope: record.listing_scope,
+    unit_label: record.unit_label,
+    street_address: record.street_address,
+    city: record.city,
+    asset_type: record.asset_type,
+    transaction_type: record.transaction_type,
+    square_feet: record.space_size_sqft_min,
+    current_occupant: record.current_occupant_name,
+    availability_date: record.availability_date,
+    transition_evidence: record.transition_evidence.map(item => item.text).join(' | '),
+    relocation_probability: record.relocation_probability,
+    outreach_status: record.outreach_status,
+    observed_current_business: '',
+    occupant_present_at_unit: '',
+    transition_confirmed: '',
+    unit_matches_listing: '',
+    review_notes: '',
+  }));
+  fs.writeFileSync(path.join(outputDir, 'relocation-review-queue.csv'), Papa.unparse(reviewCsv, { newline: '\n' }));
+  fs.writeFileSync(path.join(outputDir, 'relocation-candidates.csv'), Papa.unparse(
+    reviewCsv.filter((_, index) => relocationReviewQueue[index].direct_relocation_candidate),
+    { newline: '\n' },
+  ));
   fs.writeFileSync(path.join(outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
   fs.writeFileSync(path.join(outputRoot, 'latest-run.txt'), `${runId}\n`);
   console.log(JSON.stringify({ output_dir: outputDir, ...summary }, null, 2));

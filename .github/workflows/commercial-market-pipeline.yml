@@ -31,6 +31,7 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_relocation_engine.sql
       - name: Scrape and categorize commercial inventory
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
