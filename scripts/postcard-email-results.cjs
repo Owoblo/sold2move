@@ -24,8 +24,15 @@ const { getRegionConfig } = require('./postcard-lib.cjs');
 const OWNER_EMAIL = 'business@starmovers.ca';
 const SOLD_REPORT_EMAIL = 'business@starmovers.ca';
 const PRINT_EMAIL  = 'loonieprints@gmail.com';
+const REGION_REPORT_EMAILS = {
+  ottawa: ['hello@dexamovers.ca'],
+};
 const FROM = process.env.POSTCARD_EMAIL_FROM || 'Saturn Star Services <postcards@sold2move.com>';
 const REPLY_TO = 'business@starmovers.ca';
+
+function reportRecipients(region, primaryEmail) {
+  return [...new Set([primaryEmail, ...(REGION_REPORT_EMAILS[region] || [])])];
+}
 
 function sendEmail(to, subject, html, attachments) {
   return new Promise((resolve, reject) => {
@@ -192,9 +199,10 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
     </div>
   `;
 
-  console.log(`  Sending sold-ready delivery report (${soldListings.length} listings) to ${SOLD_REPORT_EMAIL}...`);
+  const recipients = reportRecipients(region, SOLD_REPORT_EMAIL);
+  console.log(`  Sending sold-ready delivery report (${soldListings.length} listings) to ${recipients.join(', ')}...`);
   const result = await sendEmail(
-    SOLD_REPORT_EMAIL,
+    recipients,
     `Sold-Ready Delivery List — ${regionLabel} — ${today} (${soldListings.length})`,
     html,
     [
@@ -265,9 +273,10 @@ async function sendFreshnessAuditEmail(region, regionLabel, auditRows, today) {
     </div>
   `;
 
-  console.log(`  Sending freshness audit (${auditRows.length} rows) to ${OWNER_EMAIL}...`);
+  const recipients = reportRecipients(region, OWNER_EMAIL);
+  console.log(`  Sending freshness audit (${auditRows.length} rows) to ${recipients.join(', ')}...`);
   const result = await sendEmail(
-    OWNER_EMAIL,
+    recipients,
     `Just-Listed Freshness Audit — ${regionLabel} — ${today} (${auditRows.length})`,
     html,
     [{ filename: csvName, content: csvContent }]
@@ -437,8 +446,9 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   const subject = `${regionLabel} Postcards Ready — ${today} (${recordCount} listings)`;
 
   // --- Owner email: full breakdown ---
-  console.log(`Sending full report to ${OWNER_EMAIL}...`);
-  const ownerResult = await sendEmail(OWNER_EMAIL, subject, html, attachments);
+  const ownerRecipients = reportRecipients(region, OWNER_EMAIL);
+  console.log(`Sending full report to ${ownerRecipients.join(', ')}...`);
+  const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments);
   console.log(`  Owner email sent! ID: ${ownerResult.id}`);
 
   // --- Print shop email: simple instruction, PDF only ---
