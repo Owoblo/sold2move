@@ -1,0 +1,47 @@
+name: GTA 26-Municipality Market Census
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/gta-market-census
+    paths:
+      - scripts/gta-market-census.cjs
+      - scripts/postcard-step0-scrape.cjs
+      - .github/workflows/gta-market-census.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gta-market-census
+  cancel-in-progress: false
+
+jobs:
+  census:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Scrape and audit all 26 GTA municipalities
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: node scripts/gta-market-census.cjs
+
+      - name: Upload raw data and quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta-market-census-${{ github.run_id }}
+          path: scripts/.gta-census/
+          if-no-files-found: warn
+          retention-days: 30
+
