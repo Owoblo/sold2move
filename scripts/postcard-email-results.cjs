@@ -288,7 +288,7 @@ async function sendFreshnessAuditFromPipeline(region) {
   region = (region || 'windsor').toLowerCase();
   const regionConfig = getRegionConfig(region);
   const regionLabel = regionConfig.label;
-  const pipelineDir = path.join(__dirname, `.pipeline-${region}`);
+  const pipelineDir = resolvePipelineDir(region);
   const auditPath = path.join(pipelineDir, 'step5-freshness-audit.json');
   const today = new Date().toISOString().split('T')[0];
 
@@ -306,7 +306,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   region = (region || 'windsor').toLowerCase();
   const regionConfig = getRegionConfig(region);
   const regionLabel = regionConfig.label;
-  const pipelineDir = path.join(__dirname, `.pipeline-${region}`);
+  const pipelineDir = resolvePipelineDir(region);
 
   if (!fs.existsSync(csvPath)) {
     throw new Error(`CSV not found: ${csvPath}`);
@@ -539,3 +539,11 @@ if (require.main === module) {
 }
 
 module.exports = { sendPostcardEmail, sendFreshnessAuditFromPipeline };
+function resolvePipelineDir(region) {
+  const base = path.join(__dirname, `.pipeline-${region}`);
+  const pointer = path.join(base, 'latest-run.txt');
+  if (!fs.existsSync(pointer)) return base;
+  const batchId = fs.readFileSync(pointer, 'utf8').trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+  const batchDir = path.join(base, 'batches', batchId);
+  return fs.existsSync(batchDir) ? batchDir : base;
+}

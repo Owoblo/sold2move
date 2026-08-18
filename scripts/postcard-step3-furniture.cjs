@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * Step 3: Furniture Check
+ * Step 3: Property & Outreach Classification
  *
- * Quick yes/no furniture detection using OpenAI Vision (gpt-4o).
- * - Skips first 4 photos (exterior), checks 1-2 interior photos
- * - Single API call per listing (sends 1-2 photos)
- * - Updates is_furnished + furniture_confidence in Supabase
- * - Skips listings already scanned
+ * Structured classification using listing description, metadata, and photos.
+ * Keeps the legacy furniture fields populated for postcard compatibility while
+ * also identifying rentals, student housing, flips, new construction, lots,
+ * occupancy state, and the most appropriate outreach target.
  *
  * Output: scripts/.pipeline/step3-furniture.json
  */
@@ -46,10 +45,125 @@ function getInteriorPhotoUrls(listing) {
   }).filter(url => url && !url.includes('maps.googleapis.com') && !url.includes('streetview'));
 }
 
+function getClassificationPhotoUrls(listing) {
+  let photos = listing.carouselphotos;
+  if (typeof photos === 'string') { try { photos = JSON.parse(photos); } catch (e) { return []; } }
+  if (!Array.isArray(photos) || photos.length === 0) return [];
+  const urls = photos.map(p => typeof p === 'string' ? p : (p?.url || p?.src || null))
+    .filter(url => url && !url.includes('maps.googleapis.com') && !url.includes('streetview'));
+  // Exterior/context images help identify lots and construction; later images
+  // are more useful for occupancy. Sample both instead of assuming photo order.
+  const indexes = [0, 1, 4, 5, 7, 9].filter(i => i < urls.length);
+  return [...new Set(indexes.map(i => urls[i]))];
+}
+
 /**
  * Call OpenAI Vision to check if home is furnished
  */
-async function checkFurnished(openai, photoUrls) {
+const MARKET_SEGMENTS = new Set([
+  'owner_occupied', 'investor_flip', 'student_housing', 'rental',
+  'new_construction', 'land_lot', 'unknown',
+]);
+const LISTING_CATEGORIES = new Set([
+  'ordinary_resale', 'investor_flip', 'student_housing', 'rental',
+  'new_construction', 'land_lot',
+]);
+const OCCUPANCY_STATES = new Set([
+  'furnished', 'partially_furnished', 'empty', 'construction',
+  'not_applicable', 'unknown',
+]);
+const OUTREACH_TARGETS = new Set([
+  'homeowner', 'realtor', 'builder_developer', 'landlord_property_manager',
+  'leasing_agent', 'unknown',
+]);
+
+function boundedConfidence(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : 0.5;
+}
+
+function normalizeClassification(raw, listing = {}) {
+  const contentType = String(listing.contenttype || '').toUpperCase();
+  const isLand = contentType === 'LOT' || contentType === 'LAND';
+  const signals = Array.isArray(raw?.property_signals)
+    ? [...new Set(raw.property_signals.map(v => String(v).trim().toLowerCase()).filter(Boolean))].slice(0, 12)
+    : [];
+  const reasons = Array.isArray(raw?.reasons)
+    ? raw.reasons.map(v => String(v).trim()).filter(Boolean).slice(0, 6)
+    : [];
+  const categories = Array.isArray(raw?.listing_categories)
+    ? [...new Set(raw.listing_categories.map(v => String(v).trim().toLowerCase())
+      .filter(v => LISTING_CATEGORIES.has(v)))]
+    : [];
+
+  if (isLand) {
+    return {
+      market_segment: 'land_lot',
+      listing_categories: [...new Set(['land_lot', ...categories])],
+      occupancy_state: 'not_applicable',
+      outreach_target: 'realtor',
+      property_signals: [...new Set(['land_lot', ...signals])],
+      confidence: Math.max(0.99, boundedConfidence(raw?.confidence)),
+      reasons: reasons.length ? reasons : [`Zillow property type is ${contentType}`],
+    };
+  }
+
+  const marketSegment = MARKET_SEGMENTS.has(raw?.market_segment) ? raw.market_segment : 'unknown';
+  if (marketSegment !== 'unknown') {
+    const category = marketSegment === 'owner_occupied' ? 'ordinary_resale' : marketSegment;
+    if (LISTING_CATEGORIES.has(category) && !categories.includes(category)) categories.push(category);
+  }
+  return {
+    market_segment: marketSegment,
+    listing_categories: categories,
+    occupancy_state: OCCUPANCY_STATES.has(raw?.occupancy_state) ? raw.occupancy_state : 'unknown',
+    outreach_target: OUTREACH_TARGETS.has(raw?.outreach_target) ? raw.outreach_target : 'unknown',
+    property_signals: signals,
+    confidence: boundedConfidence(raw?.confidence),
+    reasons,
+  };
+}
+
+function parseClassificationAnswer(answer, listing) {
+  const cleaned = String(answer || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (error) {
+    throw new Error(`Classifier returned invalid JSON: ${cleaned.slice(0, 180)}`);
+  }
+  return normalizeClassification(parsed, listing);
+}
+
+function countValues(listings, field, isArray = false) {
+  const counts = {};
+  for (const listing of listings) {
+    const values = isArray ? listing[field] : [listing[field] || 'unclassified'];
+    for (const value of (Array.isArray(values) ? values : [])) {
+      counts[value] = (counts[value] || 0) + 1;
+    }
+  }
+  return counts;
+}
+
+function writeClassificationOutputs(listings) {
+  writePipelineFile('step3-furniture.json', listings);
+  writePipelineFile('step3-classification-summary.json', {
+    generated_at: new Date().toISOString(),
+    total: listings.length,
+    classified: listings.filter(l => l.property_classified_at).length,
+    market_segments: countValues(listings, 'market_segment'),
+    listing_categories: countValues(listings, 'listing_categories', true),
+    occupancy_states: countValues(listings, 'occupancy_state'),
+    outreach_targets: countValues(listings, 'outreach_target'),
+  });
+}
+
+async function classifyProperty(openai, listing, photoUrls) {
+  const contentType = String(listing.contenttype || '').toUpperCase();
+  if (contentType === 'LOT' || contentType === 'LAND') {
+    return normalizeClassification({}, listing);
+  }
   const imageContent = photoUrls.map(url => ({
     type: 'image_url',
     image_url: { url, detail: 'low' },
@@ -57,14 +171,40 @@ async function checkFurnished(openai, photoUrls) {
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 50,
+    max_tokens: 500,
+    response_format: { type: 'json_object' },
     messages: [
+      {
+        role: 'system',
+        content: `You classify Canadian real-estate listings for outreach routing. Be conservative:
+- Do not call a property a flip merely because it is renovated or staged. Require multiple flip/investor signals.
+- Do not call it student housing from bedroom count alone. Require explicit rental/student/campus/per-room evidence or strong visual plus textual evidence.
+- Distinguish furnished, partially_furnished, empty, construction, not_applicable, and unknown.
+- Rental includes an offered-for-lease dwelling. Student housing is the more specific segment when supported.
+- New construction requires explicit new-build/pre-construction/builder evidence or clear unfinished construction.
+- owner_occupied means an ordinary resale with no stronger specialist segment; it does not assert legal occupancy.
+- listing_categories is multi-label. Include every supported category independently; e.g. student_housing plus rental, whether furnished or empty.
+- If evidence conflicts or is weak, use unknown and lower confidence.
+Return JSON only with market_segment (the primary label), listing_categories (array), occupancy_state, outreach_target, property_signals (array), confidence (0-1), and reasons (short evidence array).
+Allowed market_segment: owner_occupied, investor_flip, student_housing, rental, new_construction, land_lot, unknown.
+Allowed listing_categories: ordinary_resale, investor_flip, student_housing, rental, new_construction, land_lot.
+Allowed outreach_target: homeowner, realtor, builder_developer, landlord_property_manager, leasing_agent, unknown.`,
+      },
       {
         role: 'user',
         content: [
           {
             type: 'text',
-            text: 'Is this home furnished? Answer only YES or NO followed by your confidence level (HIGH, MEDIUM, or LOW). Example: "YES HIGH" or "NO MEDIUM"',
+            text: JSON.stringify({
+              description: listing.description || '',
+              property_type: listing.contenttype || '',
+              price: listing.unformattedprice || listing.price || null,
+              beds: listing.beds || null,
+              baths: listing.baths || null,
+              square_feet: listing.area || null,
+              city: listing.city || listing.addresscity || '',
+              instruction: 'Classify using only evidence present in this metadata and the attached listing photos.',
+            }),
           },
           ...imageContent,
         ],
@@ -72,71 +212,52 @@ async function checkFurnished(openai, photoUrls) {
     ],
   });
 
-  const answer = (response.choices[0]?.message?.content || '').trim().toUpperCase();
-
-  // If OpenAI couldn't determine (exterior-only photos, not enough info), treat as uncertain
-  const isUncertain = !answer.startsWith('YES') && !answer.startsWith('NO');
-
-  const isFurnished = answer.startsWith('YES');
-  let confidence = 0.5;
-  if (answer.includes('HIGH')) confidence = 0.9;
-  else if (answer.includes('MEDIUM')) confidence = 0.7;
-  else if (answer.includes('LOW')) confidence = 0.4;
-
-  return { isFurnished, confidence, rawAnswer: answer, isUncertain };
+  return parseClassificationAnswer(response.choices[0]?.message?.content, listing);
 }
 
 async function run(options) {
-  stepHeader(3, 'Furniture Check');
+  stepHeader(3, 'Property & Outreach Classification');
 
   const opts = options || parseCliArgs();
   const listings = readPipelineFile('step2-photos.json');
   console.log(`  Loaded ${listings.length} listings from Step 2`);
 
-  // Sold listings: skip furniture scan entirely.
-  // Their furniture was checked when they were just_listed — we carry that result forward.
-  // Running OpenAI on sold listings wastes credits (Zillow removes interior photos after sale).
-  const soldListings = listings.filter(l => l.status === 'sold');
-  const justListedListings = listings.filter(l => l.status !== 'sold');
-  if (soldListings.length > 0) {
-    console.log(`  Skipping furniture scan for ${soldListings.length} sold listings (result carried from just_listed phase)`);
-  }
-
-  // Separate just_listed: already scanned, has photos to scan, no photos
-  // Listings flagged furniture_needs_retry=true get re-scanned even if previously scanned
-  // (had exterior-only photos on first scan — may have new interior photos now)
-  const alreadyScanned = justListedListings.filter(l =>
-    l.furniture_scan_date != null && !l.furniture_needs_retry
+  // A description can classify a rental/lot/new build even when photos are not
+  // available. Existing furniture-only rows are reprocessed once to populate
+  // the new structured fields.
+  const alreadyScanned = listings.filter(l =>
+    l.property_classified_at != null && !l.furniture_needs_retry
   );
-  const hasPhotos = justListedListings.filter(l =>
-    (l.furniture_scan_date == null || l.furniture_needs_retry) &&
-    getInteriorPhotoUrls(l).length > 0
+  const readyToClassify = listings.filter(l =>
+    (l.property_classified_at == null || l.furniture_needs_retry) &&
+    (getClassificationPhotoUrls(l).length > 0 || String(l.description || '').trim() ||
+      ['LOT', 'LAND'].includes(String(l.contenttype || '').toUpperCase()))
   );
-  const noPhotos = justListedListings.filter(l =>
-    (l.furniture_scan_date == null || l.furniture_needs_retry) &&
-    getInteriorPhotoUrls(l).length === 0
+  const noEvidence = listings.filter(l =>
+    (l.property_classified_at == null || l.furniture_needs_retry) &&
+    !readyToClassify.includes(l)
   );
 
-  console.log(`  just_listed — already scanned: ${alreadyScanned.length}`);
-  console.log(`  just_listed — ready to scan: ${hasPhotos.length}`);
-  console.log(`  just_listed — no interior photos: ${noPhotos.length}`);
+  console.log(`  Already classified: ${alreadyScanned.length}`);
+  console.log(`  Ready to classify: ${readyToClassify.length}`);
+  console.log(`  No description/photos: ${noEvidence.length}`);
 
   if (opts.dryRun) {
-    console.log(`\n  [DRY RUN] Would scan ${hasPhotos.length} listings with OpenAI Vision.`);
-    writePipelineFile('step3-furniture.json', listings);
+    console.log(`\n  [DRY RUN] Would classify ${readyToClassify.length} listings.`);
+    writeClassificationOutputs(listings);
     return listings;
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.log('  WARNING: OPENAI_API_KEY not set - skipping furniture check');
-    writePipelineFile('step3-furniture.json', listings);
+    writeClassificationOutputs(listings);
     return listings;
   }
 
-  if (hasPhotos.length === 0) {
+  if (readyToClassify.length === 0) {
     console.log('  No listings to scan.');
-    writePipelineFile('step3-furniture.json', listings);
+    writeClassificationOutputs(listings);
     return listings;
   }
 
@@ -144,21 +265,23 @@ async function run(options) {
   const supabase = getSupabase();
   const rateLimiter = createRateLimiter(500); // 2 req/sec for OpenAI
   let scanned = 0;
-  let furnished = 0;
+  let furnishedCount = 0;
   let failed = 0;
 
-  console.log(`  Scanning ${hasPhotos.length} listings...`);
+  console.log(`  Classifying ${readyToClassify.length} listings...`);
 
-  for (const listing of hasPhotos) {
+  for (const listing of readyToClassify) {
     await rateLimiter();
-    const urls = getInteriorPhotoUrls(listing);
+    const urls = getClassificationPhotoUrls(listing);
 
     // just_listed with only 1 total photo — skip scan, queue retry for next run
     let totalPhotos = listing.carouselphotos;
     if (typeof totalPhotos === 'string') { try { totalPhotos = JSON.parse(totalPhotos); } catch(e) {} }
     totalPhotos = Array.isArray(totalPhotos) ? totalPhotos.length : 0;
 
-    if (listing.status === 'just_listed' && totalPhotos <= 1) {
+    const hasDescription = Boolean(String(listing.description || '').trim());
+    const deterministicType = ['LOT', 'LAND'].includes(String(listing.contenttype || '').toUpperCase());
+    if (listing.status === 'just_listed' && totalPhotos <= 1 && !hasDescription && !deterministicType) {
       listing.furniture_needs_retry = true;
       listing.furniture_scan_date = null;
       listing.is_furnished = null;
@@ -172,51 +295,62 @@ async function run(options) {
     }
 
     try {
-      const result = await checkFurnished(openai, urls);
+      const result = await classifyProperty(openai, listing, urls);
 
       // For just_listed with uncertain result AND very few photos → also hold for retry
       const needsRetry = listing.status === 'just_listed' &&
-        (result.isUncertain || result.confidence <= 0.5) && totalPhotos <= MIN_PHOTOS_FOR_RETRY;
+        result.market_segment === 'unknown' && result.confidence <= 0.5 &&
+        totalPhotos <= MIN_PHOTOS_FOR_RETRY && !String(listing.description || '').trim();
 
       if (needsRetry) {
         listing.furniture_needs_retry = true;
         listing.furniture_scan_date = null;
         listing.is_furnished = null;
-        process.stdout.write(`  RETRY flagged (just_listed, low/uncertain conf): zpid ${listing.zpid} — ${result.rawAnswer}\r`);
+        process.stdout.write(`  RETRY flagged (insufficient evidence): zpid ${listing.zpid}\r`);
 
         await supabase.from('listings').update({
           furniture_needs_retry: true,
           furniture_scan_date: null,
           is_furnished: null,
         }).eq('zpid', listing.zpid);
-      } else if (result.isUncertain) {
-        // Sold listing uncertain — stamp it, no retry (Zillow removes sold photos anyway)
-        listing.furniture_needs_retry = false;
-        listing.furniture_scan_date = new Date().toISOString();
-        listing.is_furnished = null;
-        process.stdout.write(`  UNCERTAIN (sold, no retry): zpid ${listing.zpid} — ${result.rawAnswer}\r`);
-
-        await supabase.from('listings').update({
-          furniture_needs_retry: false,
-          furniture_scan_date: new Date().toISOString(),
-          is_furnished: null,
-        }).eq('zpid', listing.zpid);
       } else {
-        // Clear retry flag — we got a definitive YES or NO
-        listing.is_furnished = result.isFurnished;
+        const classifiedAt = new Date().toISOString();
+        const isFurnished = ['furnished', 'partially_furnished'].includes(result.occupancy_state)
+          ? true
+          : ['empty', 'construction', 'not_applicable'].includes(result.occupancy_state)
+            ? false
+            : (listing.is_furnished ?? null);
+        listing.is_furnished = isFurnished;
         listing.furniture_confidence = result.confidence;
-        listing.furniture_scan_date = new Date().toISOString();
+        listing.furniture_scan_date = classifiedAt;
         listing.furniture_needs_retry = false;
+        listing.market_segment = result.market_segment;
+        listing.listing_categories = result.listing_categories;
+        listing.occupancy_state = result.occupancy_state;
+        listing.outreach_target = result.outreach_target;
+        listing.property_signals = result.property_signals;
+        listing.classification_confidence = result.confidence;
+        listing.classification_reasons = result.reasons;
+        listing.property_classified_at = classifiedAt;
+        listing.property_classification_method = 'postcard-multimodal-v2';
 
-        // Update Supabase
         const { error } = await supabase
           .from('listings')
           .update({
-            is_furnished: result.isFurnished,
+            is_furnished: isFurnished,
             furniture_confidence: result.confidence,
-            furniture_scan_date: new Date().toISOString(),
-            furniture_scan_method: 'postcard-pipeline-v1',
+            furniture_scan_date: classifiedAt,
+            furniture_scan_method: 'postcard-multimodal-v2',
             furniture_needs_retry: false,
+            market_segment: result.market_segment,
+            listing_categories: result.listing_categories,
+            occupancy_state: result.occupancy_state,
+            outreach_target: result.outreach_target,
+            property_signals: result.property_signals,
+            classification_confidence: result.confidence,
+            classification_reasons: result.reasons,
+            property_classified_at: classifiedAt,
+            property_classification_method: 'postcard-multimodal-v2',
           })
           .eq('zpid', listing.zpid);
 
@@ -225,8 +359,8 @@ async function run(options) {
         }
 
         scanned++;
-        if (result.isFurnished) furnished++;
-        process.stdout.write(`  Scanned ${scanned}/${hasPhotos.length} — ${result.rawAnswer} (zpid ${listing.zpid})\r`);
+        if (listing.is_furnished) furnishedCount++;
+        process.stdout.write(`  Classified ${scanned}/${readyToClassify.length} — ${result.market_segment}/${result.occupancy_state} (zpid ${listing.zpid})\r`);
       }
     } catch (err) {
       console.error(`\n  Error scanning zpid ${listing.zpid}:`, err.message);
@@ -234,7 +368,7 @@ async function run(options) {
     }
   }
 
-  console.log(`\n  Scanned: ${scanned}, Furnished: ${furnished}, Unfurnished: ${scanned - furnished}, Failed: ${failed}`);
+  console.log(`\n  Scanned: ${scanned}, Furnished: ${furnishedCount}, Unfurnished: ${scanned - furnishedCount}, Failed: ${failed}`);
 
   // Overall summary
   const totalFurnished = listings.filter(l => l.is_furnished === true).length;
@@ -242,7 +376,7 @@ async function run(options) {
   const totalUnknown = listings.filter(l => l.is_furnished == null).length;
   console.log(`  Overall: ${totalFurnished} furnished, ${totalUnfurnished} unfurnished, ${totalUnknown} unknown`);
 
-  writePipelineFile('step3-furniture.json', listings);
+  writeClassificationOutputs(listings);
   return listings;
 }
 
@@ -253,4 +387,11 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = {
+  run,
+  normalizeClassification,
+  parseClassificationAnswer,
+  getInteriorPhotoUrls,
+  getClassificationPhotoUrls,
+  countValues,
+};

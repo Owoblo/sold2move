@@ -22,13 +22,21 @@ const REGION_CITIES = {
 
 // Pipeline data directory — set per region so Windsor and WKG never share files
 let PIPELINE_DIR = path.join(__dirname, '.pipeline-windsor');
+let PIPELINE_BASE_DIR = PIPELINE_DIR;
 
 function getRegionState(regionConfig) {
   return (regionConfig.state || regionConfig.province || 'ON').trim().toUpperCase();
 }
 
-function setPipelineRegion(region) {
-  PIPELINE_DIR = path.join(__dirname, `.pipeline-${region || 'windsor'}`);
+function setPipelineRegion(region, batchId = null) {
+  PIPELINE_BASE_DIR = path.join(__dirname, `.pipeline-${region || 'windsor'}`);
+  PIPELINE_DIR = batchId
+    ? path.join(PIPELINE_BASE_DIR, 'batches', String(batchId).replace(/[^a-zA-Z0-9_-]/g, '_'))
+    : PIPELINE_BASE_DIR;
+  if (batchId) {
+    fs.mkdirSync(PIPELINE_BASE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(PIPELINE_BASE_DIR, 'latest-run.txt'), String(batchId));
+  }
 }
 
 /**
@@ -91,7 +99,8 @@ function writePipelineFile(filename, data) {
   ensurePipelineDir();
   const filepath = path.join(PIPELINE_DIR, filename);
   fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
-  console.log(`  Wrote ${data.length} records to ${path.relative(process.cwd(), filepath)}`);
+  const count = Array.isArray(data) ? `${data.length} records` : 'manifest';
+  console.log(`  Wrote ${count} to ${path.relative(process.cwd(), filepath)}`);
 }
 
 /**
@@ -123,7 +132,7 @@ function parseCliArgs(argv) {
     to: today.toISOString().split('T')[0],
     skipPhotos: false,
     skipFurniture: false,
-    skipGeocode: true,
+    skipGeocode: false,
     skipScrape: false,
     includeUnscanned: false,
     minPrice: 300000,

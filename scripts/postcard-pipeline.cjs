@@ -14,7 +14,13 @@ async function runPipeline(rawArgs) {
   const regionConfig = getRegionConfig(options.region);
   options.batchId = options.batchId || `${regionConfig.key}-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}`;
 
-  setPipelineRegion(regionConfig.key);
+  setPipelineRegion(regionConfig.key, options.batchId);
+  writePipelineFile('batch-manifest.json', {
+    batch_id: options.batchId,
+    region: regionConfig.key,
+    status: 'running',
+    started_at: new Date().toISOString(),
+  });
 
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log(`║ ${regionConfig.label.padEnd(56, ' ')} ║`);
@@ -47,6 +53,14 @@ async function runPipeline(rawArgs) {
 
   if (filtered.length === 0) {
     console.log('\nNo listings found matching criteria. Pipeline complete.');
+    writePipelineFile('batch-manifest.json', {
+      batch_id: options.batchId,
+      region: regionConfig.key,
+      status: 'generated',
+      generated_at: new Date().toISOString(),
+      record_count: 0,
+      items: [],
+    });
     return [];
   }
 

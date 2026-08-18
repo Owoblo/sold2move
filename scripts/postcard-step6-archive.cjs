@@ -1,96 +1,66 @@
 #!/usr/bin/env node
 /**
- * Step 6: Archive Sold Listings
+ * Step 6: Stage generated mailing batch.
  *
- * After postcards have been generated, moves sold listings into sold_archive
- * and removes them from the main listings table.
- *
- * This prevents:
- *   1. Duplicate sold postcards on future runs
- *   2. Clutter in the main listings table
- *
- * The sold_archive is also used by the scraper for glitch detection —
- * if a listing reappears on Zillow after being archived, it gets flagged
- * as glitch_suspected instead of just_listed.
+ * Generating CSV/PDF artifacts is not proof that mail was submitted or sent.
+ * This step records a generated batch and its immutable candidate set, but it
+ * deliberately does not mutate listing send timestamps or lifecycle status.
+ * Use postcard-confirm-mailed.cjs only after the printer/mail handoff occurs.
  */
 
-const {
-  getSupabase,
-  stepHeader,
-  parseCliArgs,
-} = require('./postcard-lib.cjs');
+const { createClient } = require('@supabase/supabase-js');
+const { stepHeader, writePipelineFile } = require('./postcard-lib.cjs');
 
-async function run(options, finalListings) {
-  stepHeader(6, 'Clean Slate — Archive Sold, Reset Just Listed');
-
-  if (!finalListings || finalListings.length === 0) {
-    console.log('  No listings to process.');
-    return;
-  }
-
-  const soldListings = finalListings.filter(l => l.status === 'sold');
-  const justListedListings = finalListings.filter(l => l.status === 'just_listed');
-  const sentAt = new Date().toISOString();
-  const batchId = options?.batchId || `batch-${sentAt.replace(/[-:.TZ]/g, '').slice(0, 14)}`;
-
-  console.log(`  Sold to archive: ${soldListings.length}`);
-  console.log(`  Just listed to reset → active: ${justListedListings.length}`);
-  console.log(`  Batch ID: ${batchId}`);
-
-  const supabase = getSupabase();
-
-  // Per-row updates so we can increment postcard_send_count from each row's
-  // current value (Supabase JS .update() doesn't support `col = col + 1`
-  // expressions without an RPC). Loop is bounded by batch size; for a few
-  // hundred rows the wall-clock cost is small.
-  let archived = 0;
-  for (const l of soldListings) {
-    const nextCount = (l.postcard_send_count || 0) + 1;
-    const { error } = await supabase
-      .from('listings')
-      .update({
-        status: 'sold_archived',
-        sold_postcard_sent_at: sentAt,
-        last_postcard_sent_at: sentAt,
-        last_postcard_batch_id: batchId,
-        last_postcard_type_sent: 'sold',
-        postcard_skip_reason: null,
-        postcard_send_count: nextCount,
-      })
-      .eq('zpid', l.zpid);
-    if (error) console.error(`  Failed to archive zpid ${l.zpid}:`, error.message);
-    else archived++;
-  }
-
-  // Mark just_listed listings as active — clean slate for next scrape
-  let reset = 0;
-  for (const l of justListedListings) {
-    const nextCount = (l.postcard_send_count || 0) + 1;
-    const { error } = await supabase
-      .from('listings')
-      .update({
-        status: 'active',
-        just_listed_postcard_sent_at: sentAt,
-        last_postcard_sent_at: sentAt,
-        last_postcard_batch_id: batchId,
-        last_postcard_type_sent: 'just_listed',
-        postcard_skip_reason: null,
-        postcard_send_count: nextCount,
-      })
-      .eq('zpid', l.zpid);
-    if (error) console.error(`  Failed to reset zpid ${l.zpid}:`, error.message);
-    else reset++;
-  }
-
-  console.log(`  ✓ ${archived} sold → sold_archived`);
-  console.log(`  ✓ ${reset} just_listed → active`);
+function serviceClient() {
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-if (require.main === module) {
-  run(null, []).catch(err => {
-    console.error('Step 6 failed:', err.message);
-    process.exit(1);
+async function run(options, finalListings) {
+  stepHeader(6, 'Stage Generated Mailing Batch');
+  const generatedAt = new Date().toISOString();
+  const batchId = options?.batchId || `batch-${generatedAt.replace(/[-:.TZ]/g, '').slice(0, 14)}`;
+  const items = (finalListings || []).map(listing => ({
+    zpid: listing.zpid,
+    postcard_type: listing.status === 'sold' ? 'sold' : 'just_listed',
+    address: listing.address || listing.addressstreet,
+    city: listing.city || listing.addresscity,
+    postal_code: listing.addresszipcode || null,
+  }));
+  const manifest = {
+    batch_id: batchId,
+    region: options?.region || 'windsor',
+    status: 'generated',
+    generated_at: generatedAt,
+    record_count: items.length,
+    items,
+    notice: 'Generated is not sent. Confirm printer/mail handoff separately.',
+  };
+  writePipelineFile('batch-manifest.json', manifest);
+
+  if (items.length === 0) {
+    console.log('  Empty batch recorded; no lifecycle changes made.');
+    return manifest;
+  }
+
+  const supabase = serviceClient();
+  if (!supabase) {
+    console.warn('  SUPABASE_SERVICE_ROLE_KEY not set; batch staged in its local manifest only.');
+    console.warn('  No listing was marked sent or archived.');
+    return manifest;
+  }
+
+  const { error } = await supabase.rpc('stage_postcard_batch', {
+    p_batch_id: batchId,
+    p_region: manifest.region,
+    p_items: items,
   });
+  if (error) throw new Error(`Failed to stage mailing batch ${batchId}: ${error.message}`);
+  console.log(`  ✓ Staged ${items.length} generated item(s) in mail batch ${batchId}`);
+  console.log('  No listing has been marked sent.');
+  return manifest;
 }
 
 module.exports = { run };

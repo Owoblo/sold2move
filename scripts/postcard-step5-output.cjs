@@ -26,6 +26,40 @@ const {
   formatRecipientDeliveryLine,
 } = require('./postcard-lib.cjs');
 const { generatePremiumEnvelopes } = require('./generate-premium-envelopes.cjs');
+const { parseStreet, extractListingUnit } = require('./postcard-step4-geocode.cjs');
+
+const NON_HOMEOWNER_SEGMENTS = new Set([
+  'investor_flip', 'student_housing', 'rental', 'new_construction', 'land_lot',
+]);
+const NON_HOMEOWNER_CATEGORIES = new Set([
+  'investor_flip', 'student_housing', 'rental', 'new_construction', 'land_lot',
+]);
+
+function homeownerAudienceEligibility(listing) {
+  const categories = Array.isArray(listing.listing_categories) ? listing.listing_categories : [];
+  const blockedCategory = categories.find(value => NON_HOMEOWNER_CATEGORIES.has(value));
+  if (blockedCategory) return { eligible: false, reason: `non_homeowner_category: ${blockedCategory}` };
+  if (NON_HOMEOWNER_SEGMENTS.has(listing.market_segment)) {
+    return { eligible: false, reason: `non_homeowner_segment: ${listing.market_segment}` };
+  }
+  if (listing.outreach_target && listing.outreach_target !== 'homeowner') {
+    return { eligible: false, reason: `non_homeowner_target: ${listing.outreach_target}` };
+  }
+
+  const classified = Boolean(listing.property_classified_at);
+  const ordinaryResale = listing.market_segment === 'owner_occupied' || categories.includes('ordinary_resale');
+  if (classified && listing.outreach_target === 'homeowner' && ordinaryResale) {
+    return { eligible: true, reason: null };
+  }
+
+  // Preserve already-established sold follow-up campaigns. These rows passed
+  // the historical just-listed homeowner filter before structured routing was
+  // introduced; all new/unmailed records must pass the structured classifier.
+  if (listing.status === 'sold' && listing.just_listed_postcard_sent_at) {
+    return { eligible: true, reason: 'legacy_just_listed_homeowner_signal' };
+  }
+  return { eligible: false, reason: classified ? 'homeowner_classification_uncertain' : 'homeowner_classification_missing' };
+}
 
 /**
  * Apply final filters to determine which listings get postcards.
@@ -36,6 +70,64 @@ function applyOutputFilters(listings, opts) {
   opts = opts || {};
   let filtered = [...listings];
   const rejected = []; // { zpid, reason }
+
+  // Active inventory can enter the pipeline only for quality recovery. It
+  // should be enriched now, while photos exist, but never mailed as though it
+  // were newly listed or sold.
+  {
+    const next = [];
+    for (const l of filtered) {
+      if (l.status === 'active') rejected.push({ zpid: l.zpid, reason: 'active_quality_recovery_only' });
+      else next.push(l);
+    }
+    filtered = next;
+  }
+
+  // The expensive classification must participate in the mailing decision.
+  // Routes intended for realtors, builders, landlords, or leasing agents are
+  // retained in Supabase for their own campaigns but cannot enter this batch.
+  {
+    const next = [];
+    for (const l of filtered) {
+      const decision = homeownerAudienceEligibility(l);
+      if (decision.eligible) next.push(l);
+      else rejected.push({ zpid: l.zpid, reason: decision.reason });
+    }
+    filtered = next;
+  }
+
+  // Lots/land now pass through the classifier so they remain visible market
+  // intelligence, but preserve the existing rule that they never enter the
+  // homeowner postcard batch.
+  {
+    const next = [];
+    for (const l of filtered) {
+      const contentType = String(l.contenttype || '').toUpperCase();
+      if (l.market_segment === 'land_lot' || contentType === 'LOT' || contentType === 'LAND') {
+        rejected.push({ zpid: l.zpid, reason: 'lot_or_land' });
+      } else {
+        next.push(l);
+      }
+    }
+    const removed = filtered.length - next.length;
+    if (removed > 0) console.log(`  Removed ${removed} lots/land from postcard output (classification retained)`);
+    filtered = next;
+  }
+
+  // Preserve the existing physical-mail requirement while allowing these rows
+  // to be classified first for realtor/builder/leasing outreach.
+  {
+    const next = [];
+    for (const l of filtered) {
+      const street = String(l.addressstreet || '').trim();
+      if (!street || !/^\d/.test(street)) {
+        rejected.push({ zpid: l.zpid, reason: 'no_street_number' });
+      } else {
+        next.push(l);
+      }
+    }
+    filtered = next;
+  }
 
   // ─── Tier 1: hard cap on total postcards per address ─────────────────────
   // No matter how the status flaps (e.g. just_listed → sold → just_listed → sold
@@ -59,19 +151,21 @@ function applyOutputFilters(listings, opts) {
     filtered = next;
   }
 
-  // Filter to verified addresses (if geocoding was run)
-  const hasGeocode = listings.some(l => l._geocode_verified != null);
-  if (hasGeocode) {
+  // Physical mail is fail-closed: true sends, false rejects, null/unavailable
+  // holds. Missing credentials and transient geocoder failures cannot silently
+  // authorize postage.
+  {
     const next = [];
     for (const l of filtered) {
-      if (l._geocode_verified === true || l._geocode_verified == null) {
-        next.push(l);
-      } else {
+      if (l._geocode_verified === true) next.push(l);
+      else if (l._geocode_verified === false) {
         rejected.push({ zpid: l.zpid, reason: `geocode_mismatch: ${(l._geocode_reason || '').slice(0, 200)}` });
+      } else {
+        rejected.push({ zpid: l.zpid, reason: `geocode_unavailable_hold: ${(l._geocode_reason || 'not verified').slice(0, 200)}` });
       }
     }
     const removedGeo = filtered.length - next.length;
-    if (removedGeo > 0) console.log(`  Removed ${removedGeo} listings with address mismatches`);
+    if (removedGeo > 0) console.log(`  Held ${removedGeo} listings without positive address verification`);
     filtered = next;
   }
 
@@ -144,7 +238,12 @@ function normalizeAddressKey(listing) {
   const street = (listing.addressstreet || '').toString();
   const postal = (listing.addresszipcode || '').toString();
   const clean = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return `${clean(street)}|${clean(postal)}`;
+  const parsed = parseStreet(street);
+  const unit = extractListingUnit(street) || 'NONE';
+  const canonicalStreet = parsed.number && parsed.core
+    ? `${parsed.number}|${parsed.core}|${parsed.suffix || 'UNKNOWN'}`
+    : street;
+  return `${clean(canonicalStreet)}|UNIT:${clean(unit)}|${clean(postal)}`;
 }
 
 /**
@@ -167,30 +266,30 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
   const kept = [];
   const rejected = [];
 
-  // Collect distinct street values to scope the lookup query tightly.
-  const streets = [...new Set(
-    finalListings.map(l => (l.addressstreet || '').trim()).filter(Boolean)
-  )];
-  if (streets.length === 0) {
+  if (!finalListings.some(l => (l.addressstreet || '').trim())) {
     return { kept: finalListings, rejected };
   }
 
-  // Pull every prior send in this region for those streets (any status,
-  // including sold_archived). Minimal columns to keep the query light.
+  // Pull all prior sends in the region, then compare canonical in memory.
+  // Scoping the SQL lookup by the current raw street string prevented variants
+  // such as "Main St." and "Main Street" from ever reaching normalization.
   const sentByAddress = new Map(); // normKey -> { jl: bool, sold: bool, zpids: Set }
-  const CHUNK = 100;
-  for (let i = 0; i < streets.length; i += CHUNK) {
-    const chunk = streets.slice(i, i + CHUNK);
+  const PAGE_SIZE = 1000;
+  for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('listings')
       .select('zpid, addressstreet, addresszipcode, just_listed_postcard_sent_at, sold_postcard_sent_at')
       .eq('region', region)
-      .in('addressstreet', chunk)
-      .or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null');
+      .or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null')
+      .order('zpid', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
 
     if (error) {
-      console.warn(`  Address-dup lookup failed for a chunk: ${error.message} — skipping guard for it`);
-      continue;
+      console.warn(`  Address-dup lookup failed: ${error.message} — holding batch`);
+      return {
+        kept: [],
+        rejected: finalListings.map(l => ({ zpid: l.zpid, reason: 'address_duplicate_guard_unavailable_hold' })),
+      };
     }
     for (const row of data || []) {
       const key = normalizeAddressKey(row);
@@ -200,6 +299,7 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
       entry.zpids.add(String(row.zpid));
       sentByAddress.set(key, entry);
     }
+    if (!data || data.length < PAGE_SIZE) break;
   }
 
   for (const listing of finalListings) {
@@ -230,9 +330,9 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
 // FOR_SALE / PENDING, the listing is alive — pull it from the batch and put
 // it back to active in the DB.
 //
-// FAIL-OPEN by design: any error (actor missing, credits out, timeout) logs
-// a warning and mails the batch as-is — verification can only ever remove
-// bad sends, never block good ones.
+// FAIL-CLOSED: a sold postcard requires a positive non-active detail status.
+// Missing credentials, timeouts, empty datasets, and unrecognized results are
+// held for the next run rather than treated as proof of sale.
 const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail-scraper';
 const VERIFY_CHUNK_SIZE = Number.parseInt(process.env.SOLD_VERIFY_CHUNK_SIZE || '25', 10);
 const VERIFY_TIMEOUT_MINUTES = Number.parseInt(process.env.SOLD_VERIFY_TIMEOUT_MINUTES || '4', 10);
@@ -339,23 +439,49 @@ function countBy(items, keyFn) {
   return counts;
 }
 
+function partitionSoldVerification(listings, statusByZpid) {
+  const kept = [];
+  const pulled = [];
+  const held = [];
+  for (const listing of listings) {
+    if (listing.status !== 'sold') {
+      kept.push(listing);
+      continue;
+    }
+    const verifiedStatus = statusByZpid.get(String(listing.zpid));
+    if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
+      pulled.push({ listing, verifiedStatus });
+    } else if (!verifiedStatus) {
+      held.push({ listing, reason: listing.detailurl ? 'sold_verification_unavailable: no_status' : 'sold_verification_unavailable: no_detail_url' });
+    } else {
+      kept.push(listing);
+    }
+  }
+  return { kept, pulled, held };
+}
+
 async function verifySoldCandidates(supabase, finalListings) {
   const token = process.env.APIFY_TOKEN;
-  const candidates = finalListings.filter(l => l.status === 'sold' && l.detailurl);
-  if (candidates.length === 0) return { kept: finalListings, pulled: [] };
+  const candidates = finalListings.filter(l => l.status === 'sold');
+  if (candidates.length === 0) return { kept: finalListings, pulled: [], held: [] };
   if (!token) {
-    console.warn('  Sold verification skipped: APIFY_TOKEN not set');
-    return { kept: finalListings, pulled: [] };
+    console.warn('  Sold verification unavailable: APIFY_TOKEN not set — holding sold candidates');
+    return {
+      kept: finalListings.filter(l => l.status !== 'sold'),
+      pulled: [],
+      held: candidates.map(listing => ({ listing, reason: 'sold_verification_unavailable: missing_apify_token' })),
+    };
   }
 
-  console.log(`  Verifying ${candidates.length} sold candidate(s) against their Zillow detail pages in chunks of ${VERIFY_CHUNK_SIZE}...`);
+  const verifiable = candidates.filter(l => l.detailurl);
+  console.log(`  Verifying ${verifiable.length}/${candidates.length} sold candidate(s) against their Zillow detail pages in chunks of ${VERIFY_CHUNK_SIZE}...`);
 
   const statusByZpid = new Map();
   let verifiedCount = 0;
-  for (let i = 0; i < candidates.length; i += VERIFY_CHUNK_SIZE) {
-    const chunk = candidates.slice(i, i + VERIFY_CHUNK_SIZE);
+  for (let i = 0; i < verifiable.length; i += VERIFY_CHUNK_SIZE) {
+    const chunk = verifiable.slice(i, i + VERIFY_CHUNK_SIZE);
     const chunkNum = Math.floor(i / VERIFY_CHUNK_SIZE) + 1;
-    const totalChunks = Math.ceil(candidates.length / VERIFY_CHUNK_SIZE);
+    const totalChunks = Math.ceil(verifiable.length / VERIFY_CHUNK_SIZE);
     console.log(`    Sold verification chunk ${chunkNum}/${totalChunks} (${chunk.length} candidate(s))...`);
 
     try {
@@ -392,22 +518,11 @@ async function verifySoldCandidates(supabase, finalListings) {
       }
       verifiedCount += chunk.length;
     } catch (err) {
-      console.warn(`    Sold verification chunk ${chunkNum}/${totalChunks} failed (${err.message}) — keeping that chunk unverified`);
+      console.warn(`    Sold verification chunk ${chunkNum}/${totalChunks} failed (${err.message}) — holding that chunk`);
     }
   }
 
-  const pulled = [];
-  const kept = [];
-  for (const l of finalListings) {
-    const verifiedStatus = l.status === 'sold' ? statusByZpid.get(String(l.zpid)) : null;
-    if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
-      pulled.push({ listing: l, verifiedStatus });
-    } else {
-      // No result for this zpid (page gone entirely — consistent with a
-      // real sale) or a non-active status: proceed with mailing.
-      kept.push(l);
-    }
-  }
+  const { kept, pulled, held } = partitionSoldVerification(finalListings, statusByZpid);
 
   for (const { listing, verifiedStatus } of pulled) {
     console.log(`    PULLED zpid ${listing.zpid} — Zillow says ${verifiedStatus}, not sold (${listing.addressstreet}, ${listing.city})`);
@@ -423,10 +538,9 @@ async function verifySoldCandidates(supabase, finalListings) {
 
   if (pulled.length > 0) {
     console.log(`  Sold verification pulled ${pulled.length}/${verifiedCount} verified candidate(s) back to active`);
-  } else {
-    console.log(`  Sold verification: no active/pending matches found across ${verifiedCount} verified candidate(s)`);
   }
-  return { kept, pulled };
+  if (held.length > 0) console.log(`  Sold verification held ${held.length} candidate(s) without positive evidence`);
+  return { kept, pulled, held };
 }
 
 /**
@@ -450,6 +564,11 @@ function generateCSV(listings, outputPath) {
     detail_days_on_zillow: l.detail_days_on_zillow ?? '',
     detail_time_on_zillow: l.detail_time_on_zillow || '',
     zillow_date_posted: l.zillow_date_posted || '',
+    listing_agents: Array.isArray(l.listing_agent_names)
+      ? l.listing_agent_names.join('; ')
+      : '',
+    listing_mls_id: l.listing_mls_id || '',
+    listing_attribution_captured_at: l.listing_attribution_captured_at || '',
     address_verified: l._geocode_verified != null ? (l._geocode_verified ? 'Yes' : 'No') : 'Not checked',
     lastseenat: l.lastseenat,
   }));
@@ -482,23 +601,10 @@ async function run(options) {
 
   const opts = options || parseCliArgs();
 
-  // Try step4 first, fall back to step3, step2, step1
-  let listings;
-  const fallbackFiles = ['step4-verified.json', 'step3-furniture.json', 'step2-photos.json', 'step1-filtered.json'];
-  for (const file of fallbackFiles) {
-    try {
-      listings = readPipelineFile(file);
-      console.log(`  Loaded ${listings.length} listings from ${file}`);
-      break;
-    } catch (e) {
-      // Try next file
-    }
-  }
-
-  if (!listings) {
-    console.error('  No pipeline data found. Run at least Step 1 first.');
-    process.exit(1);
-  }
+  // Production output must consume this batch's Step 4 artifact. Falling back
+  // to a prior/partial stage can bypass classification or address controls.
+  const listings = readPipelineFile('step4-verified.json');
+  console.log(`  Loaded ${listings.length} listings from step4-verified.json`);
 
   // Apply filters
   let { finalListings, rejected } = applyOutputFilters(listings, opts);
@@ -533,14 +639,17 @@ async function run(options) {
   }
   const addressRejected = rejected.slice(initialRejected.length + freshnessRejected.length);
 
-  // Verify sold candidates against their live Zillow pages — pull any that
-  // are actually still on the market. Fail-open: errors mail the batch as-is.
+  // Verify sold candidates against their live Zillow pages. Still-active rows
+  // return to active; unavailable evidence is held for a later run.
   let soldPulled = [];
+  let soldHeld = [];
   if (!opts.dryRun && finalListings.some(l => l.status === 'sold')) {
     const supabase = getSupabase();
-    const { kept, pulled } = await verifySoldCandidates(supabase, finalListings);
+    const { kept, pulled, held } = await verifySoldCandidates(supabase, finalListings);
     finalListings = kept;
     soldPulled = pulled;
+    soldHeld = held;
+    rejected = rejected.concat(held.map(({ listing, reason }) => ({ zpid: listing.zpid, reason })));
   }
 
   writePipelineFile('step5-final.json', finalListings);
@@ -579,13 +688,20 @@ async function run(options) {
       rejected_by_reason: countBy(addressRejected, r => r.reason),
     },
     sold_verification: {
-      candidates_before_verification: finalListings.filter(l => l.status === 'sold').length + soldPulled.length,
+      candidates_before_verification: finalListings.filter(l => l.status === 'sold').length + soldPulled.length + soldHeld.length,
       pulled_back_count: soldPulled.length,
       pulled_back: soldPulled.map(({ listing, verifiedStatus }) => ({
         zpid: listing.zpid,
         address: listing.address || listing.addressstreet,
         city: listing.city || listing.addresscity,
         verified_status: verifiedStatus,
+      })),
+      held_count: soldHeld.length,
+      held: soldHeld.map(({ listing, reason }) => ({
+        zpid: listing.zpid,
+        address: listing.address || listing.addressstreet,
+        city: listing.city || listing.addresscity,
+        reason,
       })),
     },
     reappeared_after_sold_archive: {
@@ -626,17 +742,10 @@ async function run(options) {
   const region = opts.region || 'windsor';
   const regionConfig = getRegionConfig(region);
   const regionLabel = regionConfig.outputPrefix;
-  const dateStr = new Date().toISOString().split('T')[0];
-
-  // Use versioned filenames so re-runs never overwrite previous output
-  let runNum = 1;
-  let csvPath, pdfPath;
-  do {
-    const suffix = runNum === 1 ? dateStr : `${dateStr}_v${runNum}`;
-    csvPath = path.join(projectRoot, `${regionLabel}_Postcards_${suffix}.csv`);
-    pdfPath = path.join(projectRoot, `${regionLabel}_Postcards_${suffix}.pdf`);
-    runNum++;
-  } while (fs.existsSync(csvPath) || fs.existsSync(pdfPath));
+  const artifactId = String(opts.batchId || new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14))
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
+  const csvPath = path.join(projectRoot, `${regionLabel}_Postcards_${artifactId}.csv`);
+  const pdfPath = path.join(projectRoot, `${regionLabel}_Postcards_${artifactId}.pdf`);
 
   generateCSV(finalListings, csvPath);
   await generatePDF(finalListings, pdfPath, opts);
@@ -667,6 +776,8 @@ if (require.main === module) {
 module.exports = {
   run,
   applyOutputFilters,
+  homeownerAudienceEligibility,
+  partitionSoldVerification,
   normalizeAddressKey,
   applyJustListedFreshnessGuard,
   generatePDF,
