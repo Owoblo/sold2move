@@ -106,6 +106,10 @@ function safeClassification(line) {
   }
 }
 
+function jsonLines(text) {
+  return String(text || '').split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+}
+
 function counts(rows, getter) {
   const result = {};
   for (const row of rows) {
@@ -194,12 +198,75 @@ async function main() {
     }
   }
   const outputText = outputParts.join('\n');
-  fs.writeFileSync(path.join(OUT_DIR, 'responses.jsonl'), outputText);
-  const errorText = errorParts.join('\n');
-  if (errorText.trim()) fs.writeFileSync(path.join(OUT_DIR, 'errors.jsonl'), errorText);
+  const originalErrors = errorParts.join('\n');
+  const outputById = new Map(jsonLines(outputText).map(line => [line.custom_id, line]));
+  const retryIds = new Set(jsonLines(originalErrors).map(line => line.custom_id));
+  for (const [customId, line] of outputById) {
+    if (!safeClassification(line).classification) retryIds.add(customId);
+  }
+
+  let finalErrorLines = [];
+  if (retryIds.size) {
+    const retryKey = `${JOB_KEY}-retry-unresolved-v1`;
+    const badImageById = new Map();
+    for (const line of jsonLines(originalErrors)) {
+      const message = line.response?.body?.error?.message || line.error?.message || '';
+      const match = message.match(/https?:\/\/[^\s]+/);
+      if (match) badImageById.set(line.custom_id, match[0].replace(/[.]+$/, ''));
+    }
+    const retryRequests = requests.filter(request => retryIds.has(request.custom_id)).map(request => {
+      const copy = JSON.parse(JSON.stringify(request));
+      copy.body.max_tokens = 500;
+      const badUrl = badImageById.get(copy.custom_id);
+      if (badUrl) {
+        copy.body.messages[1].content = copy.body.messages[1].content.filter(part =>
+          part.type !== 'image_url' || part.image_url.url !== badUrl);
+      }
+      return copy;
+    });
+    console.log(`Retrying ${retryRequests.length} unresolved unique requests...`);
+    const recent = await openai.batches.list({ limit: 100 });
+    let retryBatch = recent.data.find(candidate => candidate.metadata?.job_key === retryKey &&
+      !['failed', 'expired', 'cancelled'].includes(candidate.status));
+    if (!retryBatch) {
+      const retryPath = path.join(OUT_DIR, 'requests-retry.jsonl');
+      fs.writeFileSync(retryPath, retryRequests.map(row => JSON.stringify(row)).join('\n') + '\n');
+      const retryFile = await openai.files.create({ file: fs.createReadStream(retryPath), purpose: 'batch' });
+      retryBatch = await openai.batches.create({
+        input_file_id: retryFile.id,
+        endpoint: '/v1/chat/completions',
+        completion_window: '24h',
+        metadata: { job_key: retryKey, market: 'gta-26', model: MODEL },
+      });
+      console.log(`Created unresolved retry batch: ${retryBatch.id}`);
+    } else {
+      console.log(`Resuming unresolved retry batch: ${retryBatch.id} (${retryBatch.status})`);
+    }
+    while (!['completed', 'failed', 'expired', 'cancelled'].includes(retryBatch.status) && Date.now() < deadline) {
+      await sleep(60_000);
+      retryBatch = await openai.batches.retrieve(retryBatch.id);
+      console.log(`Retry ${retryBatch.status}: ${retryBatch.request_counts?.completed || 0}/${retryBatch.request_counts?.total || retryRequests.length}, failed ${retryBatch.request_counts?.failed || 0}`);
+    }
+    if (retryBatch.status !== 'completed') {
+      console.log(`Retry batch remains ${retryBatch.status}; rerun later to resume collection.`);
+      return;
+    }
+    batchStates.push(retryBatch);
+    const retryResponse = await openai.files.content(retryBatch.output_file_id);
+    for (const line of jsonLines(await retryResponse.text())) outputById.set(line.custom_id, line);
+    if (retryBatch.error_file_id) {
+      const retryErrorResponse = await openai.files.content(retryBatch.error_file_id);
+      finalErrorLines = jsonLines(await retryErrorResponse.text());
+    }
+  }
+
+  const dedupedOutputText = [...outputById.values()].map(line => JSON.stringify(line)).join('\n') + '\n';
+  fs.writeFileSync(path.join(OUT_DIR, 'responses.jsonl'), dedupedOutputText);
+  const errorText = finalErrorLines.map(line => JSON.stringify(line)).join('\n');
+  if (errorText.trim()) fs.writeFileSync(path.join(OUT_DIR, 'errors.jsonl'), errorText + '\n');
 
   const manifestById = new Map(manifest.map(row => [`zpid-${row.zpid}`, row]));
-  const classified = outputText.trim().split('\n').filter(Boolean).map(text => {
+  const classified = dedupedOutputText.trim().split('\n').filter(Boolean).map(text => {
     const line = JSON.parse(text);
     return { ...manifestById.get(line.custom_id), custom_id: line.custom_id, ...safeClassification(line) };
   });
