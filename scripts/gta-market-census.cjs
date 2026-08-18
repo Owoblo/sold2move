@@ -19,6 +19,7 @@ const {
 } = require('./postcard-step0-scrape.cjs');
 
 const OUT_DIR = path.join(__dirname, '.gta-census');
+const SEARCH_ACTOR = 'maxcopell~zillow-scraper';
 
 // Bounds are deliberately municipality-sized instead of one giant GTA box.
 // This reduces border spillover and keeps every Zillow search below its
@@ -145,6 +146,26 @@ function writeCsv(file, rows) {
   fs.writeFileSync(file, [columns.join(','), ...rows.map(row => columns.map(column => csvValue(row[column])).join(','))].join('\n'));
 }
 
+async function recoverLatestSuccessfulDataset(token) {
+  const after = new Date(process.env.RECOVER_AFTER || Date.now() - 24 * 60 * 60 * 1000);
+  const runsUrl = `https://api.apify.com/v2/acts/${SEARCH_ACTOR}/runs?token=${encodeURIComponent(token)}&status=SUCCEEDED&desc=1&limit=20`;
+  const runsResponse = await fetch(runsUrl);
+  if (!runsResponse.ok) throw new Error(`Could not list Apify runs (${runsResponse.status})`);
+  const runs = (await runsResponse.json())?.data?.items || [];
+  const run = runs.find(candidate =>
+    new Date(candidate.startedAt || candidate.createdAt) >= after &&
+    candidate.defaultDatasetId
+  );
+  if (!run) throw new Error(`No successful Apify search run found after ${after.toISOString()}`);
+  console.log(`Recovering successful Apify run ${run.id} started ${run.startedAt || run.createdAt}`);
+  const datasetUrl = `https://api.apify.com/v2/datasets/${run.defaultDatasetId}/items?token=${encodeURIComponent(token)}&format=json`;
+  const datasetResponse = await fetch(datasetUrl);
+  if (!datasetResponse.ok) throw new Error(`Could not download Apify dataset (${datasetResponse.status})`);
+  const rows = await datasetResponse.json();
+  if (!Array.isArray(rows) || rows.length === 0) throw new Error('Recovered Apify dataset is empty');
+  return rows;
+}
+
 async function main() {
   if (!process.env.APIFY_TOKEN) throw new Error('APIFY_TOKEN is required');
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -158,7 +179,9 @@ async function main() {
   }
   console.log(`GTA census: ${MUNICIPALITIES.length} municipalities, ${urls.length} search cells`);
 
-  const raw = await runSearchScraper(process.env.APIFY_TOKEN, urls);
+  const raw = process.env.RECOVER_LATEST === 'true'
+    ? await recoverLatestSuccessfulDataset(process.env.APIFY_TOKEN)
+    : await runSearchScraper(process.env.APIFY_TOKEN, urls);
   fs.writeFileSync(path.join(OUT_DIR, 'raw.json'), JSON.stringify(raw, null, 2));
 
   const normalizedAll = raw.map(normalize);
