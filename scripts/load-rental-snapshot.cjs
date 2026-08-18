@@ -116,6 +116,7 @@ async function loadSourceRecords() {
       source: record.source,
       source_family: record.source_family,
       source_listing_id: record.source_listing_id,
+      acquisition_scope: record.acquisition_scope,
       source_url: record.source_url,
       source_address: [record.street_address, record.city, record.province, record.postal_code].filter(Boolean).join(', '),
       monthly_price: record.monthly_price,
@@ -135,18 +136,19 @@ async function loadSourceRecords() {
         source_address, monthly_price, description, photo_urls, contact_name,
         contact_company, contact_phone, first_seen_at, last_seen_at, active
         , online_leasing_url, units_available
+        , acquisition_scope
       )
       SELECT p.id, x.source, x.source_family, x.source_listing_id, x.source_url,
         x.source_address, x.monthly_price, x.description,
         ARRAY(SELECT jsonb_array_elements_text(COALESCE(x.photo_urls, '[]'::jsonb))),
         x.contact_name, x.contact_company, x.contact_phone, now(), now(), true,
-        x.online_leasing_url, x.units_available
+        x.online_leasing_url, x.units_available, x.acquisition_scope
       FROM jsonb_to_recordset(${literal(batch)}) AS x(
         property_address_key text, property_city text, property_province text,
         source text, source_family text, source_listing_id text, source_url text,
         source_address text, monthly_price numeric, description text,
         photo_urls jsonb, contact_name text, contact_company text, contact_phone text,
-        online_leasing_url text, units_available integer
+        online_leasing_url text, units_available integer, acquisition_scope text
       )
       JOIN rental_properties p
         ON p.address_key = x.property_address_key
@@ -166,6 +168,7 @@ async function loadSourceRecords() {
         contact_phone = EXCLUDED.contact_phone,
         online_leasing_url = EXCLUDED.online_leasing_url,
         units_available = EXCLUDED.units_available,
+        acquisition_scope = EXCLUDED.acquisition_scope,
         last_seen_at = now(), active = true, missing_run_count = 0,
         lifecycle_status = 'active';
     `);
@@ -261,7 +264,7 @@ async function loadRuns() {
 async function applyLifecycle(previous) {
   const successfulScopes = summary.acquisitions
     .filter(item => item.fresh && item.raw_records > 0)
-    .map(item => ({ source: item.source, city: item.requested_city }));
+    .map(item => ({ source: item.source, city: item.requested_region || item.requested_city.toLocaleLowerCase() }));
   const lifecycle = diffInventory({
     lane: 'rental', current: records, previous, successfulScopes,
   });
@@ -285,7 +288,13 @@ async function applyLifecycle(previous) {
 
 (async () => {
   const previous = await query(`
-    SELECT r.source, r.source_listing_id, p.city, r.active, r.missing_run_count
+    SELECT r.source, r.source_listing_id, r.source_url, r.monthly_price,
+      r.bedrooms, r.bathrooms, r.photo_urls, r.contact_name, r.contact_phone,
+      r.contact_company, r.occupancy_state, r.classification_confidence,
+      r.classification_evidence, r.classification_method, r.classified_at,
+      r.acquisition_scope,
+      p.street_address, p.city, p.province, p.postal_code,
+      p.listing_categories, p.property_signals, r.active, r.missing_run_count
     FROM rental_source_records r
     LEFT JOIN rental_properties p ON p.id = r.rental_property_id;
   `);

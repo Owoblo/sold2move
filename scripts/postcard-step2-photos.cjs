@@ -414,9 +414,10 @@ async function run(options) {
   const reappearedNeedFreshness = needFreshness.filter(l => l.postcard_skip_reason === 'reappeared_after_sold_archive');
   const normalNeedFreshness = needFreshness.length - reappearedNeedFreshness.length;
   const detailCandidatesByZpid = new Map();
-  // Attribution rides along with detail requests the pipeline already needs
-  // for photos/freshness. Do not create a second bulk crawl or extra actor run.
-  for (const listing of needPhotos.concat(needFreshness)) {
+  // Realtor attribution is required downstream for Recent Sales outreach.
+  // Include unresolved listings even when their photos/freshness are cached so
+  // they cannot later become sold without a representative attached.
+  for (const listing of needPhotos.concat(needFreshness, needAttribution)) {
     detailCandidatesByZpid.set(String(listing.zpid), listing);
   }
   const detailCandidates = [...detailCandidatesByZpid.values()].slice(0, MAX_BATCH);

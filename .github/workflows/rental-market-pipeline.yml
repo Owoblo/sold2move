@@ -2,7 +2,7 @@ name: Rental Market Pipeline
 
 on:
   schedule:
-    - cron: '30 16 */2 * *'
+    - cron: '30 16 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -29,6 +29,8 @@ jobs:
         run: |
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260723_rental_market_hub.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
       - name: Scrape and categorize rental inventory
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
@@ -38,6 +40,15 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/load-rental-snapshot.cjs
+      - name: Classify rental furnishing from photos and descriptions
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MARKET_AI_BACKFILL_LIMIT: 150
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
+          node scripts/market-ai-classify.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
       - name: Email rental report
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

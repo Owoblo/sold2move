@@ -15,19 +15,40 @@ const { REGION_CONFIG } = require('./postcard-region-config.cjs');
 
 const slugify = value => String(value).toLowerCase().normalize('NFKD')
   .replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const REGION_ROOTS = { windsor: 'Windsor', chatham: 'Chatham-Kent', sarnia: 'Sarnia', london: 'London' };
-const CITIES = Object.freeze(Object.entries(REGION_ROOTS).flatMap(([region, root]) => {
-  const names = [...new Set([root, ...REGION_CONFIG[region].cities])];
-  return names.map(city => ({
-    city, region, slug: city === 'Chatham-Kent' || city === 'Chatham Kent' ? 'chatham' : slugify(city),
-  }));
-}));
+const REGION_ROOTS = {
+  windsor: 'Windsor', chatham: 'Chatham-Kent', sarnia: 'Sarnia',
+  london: 'London', woodstock: 'Woodstock', wkg: 'Kitchener-Waterloo-Cambridge-Guelph',
+};
+const SERVICE_CITIES = Object.freeze(Object.entries(REGION_CONFIG).flatMap(([region, config]) =>
+  [...new Set(config.cities)].map(city => ({ city, region }))));
+const SPACELIST_INPUTS = Object.freeze([
+  ['windsor', 'Windsor'], ['windsor', 'Amherstburg'], ['windsor', 'Kingsville'],
+  ['chatham', 'Chatham'], ['chatham', 'Thamesville'],
+  ['sarnia', 'Sarnia'], ['sarnia', 'Petrolia'],
+  ['london', 'London'], ['london', 'Ilderton'], ['london', 'Strathroy'],
+].map(([region, city]) => ({ city, region, slug: slugify(city) })));
+const REALTOR_SUPPLEMENTAL_MARKETS = Object.freeze({
+  windsor: ['LaSalle', 'Tecumseh', 'Amherstburg', 'Lakeshore', 'Leamington', 'Kingsville', 'Essex'],
+  chatham: [],
+  sarnia: ['Point Edward', 'Petrolia', 'St. Clair', 'Plympton-Wyoming', 'Lambton Shores', 'Warwick', 'Brooke-Alvinston'],
+  london: ['St. Thomas', 'Strathroy-Caradoc', 'Middlesex Centre', 'Thames Centre', 'Aylmer', 'Central Elgin', 'South Huron', 'North Middlesex'],
+  woodstock: ['Ingersoll', 'Tillsonburg', 'Norwich', 'Zorra', 'East Zorra-Tavistock', 'South-West Oxford'],
+  wkg: ['Waterloo', 'Cambridge', 'Guelph', 'Woolwich', 'Wilmot', 'Wellesley', 'North Dumfries', 'Centre Wellington', 'Puslinch', 'Guelph-Eramosa', 'Wellington North', 'Mapleton', 'Minto', 'Stratford', 'Brantford', 'Brant', 'North Perth', 'Perth East'],
+});
+const REALTOR_SEARCH_PLAN = Object.freeze([
+  ...Object.entries(REGION_ROOTS).flatMap(([region, location]) =>
+    ['sale', 'lease', 'sold'].map(dealType => ({ region, location, deal_type: dealType, scope_level: 'broad_region' }))),
+  ...Object.entries(REALTOR_SUPPLEMENTAL_MARKETS).flatMap(([region, markets]) => markets.map(location => ({
+    region, location, deal_type: 'lease', scope_level: 'municipality_gap_fill',
+  }))),
+]);
 const REALTOR_DATASETS = Object.freeze([
   { city: 'Windsor', datasetId: 'hbBdkES1evmcFOSEC' },
   { city: 'Windsor', datasetId: 'sX51VIlV9ChygRKjH' },
   { city: 'London', datasetId: 'GwFjabf0haKzabXkm' },
   { city: 'London', datasetId: 'eoObr7Q2MCGN1ALtC' },
 ]);
+const REALTOR_ACTOR = 'fatihtahta~realtor-canada-scraper-commercial';
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -46,6 +67,65 @@ function fetchText(url) {
 
 async function fetchJson(url) {
   return JSON.parse(await fetchText(url));
+}
+
+function apifyRequest(url, method = 'GET', payload) {
+  return new Promise((resolve, reject) => {
+    const body = payload == null ? null : JSON.stringify(payload);
+    const request = https.request(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } : {},
+    }, response => {
+      let result = '';
+      response.on('data', chunk => { result += chunk; });
+      response.on('end', () => {
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          reject(new Error(`Apify HTTP ${response.statusCode}: ${result.slice(0, 500)}`));
+          return;
+        }
+        try { resolve(JSON.parse(result)); } catch (error) { reject(error); }
+      });
+    });
+    request.on('error', reject);
+    request.setTimeout(45 * 60 * 1000, () => request.destroy(new Error('Apify request timed out')));
+    if (body) request.write(body);
+    request.end();
+  });
+}
+
+async function runRealtorCommercial(token, location, dealType) {
+  const input = { location: `${location}, Ontario`, deal_type: dealType, maximize_coverage: true, sort_option: 'date_desc' };
+  if (dealType === 'sold') input.sold_within_days = '30';
+  const started = await apifyRequest(
+    `https://api.apify.com/v2/acts/${REALTOR_ACTOR}/runs?token=${token}`,
+    'POST', input
+  );
+  const runId = started.data.id;
+  const datasetId = started.data.defaultDatasetId;
+  let status = started.data.status;
+  while (['READY', 'RUNNING'].includes(status)) {
+    await new Promise(resolve => setTimeout(resolve, 10000));
+    const run = await apifyRequest(`https://api.apify.com/v2/actor-runs/${runId}?token=${token}`);
+    status = run.data.status;
+  }
+  if (status !== 'SUCCEEDED') throw new Error(`REALTOR commercial actor ${runId} ended ${status}`);
+  const rows = await apifyRequest(
+    `https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&clean=true&limit=5000`
+  );
+  return { run_id: runId, dataset_id: datasetId, rows };
+}
+
+async function mapWithConcurrency(values, concurrency, worker) {
+  const output = new Array(values.length);
+  let cursor = 0;
+  async function consume() {
+    while (cursor < values.length) {
+      const index = cursor++;
+      output[index] = await worker(values[index], index);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, consume));
+  return output;
 }
 
 async function scrapeCity(city, slug, maxPages = 50) {
@@ -98,9 +178,14 @@ async function run() {
   const outputDir = path.join(outputRoot, runId);
   fs.mkdirSync(outputDir, { recursive: true });
   const cityResults = [];
-  for (const input of CITIES) {
+  for (const input of SPACELIST_INPUTS) {
     try {
-      cityResults.push({ ...await scrapeCity(input.city, input.slug), region: input.region, status: 'ok' });
+      const result = await scrapeCity(input.city, input.slug);
+      result.records.forEach(record => {
+        record.acquisition_scope = input.region;
+        record.requested_region = input.region;
+      });
+      cityResults.push({ ...result, region: input.region, status: 'ok' });
     } catch (error) {
       cityResults.push({ city: input.city, region: input.region, pages: 0, records: [], status: 'error', error: error.message });
     }
@@ -111,18 +196,49 @@ async function run() {
     ? await enrichSpacelistUnitDetails(spacelistBaseRecords)
     : spacelistBaseRecords;
   const realtorRecords = [];
-  for (const input of REALTOR_DATASETS) {
-    const rows = await fetchJson(
-      `https://api.apify.com/v2/datasets/${input.datasetId}/items?clean=true&limit=1000`
-    );
-    realtorRecords.push(...rows.map(row => normalizeRealtorCommercial(row, input.city)));
+  const realtorSoldRecords = [];
+  const realtorRuns = [];
+  if (process.env.APIFY_TOKEN) {
+    const results = await mapWithConcurrency(REALTOR_SEARCH_PLAN, 3, async search => {
+      try {
+        const result = await runRealtorCommercial(process.env.APIFY_TOKEN, search.location, search.deal_type);
+        return { ...search, status: 'ok', run_id: result.run_id, dataset_id: result.dataset_id,
+          records: result.rows.length, rows: result.rows };
+      } catch (error) {
+        return { ...search, status: 'error', error: error.message, records: 0, rows: [] };
+      }
+    });
+    for (const result of results) {
+      const { rows, ...ledger } = result;
+      realtorRuns.push(ledger);
+      const normalized = rows.map(row => ({
+        ...normalizeRealtorCommercial(row, result.location),
+        acquisition_scope: result.region, requested_region: result.region,
+        realtor_search_location: result.location,
+        realtor_search_scope: result.scope_level,
+        discovered_by: [`${result.location}|${result.deal_type}`],
+      }));
+      if (result.deal_type === 'sold') realtorSoldRecords.push(...normalized);
+      else realtorRecords.push(...normalized);
+    }
+  } else {
+    for (const input of REALTOR_DATASETS) {
+      const rows = await fetchJson(`https://api.apify.com/v2/datasets/${input.datasetId}/items?clean=true&limit=1000`);
+      realtorRecords.push(...rows.map(row => normalizeRealtorCommercial(row, input.city)));
+    }
   }
-  const records = [...new Map([...spacelistRecords, ...realtorRecords]
-    .filter(record => record.address_key && record.province === 'ON')
-    .map(record => [`${record.source}|${record.source_listing_id}`, {
-      ...record,
-      ...classifyCommercialRelocation(record),
-    }])).values()];
+  const recordMap = new Map();
+  for (const record of [...spacelistRecords, ...realtorRecords]
+    .filter(record => record.address_key && record.province === 'ON')) {
+    const id = `${record.source}|${record.source_listing_id}`;
+    const previous = recordMap.get(id);
+    const merged = previous ? {
+      ...previous, ...record,
+      discovered_by: [...new Set([...(previous.discovered_by || []), ...(record.discovered_by || [])])],
+    } : record;
+    recordMap.set(id, { ...merged, ...classifyCommercialRelocation(merged) });
+  }
+  const records = [...recordMap.values()];
   const properties = canonicalizeCommercial(records);
   const relocationCandidates = records.filter(record => record.direct_relocation_candidate)
     .sort((a, b) => b.relocation_probability - a.relocation_probability);
@@ -142,7 +258,7 @@ async function run() {
     sources: ['spacelist', 'realtor_ca_commercial'],
     source_freshness: {
       spacelist: 'live',
-      realtor_ca_commercial: 'stored_apify_dataset',
+      realtor_ca_commercial: process.env.APIFY_TOKEN ? 'live_apify_actor' : 'stored_apify_dataset',
     },
     totals: {
       source_records: records.length,
@@ -150,6 +266,7 @@ async function run() {
       collapsed_same_property_spaces: records.length - properties.length,
       direct_relocation_candidates: relocationCandidates.length,
       market_intelligence_only: records.length - relocationCandidates.length,
+      recent_sold_reference_records: realtorSoldRecords.length,
     },
     relocation_engine: {
       outreach_threshold: 70,
@@ -180,27 +297,46 @@ async function run() {
       sale_price: percent(records.filter(record => record.transaction_type === 'sale'), record => record.asking_price != null),
       lease_rate: percent(records.filter(record => record.transaction_type === 'lease'), record => record.lease_rate != null),
     },
-    cities: CITIES.map(input => ({
+    cities: SERVICE_CITIES.map(input => ({
       city: input.city,
       region: input.region,
-      status: cityResults.find(result => result.city === input.city)?.status || 'error',
+      spacelist_attempted: SPACELIST_INPUTS.some(item => item.city === input.city && item.region === input.region),
+      status: cityResults.find(result => result.city === input.city)?.status || 'covered_by_realtor_region_or_municipality',
       error: cityResults.find(result => result.city === input.city)?.error || null,
       spacelist_pages: cityResults.find(result => result.city === input.city)?.pages || 0,
-      source_records: records.filter(record =>
-        (record.requested_region || record.city) === input.city).length,
-      canonical_properties: properties.filter(property =>
-        property.requested_regions.includes(input.city)).length,
+      source_records: cityResults.find(result => result.city === input.city)?.records.length || 0,
+      canonical_properties: new Set((cityResults.find(result =>
+        result.city === input.city)?.records || []).map(record => record.address_key)).size,
       capped_sources: REALTOR_DATASETS.filter(dataset => dataset.city === input.city).length,
+      realtor_targeted: REALTOR_SEARCH_PLAN.some(search => search.region === input.region && search.location === input.city),
+      realtor_runs: realtorRuns.filter(run => run.region === input.region && run.location === input.city)
+        .map(run => ({ deal_type: run.deal_type, scope_level: run.scope_level, status: run.status, records: run.records, error: run.error || null })),
     })),
+    regions: Object.entries(REGION_ROOTS).map(([region]) => ({
+      region, label: REGION_CONFIG[region].label,
+      requested_cities: REGION_CONFIG[region].cities.length,
+      realtor_searches_planned: REALTOR_SEARCH_PLAN.filter(search => search.region === region).length,
+      realtor_searches_succeeded: realtorRuns.filter(run => run.region === region && run.status === 'ok').length,
+      spacelist_records: spacelistRecords.filter(record => record.acquisition_scope === region).length,
+      realtor_records: realtorRecords.filter(record => record.acquisition_scope === region).length,
+      realtor_recent_sold_records: realtorSoldRecords.filter(record => record.acquisition_scope === region).length,
+      realtor_runs: realtorRuns.filter(run => run.region === region),
+    })),
+    realtor_runs: realtorRuns,
     coverage_warnings: [
-      'All four REALTOR.ca commercial runs reached their configured result caps; counts are a floor.',
+      process.env.APIFY_TOKEN
+        ? 'REALTOR.ca sale and lease acquisition runs live for every configured region.'
+        : 'REALTOR.ca is using stored fallback datasets; those records cannot drive disappearance lifecycle.',
       'Only exact normalized-address and parent-property duplicates are collapsed; low-confidence matches remain separate.',
       'Commercial lease rate can legitimately be undisclosed/contact-for-pricing.',
-      'Direct relocation outreach is blocked unless a specific unit, named occupant, and explicit transition/availability evidence are all present.',
+      'Direct relocation scoring runs after photo analysis and requires a unit-specific lease plus credible visual or textual transition evidence.',
+      'Realtor.ca is the primary source: every region receives broad sale, lease and recent-sold searches; coverage gaps receive municipality-specific lease searches.',
+      'Spacelist is secondary and limited to verified working markets to avoid invalid-path and rate-limit cascades.',
     ],
   };
   fs.writeFileSync(path.join(outputDir, 'source-records.json'), `${JSON.stringify(records, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, 'canonical-properties.json'), `${JSON.stringify(properties, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, 'realtor-recent-sold-records.json'), `${JSON.stringify(realtorSoldRecords, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, 'relocation-candidates.json'), `${JSON.stringify(relocationCandidates, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, 'relocation-review-queue.json'), `${JSON.stringify(relocationReviewQueue, null, 2)}\n`);
   const reviewCsv = relocationReviewQueue.map(record => ({
@@ -242,4 +378,11 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, scrapeCity };
+module.exports = {
+  REALTOR_SEARCH_PLAN,
+  SERVICE_CITIES,
+  SPACELIST_INPUTS,
+  mapWithConcurrency,
+  run,
+  scrapeCity,
+};

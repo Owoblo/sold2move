@@ -471,6 +471,36 @@ jobs:
 
       # ─── NOTIFICATIONS ────────────────────────────────────────────────────────
 
+      - name: Find Realtors for newly sold listings
+        if: success()
+        continue-on-error: true
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          IFS=',' read -ra REGIONS <<< "${{ steps.regions.outputs.list }}"
+          for REGION in "${REGIONS[@]}"; do
+            node scripts/backfill-listing-attribution-openai.cjs \
+              --region "$REGION" \
+              --statuses sold,sold_archived \
+              --since-days 3 \
+              --limit 100 \
+              --concurrency 3 \
+              --retry-hours 1 \
+              --pass first
+          done
+
+      - name: Sync confirmed sales into partnership Recent Sales
+        if: success()
+        env:
+          RECENT_SALES_SYNC_SECRET: ${{ secrets.RECENT_SALES_SYNC_SECRET }}
+        run: |
+          curl --fail-with-body --retry 3 \
+            -X POST \
+            -H "Authorization: Bearer $RECENT_SALES_SYNC_SECRET" \
+            https://go.quote2move.com/api/marketing/recent-sales/sync
+
       - name: Notify when a selected region produced no postcards
         if: |
           always() && !failure() && !cancelled() && (

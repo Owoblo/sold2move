@@ -21,38 +21,26 @@ const {
   normalizeZillow,
 } = require('./rental-market-lib.cjs');
 const { runSearchScraper } = require('./postcard-step0-scrape.cjs');
+const { REGION_CONFIG } = require('./postcard-region-config.cjs');
 
+const MARKET_REGION_KEYS = Object.freeze(['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg']);
+const REGION_ROOTS = Object.freeze({
+  windsor: 'Windsor', chatham: 'Chatham-Kent', sarnia: 'Sarnia',
+  london: 'London', woodstock: 'Woodstock', wkg: 'Kitchener',
+});
+const LIVE_REGION_DATASETS = MARKET_REGION_KEYS.flatMap(region => {
+  const config = REGION_CONFIG[region];
+  const common = {
+    city: REGION_ROOTS[region], region, region_label: config.label,
+    bounds: config.bounds, gridSplit: config.gridSplit,
+    allowed_cities: config.cities,
+  };
+  return [{ source: 'zillow', ...common }, { source: 'rentseeker', ...common }];
+});
 const DEFAULT_DATASETS = Object.freeze([
-  {
-    source: 'zillow', city: 'Windsor', datasetId: 'ihmJWO2oay1LMMpqQ',
-    bounds: { south: 42.25, west: -83.08, north: 42.35, east: -82.90 },
-  },
-  {
-    source: 'zillow', city: 'London', datasetId: 'o3GPzxOReniGn4BDC',
-    bounds: { south: 42.85, west: -81.40, north: 43.10, east: -81.10 },
-  },
+  ...LIVE_REGION_DATASETS,
   { source: 'rentcafe', city: 'Windsor', datasetId: 'LwiqEJxtx7qTKqOfJ' },
   { source: 'rentcafe', city: 'London', datasetId: 'uteVNNe6yFMbhRIzb' },
-  {
-    source: 'rentseeker',
-    city: 'Windsor',
-    bounds: { south: 42.25, west: -83.08, north: 42.35, east: -82.90 },
-  },
-  {
-    source: 'rentseeker',
-    city: 'Chatham-Kent',
-    bounds: { south: 42.15, west: -82.75, north: 42.70, east: -81.75 },
-  },
-  {
-    source: 'rentseeker',
-    city: 'Sarnia',
-    bounds: { south: 42.60, west: -82.60, north: 43.40, east: -81.55 },
-  },
-  {
-    source: 'rentseeker',
-    city: 'London',
-    bounds: { south: 42.85, west: -81.40, north: 43.10, east: -81.10 },
-  },
 ]);
 const DEFAULT_ENRICHMENTS = Object.freeze([
   { source: 'zillow', datasetId: 'YuXrQVG9xJPBHONES' },
@@ -165,6 +153,21 @@ function buildZillowRentalUrl(bounds) {
   return `https://www.zillow.com/homes/for_rent/?searchQueryState=${encodeURIComponent(JSON.stringify(state))}`;
 }
 
+function splitBoundsIntoGrid(bounds, gridSplit = {}) {
+  const rows = Math.max(1, gridSplit.rows || 2);
+  const cols = Math.max(1, gridSplit.cols || 2);
+  const latStep = (bounds.north - bounds.south) / rows;
+  const lngStep = (bounds.east - bounds.west) / cols;
+  return Array.from({ length: rows * cols }, (_, index) => {
+    const row = Math.floor(index / cols);
+    const col = index % cols;
+    return {
+      south: bounds.south + row * latStep, north: bounds.south + (row + 1) * latStep,
+      west: bounds.west + col * lngStep, east: bounds.west + (col + 1) * lngStep,
+    };
+  });
+}
+
 function normalizeRow(source, row, input) {
   if (source === 'zillow') return normalizeZillow(row);
   if (source === 'rentcafe') return normalizeRentCafe(row);
@@ -176,6 +179,22 @@ function matchesRequestedCity(record, requestedCity) {
   const city = record.city.toLocaleLowerCase();
   const requested = requestedCity.toLocaleLowerCase();
   return city === requested || city.startsWith(`${requested} `);
+}
+
+function insideBounds(record, bounds) {
+  const lat = Number(record.latitude);
+  const lng = Number(record.longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) &&
+    lat >= bounds.south && lat <= bounds.north && lng >= bounds.west && lng <= bounds.east;
+}
+
+function matchesAcquisitionScope(record, input) {
+  if (input.bounds && insideBounds(record, input.bounds)) return true;
+  const city = String(record.city || '').toLocaleLowerCase();
+  return [input.city, ...(input.allowed_cities || [])].some(value => {
+    const expected = String(value).toLocaleLowerCase();
+    return city === expected || city.startsWith(`${expected} `);
+  });
 }
 
 function completeness(records, field) {
@@ -373,11 +392,14 @@ async function run(options) {
     const rows = input.source === 'rentseeker'
       ? await fetchRentSeeker(input.bounds)
       : canRefreshZillow
-        ? await runSearchScraper(process.env.APIFY_TOKEN, [buildZillowRentalUrl(input.bounds)])
+        ? await runSearchScraper(process.env.APIFY_TOKEN,
+          splitBoundsIntoGrid(input.bounds, input.gridSplit).map(buildZillowRentalUrl))
         : await fetchDataset(input.datasetId);
     acquisitions.push({
       source: input.source,
       requested_city: input.city,
+      requested_region: input.region || null,
+      region_label: input.region_label || input.city,
       dataset_id: input.datasetId || null,
       raw_records: rows.length,
       fresh: input.source === 'rentseeker' || Boolean(canRefreshZillow),
@@ -392,15 +414,16 @@ async function run(options) {
         record = mergeZillowDetail(record, detail);
       }
       record.requested_city = input.city;
+      record.requested_region = input.region || input.city.toLocaleLowerCase();
+      record.acquisition_scope = input.region || input.city.toLocaleLowerCase();
       if (!record.source_listing_id || !record.address_key) {
         rejected.push({ reason: 'missing_identity_or_address', record });
       } else if (!isInProvince(record, options.province)) {
         rejected.push({ reason: 'wrong_province', record });
-      } else if (!matchesRequestedCity(record, input.city)) {
+      } else if (!matchesAcquisitionScope(record, input)) {
         rejected.push({ reason: 'unexpected_city', record });
       } else {
         record.source_city = record.city;
-        record.city = input.city;
         normalized.push(record);
       }
     }
@@ -456,9 +479,25 @@ async function run(options) {
       canonical_properties_with_multiple_source_families:
         canonical.filter(property => property.source_families.length > 1).length,
     },
-    cities: [...new Set(normalized.map(record => record.city))].sort().map(city => ({
-      city,
-      ...metricsFor(normalized.filter(record => record.city === city)),
+    cities: MARKET_REGION_KEYS.flatMap(region => REGION_CONFIG[region].cities.map(city => {
+      const cityLower = city.toLocaleLowerCase();
+      const cityRecords = normalized.filter(record => {
+        const actual = String(record.source_city || record.city).toLocaleLowerCase();
+        return actual === cityLower || actual.startsWith(`${cityLower} `);
+      });
+      const acquisitionsForRegion = acquisitions.filter(item => item.requested_region === region);
+      return {
+        city, region, region_label: REGION_CONFIG[region].label,
+        status: acquisitionsForRegion.some(item => item.fresh && item.raw_records > 0) ? 'covered' : 'failed_or_empty',
+        source_records: cityRecords.length,
+        ...metricsFor(cityRecords),
+      };
+    })),
+    regions: MARKET_REGION_KEYS.map(region => ({
+      region, label: REGION_CONFIG[region].label,
+      requested_cities: REGION_CONFIG[region].cities.length,
+      source_records: normalized.filter(record => record.acquisition_scope === region).length,
+      acquisitions: acquisitions.filter(item => item.requested_region === region),
     })),
     enrichments: Object.entries(enrichmentIndexes).map(([source, index]) => ({
       source,

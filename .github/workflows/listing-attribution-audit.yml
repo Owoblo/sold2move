@@ -1,0 +1,40 @@
+name: Audit Listing Attribution
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: 'Verified records to audit'
+        default: '30'
+      concurrency:
+        description: 'Parallel searches'
+        default: '3'
+      model:
+        description: 'Independent audit model'
+        default: 'gpt-5-mini'
+
+concurrency:
+  group: listing-attribution-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Independently audit verified representatives
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          node scripts/audit-listing-attribution-openai.cjs \
+            --count "${{ inputs.count }}" \
+            --concurrency "${{ inputs.concurrency }}" \
+            --model "${{ inputs.model }}"

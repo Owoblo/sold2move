@@ -80,7 +80,7 @@ async function loadRecordsAndSpaces() {
         commercial_property_id, source, source_family, source_listing_id,
         source_url, transaction_types, asset_types, title, description, asking_price,
         lease_rate, lease_rate_unit, space_size_sqft_min, space_size_sqft_max,
-        brokerage_name, agent_name, agent_phone, photo_urls,
+        brokerage_name, agent_name, agent_phone, photo_urls, acquisition_scope,
         listing_scope, unit_label, current_occupant_name, occupant_confidence,
         availability_date, transition_evidence, relocation_probability,
         direct_relocation_candidate, relocation_reasons, outreach_status,
@@ -90,7 +90,7 @@ async function loadRecordsAndSpaces() {
         ARRAY[x.transaction_type], ARRAY[x.asset_type], x.title, x.description, x.asking_price,
         x.lease_rate, x.lease_rate_unit, x.space_size_sqft_min,
         x.space_size_sqft_max, x.brokerage_name, x.agent_name, x.agent_phone,
-        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)),
+        ARRAY(SELECT jsonb_array_elements_text(x.photo_urls)), x.acquisition_scope,
         x.listing_scope, x.unit_label, x.current_occupant_name,
         x.occupant_confidence, x.availability_date, x.transition_evidence,
         x.relocation_probability, x.direct_relocation_candidate,
@@ -101,8 +101,8 @@ async function loadRecordsAndSpaces() {
         city text, province text, asking_price numeric, lease_rate numeric,
         lease_rate_unit text, space_size_sqft_min numeric,
         space_size_sqft_max numeric, brokerage_name text, agent_name text,
-        agent_phone text, photo_urls jsonb
-        , listing_scope text, unit_label text, current_occupant_name text,
+        agent_phone text, photo_urls jsonb, acquisition_scope text,
+        listing_scope text, unit_label text, current_occupant_name text,
         occupant_confidence numeric, availability_date text,
         transition_evidence jsonb, relocation_probability integer,
         direct_relocation_candidate boolean, relocation_reasons jsonb,
@@ -118,6 +118,7 @@ async function loadRecordsAndSpaces() {
         asking_price = EXCLUDED.asking_price, lease_rate = EXCLUDED.lease_rate,
         brokerage_name = EXCLUDED.brokerage_name, photo_urls = EXCLUDED.photo_urls,
         agent_name = EXCLUDED.agent_name, agent_phone = EXCLUDED.agent_phone,
+        acquisition_scope = EXCLUDED.acquisition_scope,
         listing_scope = EXCLUDED.listing_scope, unit_label = EXCLUDED.unit_label,
         current_occupant_name = EXCLUDED.current_occupant_name,
         occupant_confidence = EXCLUDED.occupant_confidence,
@@ -173,10 +174,18 @@ async function loadRecordsAndSpaces() {
 }
 
 async function applyLifecycle(previous) {
-  const successfulScopes = [
-    ...summary.cities.filter(item => item.status === 'ok' && item.spacelist_pages > 0)
-      .map(item => ({ source: 'spacelist', city: item.city })),
-  ];
+  const successfulScopes = [];
+  for (const region of summary.regions || []) {
+    const cityChecks = summary.cities.filter(item => item.region === region.region);
+    if (cityChecks.length && cityChecks.every(item => item.status === 'ok')) {
+      successfulScopes.push({ source: 'spacelist', city: region.region });
+    }
+    const realtorChecks = (summary.realtor_runs || []).filter(item => item.region === region.region
+      && item.scope_level === 'broad_region' && ['sale', 'lease'].includes(item.deal_type));
+    if (realtorChecks.length === 2 && realtorChecks.every(item => item.status === 'ok')) {
+      successfulScopes.push({ source: 'realtor_ca_commercial', city: region.region });
+    }
+  }
   const lifecycle = diffInventory({
     lane: 'commercial', current: records, previous, successfulScopes,
   });
@@ -206,7 +215,14 @@ async function applyLifecycle(previous) {
 
 (async () => {
   const previous = await query(`
-    SELECT r.source, r.source_listing_id, p.city, r.transaction_types,
+    SELECT r.source, r.source_listing_id, r.source_url, r.title,
+      r.transaction_types, r.asset_types[1] AS asset_type, r.asking_price, r.lease_rate,
+      r.lease_rate_unit, r.space_size_sqft_min, r.space_size_sqft_max,
+      r.agent_name, r.agent_phone, r.brokerage_name, r.photo_urls,
+      r.occupancy_state, r.classification_confidence,
+      r.classification_evidence, r.classification_method, r.classified_at,
+      r.acquisition_scope,
+      p.street_address, p.city, p.province, p.postal_code,
       r.active, r.missing_run_count
     FROM commercial_source_records r
     LEFT JOIN commercial_properties p ON p.id = r.commercial_property_id;
