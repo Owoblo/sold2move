@@ -1,0 +1,47 @@
+name: GTA Full Vision Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [agent/gta-market-census]
+    paths:
+      - scripts/gta-full-vision-qualification.cjs
+      - .github/workflows/gta-full-vision-qualification.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gta-full-vision-qualification
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Scan the full eligible GTA inventory with vision
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RECOVER_AFTER: '2026-08-18T02:40:00Z'
+          GTA_VISION_MODEL: gpt-4o
+          GTA_VISION_JOB_KEY: gta-full-vision-20260818-v1
+          GTA_VISION_MAX_WAIT_MINUTES: '330'
+        run: node scripts/gta-full-vision-qualification.cjs
+      - name: Upload full qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta-full-vision-${{ github.run_id }}
+          path: scripts/.gta-full-vision/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
