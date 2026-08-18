@@ -273,7 +273,11 @@ async function main() {
   console.log(markdown);
 }
 
-main().catch(error => {
-  console.error(error.stack || error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error.stack || error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = { MUNICIPALITIES, normalize, recoverLatestSuccessfulDataset };
