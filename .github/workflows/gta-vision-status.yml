@@ -1,0 +1,60 @@
+name: GTA Vision Batch Status
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [agent/gta-market-census]
+    paths: [.github/workflows/gta-vision-status.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Read OpenAI batch counters
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const OpenAI = require('openai');
+          (async () => {
+            const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            const page = await client.batches.list({ limit: 100 });
+            const rows = page.data
+              .filter(batch => String(batch.metadata?.job_key || '').startsWith('gta-full-vision-20260818-v1-part-'))
+              .sort((a, b) => String(a.metadata.job_key).localeCompare(String(b.metadata.job_key)))
+              .map(batch => ({
+                id: batch.id,
+                part: batch.metadata.job_key,
+                status: batch.status,
+                total: batch.request_counts?.total || 0,
+                completed: batch.request_counts?.completed || 0,
+                failed: batch.request_counts?.failed || 0,
+              }));
+            const summary = {
+              checked_at: new Date().toISOString(),
+              batches_created: rows.length,
+              total: rows.reduce((sum, row) => sum + row.total, 0),
+              completed: rows.reduce((sum, row) => sum + row.completed, 0),
+              failed: rows.reduce((sum, row) => sum + row.failed, 0),
+              batches: rows,
+            };
+            fs.writeFileSync('gta-vision-status.json', JSON.stringify(summary, null, 2));
+            console.log(JSON.stringify(summary, null, 2));
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gta-vision-status-${{ github.run_id }}
+          path: gta-vision-status.json
+          retention-days: 7
+
