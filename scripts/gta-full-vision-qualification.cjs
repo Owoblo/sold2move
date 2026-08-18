@@ -9,6 +9,7 @@ const OUT_DIR = path.join(__dirname, '.gta-full-vision');
 const JOB_KEY = process.env.GTA_VISION_JOB_KEY || 'gta-full-vision-20260818-v1';
 const MODEL = process.env.GTA_VISION_MODEL || 'gpt-4o';
 const MAX_WAIT_MINUTES = Number(process.env.GTA_VISION_MAX_WAIT_MINUTES || 330);
+const BATCH_REQUEST_LIMIT = Number(process.env.GTA_VISION_BATCH_REQUEST_LIMIT || 4500);
 
 const SYSTEM_PROMPT = `You classify Canadian real-estate listings for moving-company homeowner outreach. Be conservative and use only supplied metadata and photos.
 Return JSON only with:
@@ -147,45 +148,55 @@ async function main() {
   console.log(`Raw unique: ${unique.length}; submitted for vision: ${requests.length}; deterministic rejects: ${rejected.length}`);
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const recent = await openai.batches.list({ limit: 100 });
-  let batch = recent.data.find(candidate => candidate.metadata?.job_key === JOB_KEY &&
-    !['failed', 'expired', 'cancelled'].includes(candidate.status));
-  if (!batch) {
-    console.log(`Uploading ${requests.length} vision requests to OpenAI Batch...`);
-    const inputFile = await openai.files.create({ file: fs.createReadStream(requestsPath), purpose: 'batch' });
-    batch = await openai.batches.create({
-      input_file_id: inputFile.id,
-      endpoint: '/v1/chat/completions',
-      completion_window: '24h',
-      metadata: { job_key: JOB_KEY, market: 'gta-26', model: MODEL },
-    });
-    console.log(`Created batch ${batch.id}`);
-  } else {
-    console.log(`Resuming batch ${batch.id} (${batch.status})`);
-  }
-  fs.writeFileSync(path.join(OUT_DIR, 'batch-state.json'), JSON.stringify(batch, null, 2));
-
   const deadline = Date.now() + MAX_WAIT_MINUTES * 60_000;
-  while (!['completed', 'failed', 'expired', 'cancelled'].includes(batch.status) && Date.now() < deadline) {
-    await sleep(60_000);
-    batch = await openai.batches.retrieve(batch.id);
-    fs.writeFileSync(path.join(OUT_DIR, 'batch-state.json'), JSON.stringify(batch, null, 2));
-    console.log(`Batch ${batch.status}: ${batch.request_counts?.completed || 0}/${batch.request_counts?.total || requests.length}, failed ${batch.request_counts?.failed || 0}`);
+  const chunks = [];
+  for (let i = 0; i < requests.length; i += BATCH_REQUEST_LIMIT) chunks.push(requests.slice(i, i + BATCH_REQUEST_LIMIT));
+  const batchStates = [];
+  const outputParts = [];
+  const errorParts = [];
+  for (let index = 0; index < chunks.length; index++) {
+    const chunk = chunks[index];
+    const partKey = `${JOB_KEY}-part-${index + 1}-of-${chunks.length}`;
+    const recent = await openai.batches.list({ limit: 100 });
+    let batch = recent.data.find(candidate => candidate.metadata?.job_key === partKey &&
+      !['failed', 'expired', 'cancelled'].includes(candidate.status));
+    if (!batch) {
+      const partPath = path.join(OUT_DIR, `requests-part-${index + 1}.jsonl`);
+      fs.writeFileSync(partPath, chunk.map(row => JSON.stringify(row)).join('\n') + '\n');
+      console.log(`Uploading batch part ${index + 1}/${chunks.length} (${chunk.length} requests)...`);
+      const inputFile = await openai.files.create({ file: fs.createReadStream(partPath), purpose: 'batch' });
+      batch = await openai.batches.create({
+        input_file_id: inputFile.id,
+        endpoint: '/v1/chat/completions',
+        completion_window: '24h',
+        metadata: { job_key: partKey, market: 'gta-26', model: MODEL },
+      });
+      console.log(`Created batch part ${index + 1}: ${batch.id}`);
+    } else {
+      console.log(`Resuming batch part ${index + 1}: ${batch.id} (${batch.status})`);
+    }
+    while (!['completed', 'failed', 'expired', 'cancelled'].includes(batch.status) && Date.now() < deadline) {
+      await sleep(60_000);
+      batch = await openai.batches.retrieve(batch.id);
+      console.log(`Part ${index + 1}/${chunks.length} ${batch.status}: ${batch.request_counts?.completed || 0}/${batch.request_counts?.total || chunk.length}, failed ${batch.request_counts?.failed || 0}`);
+    }
+    batchStates.push(batch);
+    fs.writeFileSync(path.join(OUT_DIR, 'batch-state.json'), JSON.stringify(batchStates, null, 2));
+    if (batch.status !== 'completed') {
+      console.log(`Batch part ${index + 1} remains ${batch.status}; rerun later to resume collection.`);
+      return;
+    }
+    const response = await openai.files.content(batch.output_file_id);
+    outputParts.push(await response.text());
+    if (batch.error_file_id) {
+      const errorResponse = await openai.files.content(batch.error_file_id);
+      errorParts.push(await errorResponse.text());
+    }
   }
-  if (batch.status !== 'completed') {
-    console.log(`Batch remains ${batch.status}; rerun this workflow later to resume collection.`);
-    return;
-  }
-
-  const response = await openai.files.content(batch.output_file_id);
-  const outputText = await response.text();
+  const outputText = outputParts.join('\n');
   fs.writeFileSync(path.join(OUT_DIR, 'responses.jsonl'), outputText);
-  let errorText = '';
-  if (batch.error_file_id) {
-    const errorResponse = await openai.files.content(batch.error_file_id);
-    errorText = await errorResponse.text();
-    fs.writeFileSync(path.join(OUT_DIR, 'errors.jsonl'), errorText);
-  }
+  const errorText = errorParts.join('\n');
+  if (errorText.trim()) fs.writeFileSync(path.join(OUT_DIR, 'errors.jsonl'), errorText);
 
   const manifestById = new Map(manifest.map(row => [`zpid-${row.zpid}`, row]));
   const classified = outputText.trim().split('\n').filter(Boolean).map(text => {
@@ -214,7 +225,7 @@ async function main() {
   });
   const report = {
     generated_at: new Date().toISOString(),
-    batch_id: batch.id,
+    batch_ids: batchStates.map(batch => batch.id),
     model: MODEL,
     interpretation: 'Hypothetical first-day just-listed qualification of the current active baseline; not an average daily arrival count.',
     raw_unique: unique.length,
@@ -242,4 +253,3 @@ main().catch(error => {
   console.error(error.stack || error.message);
   process.exit(1);
 });
-
