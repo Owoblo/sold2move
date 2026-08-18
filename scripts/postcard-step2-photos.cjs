@@ -6,7 +6,7 @@
  * property detail endpoint to fetch interior/carousel photos.
  *
  * - Rate limit: 1 request/second
- * - Batch of 50 max per run
+ * - Processes all candidates in bounded Apify chunks
  * - Skips listings that already have cached photos
  * - Updates carouselphotos in Supabase for reuse
  *

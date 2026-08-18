@@ -5,8 +5,8 @@
  * Queries Supabase for Windsor-area listings matching criteria:
  * - City in Windsor-area list
  * - Status: sold or just_listed
- * - Not a LOT/land
- * - Above minimum price
+ * - All property types (postcard eligibility is decided after classification)
+ * - Above the configured minimum price
  * - Within date range (lastseenat)
  *
  * Output: scripts/.pipeline/step1-filtered.json
@@ -22,6 +22,26 @@ const {
   formatCanadianPostal,
   createRateLimiter,
 } = require('./postcard-lib.cjs');
+
+const LISTING_SELECT = 'zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, description, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count, postcard_skip_reason, market_segment, listing_categories, occupancy_state, outreach_target, property_signals, classification_confidence, classification_reasons, property_classified_at, property_classification_method, listing_representatives, listing_agent_names, listing_mls_id, listing_attribution_source, listing_attribution_captured_at';
+
+function mergeListingsByZpid(...groups) {
+  const merged = new Map();
+  for (const row of groups.flat()) {
+    if (row?.zpid != null && !merged.has(String(row.zpid))) merged.set(String(row.zpid), row);
+  }
+  return [...merged.values()];
+}
+
+async function fetchAllPages(buildQuery, pageSize = 1000) {
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) return { data: rows, error };
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) return { data: rows, error: null };
+  }
+}
 
 // OpenStreetMap Nominatim — free postal lookup, no API key, 1 req/sec policy.
 // Used as a fallback when Apify/Zillow didn't return a postal and the address
@@ -140,16 +160,16 @@ async function run(options) {
   let allListings = [];
 
   for (const city of opts.cities) {
-    const { data, error } = await supabase
+    const { data, error } = await fetchAllPages(() => supabase
       .from('listings')
-      .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count, postcard_skip_reason')
+      .select(LISTING_SELECT)
       .in('status', opts.statuses)
       .eq('region', opts.region)
       .eq('city', city)
       .eq('glitch_suspected', false)
       .gte('lastseenat', `${opts.from}T00:00:00Z`)
       .lte('lastseenat', `${opts.to}T23:59:59Z`)
-      .order('lastseenat', { ascending: false });
+      .order('lastseenat', { ascending: false }));
 
     if (error) {
       console.error(`  Error querying ${city}:`, error.message);
@@ -162,10 +182,53 @@ async function run(options) {
     }
   }
 
+  // Recovery lane: classify active inventory while Zillow still exposes its
+  // photos. Step 5 blocks these rows from postcard output, so seeded/backlog
+  // inventory is enriched without being misrepresented as newly listed.
+  let recoveryListings = [];
+  for (const city of opts.cities) {
+    const { data, error } = await fetchAllPages(() => supabase
+      .from('listings')
+      .select(LISTING_SELECT)
+      .eq('status', 'active')
+      .eq('region', opts.region)
+      .eq('city', city)
+      .eq('glitch_suspected', false)
+      .or('property_classified_at.is.null,furniture_needs_retry.eq.true')
+      .order('lastseenat', { ascending: false }));
+
+    if (error) {
+      console.error(`  Error querying active quality recovery for ${city}:`, error.message);
+    } else if (data?.length) {
+      recoveryListings = recoveryListings.concat(data);
+    }
+  }
+  if (recoveryListings.length > 0) {
+    console.log(`  Active quality recovery: ${recoveryListings.length} unclassified/retry listing(s)`);
+    allListings = mergeListingsByZpid(allListings, recoveryListings);
+  }
+
   const knownCities = opts.cities.map(c => `"${c}"`).join(',');
-  const { data: unmappedCityRows, error: unmappedCityError } = await supabase
+  const { data: unmappedRecoveryRows, error: unmappedRecoveryError } = await fetchAllPages(() => supabase
     .from('listings')
-    .select('zpid, region, status, price, unformattedprice, address, addressstreet, addresscity, addressstate, addresszipcode, city, beds, baths, area, imgsrc, detailurl, carouselphotos, contenttype, lastseenat, is_furnished, furniture_confidence, furniture_scan_date, latlong, photo_fetch_attempts, photos_last_attempted_at, furniture_needs_retry, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, just_listed_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, sold_postcard_sent_at, postcard_send_count, missing_scrape_count, postcard_skip_reason')
+    .select(LISTING_SELECT)
+    .eq('status', 'active')
+    .eq('region', opts.region)
+    .not('city', 'in', `(${knownCities})`)
+    .eq('addressstate', targetState)
+    .eq('glitch_suspected', false)
+    .or('property_classified_at.is.null,furniture_needs_retry.eq.true')
+    .order('lastseenat', { ascending: false }));
+  if (unmappedRecoveryError) {
+    console.error(`  Error querying unmapped active quality recovery:`, unmappedRecoveryError.message);
+  } else if (unmappedRecoveryRows.length > 0) {
+    console.log(`  Unmapped active quality recovery: ${unmappedRecoveryRows.length} listing(s)`);
+    allListings = mergeListingsByZpid(allListings, unmappedRecoveryRows);
+  }
+
+  const { data: unmappedCityRows, error: unmappedCityError } = await fetchAllPages(() => supabase
+    .from('listings')
+    .select(LISTING_SELECT)
     .in('status', opts.statuses)
     .eq('region', opts.region)
     .not('city', 'in', `(${knownCities})`)
@@ -173,7 +236,7 @@ async function run(options) {
     .eq('glitch_suspected', false)
     .gte('lastseenat', `${opts.from}T00:00:00Z`)
     .lte('lastseenat', `${opts.to}T23:59:59Z`)
-    .order('lastseenat', { ascending: false });
+    .order('lastseenat', { ascending: false }));
 
   if (unmappedCityError) {
     console.error(`  Error querying unmapped ${targetState} city labels:`, unmappedCityError.message);
@@ -197,44 +260,12 @@ async function run(options) {
     }
   }
 
-  // Filter out lots/land — write skip reason back to Supabase
-  const lotsLand = allListings.filter(l => {
-    const ct = (l.contenttype || '').toUpperCase();
-    return ct === 'LOT' || ct === 'LAND';
-  });
-  allListings = allListings.filter(l => {
-    const ct = (l.contenttype || '').toUpperCase();
-    return ct !== 'LOT' && ct !== 'LAND';
-  });
-  if (lotsLand.length > 0) {
-    console.log(`  Removed ${lotsLand.length} lots/land listings`);
-    const zpids = lotsLand.map(l => l.zpid);
-    for (let i = 0; i < zpids.length; i += 200) {
-      await supabase.from('listings')
-        .update({ postcard_skip_reason: 'lot_or_land' })
-        .in('zpid', zpids.slice(i, i + 200));
-    }
-  }
+  // Lots/land intentionally continue through photo/description classification.
+  // Step 5 keeps them out of homeowner postcard output and records the correct
+  // business-development outreach target.
 
-  // Filter out listings without a proper street address (must have a street number)
-  const noStreetNumber = [];
-  allListings = allListings.filter(l => {
-    const street = (l.addressstreet || '').trim();
-    if (!street || !/^\d/.test(street)) {
-      console.log(`  Removed (no street number): zpid ${l.zpid} — "${street}"`);
-      noStreetNumber.push(l);
-      return false;
-    }
-    return true;
-  });
-  if (noStreetNumber.length > 0) {
-    const zpids = noStreetNumber.map(l => l.zpid);
-    for (let i = 0; i < zpids.length; i += 200) {
-      await supabase.from('listings')
-        .update({ postcard_skip_reason: 'no_street_number' })
-        .in('zpid', zpids.slice(i, i + 200));
-    }
-  }
+  // Addressless/new-development listings continue through classification.
+  // Step 5 still requires a numbered street address for physical postcards.
 
   // Deduplicate by zpid (keep latest)
   const seen = new Map();
@@ -370,4 +401,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, filterJustListedSeenInCurrentScrape };
+module.exports = { run, filterJustListedSeenInCurrentScrape, mergeListingsByZpid };

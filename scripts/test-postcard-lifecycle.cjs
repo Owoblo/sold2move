@@ -11,13 +11,20 @@ const {
 const {
   applyOutputFilters,
   applyJustListedFreshnessGuard,
+  normalizeAddressKey: normalizeOutputAddressKey,
+  partitionSoldVerification,
 } = require('./postcard-step5-output.cjs');
 const {
   filterJustListedSeenInCurrentScrape,
+  mergeListingsByZpid,
 } = require('./postcard-step1-filter.cjs');
 const {
   needsDetailFreshness,
 } = require('./postcard-step2-photos.cjs');
+const {
+  verifyMatch,
+  verifyLocalAddress,
+} = require('./postcard-step4-geocode.cjs');
 
 const region = { key: 'windsor', cities: ['Windsor'] };
 const now = '2026-07-03T12:00:00.000Z';
@@ -38,6 +45,11 @@ function listing(overrides = {}) {
     carouselphotos: overrides.carouselphotos,
     is_furnished: overrides.is_furnished,
     furniture_scan_date: overrides.furniture_scan_date,
+    market_segment: overrides.market_segment || 'owner_occupied',
+    listing_categories: overrides.listing_categories || ['ordinary_resale'],
+    outreach_target: overrides.outreach_target || 'homeowner',
+    property_classified_at: overrides.property_classified_at || now,
+    _geocode_verified: overrides._geocode_verified ?? true,
     just_listed_postcard_sent_at: overrides.just_listed_postcard_sent_at,
     sold_postcard_sent_at: overrides.sold_postcard_sent_at,
     last_postcard_sent_at: overrides.last_postcard_sent_at,
@@ -111,6 +123,12 @@ function testAddressKeyFallsBackToCityWhenPostalMissing() {
   assert.equal(normalizeAddressKey(a), normalizeAddressKey(b));
 }
 
+function testAddressKeyCanonicalizesStreetSuffixFormatting() {
+  const a = listing({ addressstreet: '123 Main St.', addresszipcode: 'N9A 1A1' });
+  const b = listing({ addressstreet: '123 MAIN STREET', addresszipcode: 'N9A1A1' });
+  assert.equal(normalizeOutputAddressKey(a), normalizeOutputAddressKey(b));
+}
+
 function testUnscannedJustListedBlockedByDefault() {
   const rows = [listing({
     zpid: '100',
@@ -135,6 +153,132 @@ function testIncludeUnscannedIsExplicitOverride() {
   const { finalListings, rejected } = applyOutputFilters(rows, { includeUnscanned: true });
   assert.equal(finalListings.length, 1);
   assert.equal(rejected.length, 0);
+}
+
+function testActiveRecoveryNeverEntersPostcardOutput() {
+  const rows = [listing({
+    zpid: '100',
+    status: 'active',
+    is_furnished: true,
+    property_classified_at: now,
+  })];
+  const { finalListings, rejected } = applyOutputFilters(rows, {});
+  assert.equal(finalListings.length, 0);
+  assert.equal(rejected[0].reason, 'active_quality_recovery_only');
+}
+
+function testQualityRecoveryMergeDeduplicatesSelectedRows() {
+  const selected = listing({ zpid: '100', status: 'just_listed' });
+  const recoveryDuplicate = listing({ zpid: '100', status: 'active' });
+  const recoveryOnly = listing({ zpid: '200', status: 'active' });
+  const merged = mergeListingsByZpid([selected], [recoveryDuplicate, recoveryOnly]);
+  assert.equal(merged.length, 2);
+  assert.equal(merged.find(row => row.zpid === '100').status, 'just_listed');
+}
+
+function testRentalNeverEntersHomeownerPostcardOutput() {
+  const rows = [listing({
+    zpid: '300',
+    status: 'just_listed',
+    is_furnished: true,
+    market_segment: 'rental',
+    listing_categories: ['rental'],
+    outreach_target: 'landlord_property_manager',
+  })];
+  const { finalListings, rejected } = applyOutputFilters(rows, {});
+  assert.equal(finalListings.length, 0);
+  assert.match(rejected[0].reason, /^non_homeowner_/);
+}
+
+function testUnknownClassificationIsHeld() {
+  const rows = [listing({
+    zpid: '301',
+    status: 'just_listed',
+    is_furnished: true,
+    market_segment: 'unknown',
+    listing_categories: [],
+    outreach_target: 'unknown',
+  })];
+  const { finalListings, rejected } = applyOutputFilters(rows, {});
+  assert.equal(finalListings.length, 0);
+  assert.equal(rejected[0].reason, 'non_homeowner_target: unknown');
+}
+
+function googleResult(streetNumber, route, extraComponents = []) {
+  return {
+    address_components: [
+      { long_name: streetNumber, short_name: streetNumber, types: ['street_number'] },
+      { long_name: route, short_name: route, types: ['route'] },
+      ...extraComponents,
+    ],
+    geometry: { location_type: 'ROOFTOP' },
+  };
+}
+
+function testGeocodeStreetNumberIsExact() {
+  const result = verifyMatch(listing({ addressstreet: '12 Main Street' }), googleResult('123', 'Main Street'));
+  assert.equal(result.verified, false);
+  assert.match(result.reason, /Street number/);
+}
+
+function testGeocodeStreetTypeMustMatch() {
+  const result = verifyMatch(listing({ addressstreet: '100 Oak Street' }), googleResult('100', 'Oak Avenue'));
+  assert.equal(result.verified, false);
+  assert.match(result.reason, /Street type/);
+}
+
+function testGeocodeSubstringStreetDoesNotMatch() {
+  const result = verifyMatch(listing({ addressstreet: '100 King Street' }), googleResult('100', 'Kingston Street'));
+  assert.equal(result.verified, false);
+  assert.match(result.reason, /Street name/);
+}
+
+function testGeocodeMissingUnitIsHeld() {
+  const result = verifyMatch(listing({ addressstreet: '500 King Street' }), googleResult('500', 'King Street', [
+    { long_name: '12', short_name: '12', types: ['subpremise'] },
+  ]));
+  assert.equal(result.verified, false);
+  assert.match(result.reason, /no unit/);
+}
+
+function testNullGeocodeNeverEntersOutput() {
+  const { finalListings, rejected } = applyOutputFilters([
+    listing({ status: 'just_listed', is_furnished: true, _geocode_verified: null }),
+  ], {});
+  assert.equal(finalListings.length, 0);
+  assert.match(rejected[0].reason, /^geocode_unavailable_hold/);
+}
+
+function testCleanCanadianAddressPassesWithoutGoogle() {
+  const result = verifyLocalAddress(listing({
+    addressstreet: '3567 Howard Avenue',
+    addresszipcode: 'N9E 3N6',
+    addressstate: 'ON',
+    city: 'Windsor',
+  }));
+  assert.equal(result.verified, true);
+  assert.equal(result.method, 'local_canonical_v1');
+}
+
+function testMalformedLocalAddressIsHeld() {
+  const result = verifyLocalAddress(listing({ addressstreet: 'Howard Avenue', addresszipcode: '' }));
+  assert.equal(result.verified, null);
+  assert.match(result.reason, /missing street number/);
+}
+
+function testSoldVerificationUnavailableIsHeld() {
+  const sold = listing({ zpid: '400', status: 'sold', detailurl: 'https://example.test/400' });
+  const result = partitionSoldVerification([sold], new Map());
+  assert.equal(result.kept.length, 0);
+  assert.equal(result.held.length, 1);
+}
+
+function testSoldVerificationRequiresNonActiveStatus() {
+  const sold = listing({ zpid: '401', status: 'sold', detailurl: 'https://example.test/401' });
+  const active = partitionSoldVerification([sold], new Map([['401', 'FOR_SALE']]));
+  assert.equal(active.pulled.length, 1);
+  const confirmed = partitionSoldVerification([sold], new Map([['401', 'SOLD']]));
+  assert.equal(confirmed.kept.length, 1);
 }
 
 function testDetailFreshnessBlocksStaleJustListed() {
@@ -324,8 +468,22 @@ const tests = [
   testDegradedScrapeDoesNotBurnMiss,
   testSoldArchivedReappearanceRoutesToVerifiedJustListed,
   testAddressKeyFallsBackToCityWhenPostalMissing,
+  testAddressKeyCanonicalizesStreetSuffixFormatting,
   testUnscannedJustListedBlockedByDefault,
   testIncludeUnscannedIsExplicitOverride,
+  testActiveRecoveryNeverEntersPostcardOutput,
+  testQualityRecoveryMergeDeduplicatesSelectedRows,
+  testRentalNeverEntersHomeownerPostcardOutput,
+  testUnknownClassificationIsHeld,
+  testGeocodeStreetNumberIsExact,
+  testGeocodeStreetTypeMustMatch,
+  testGeocodeSubstringStreetDoesNotMatch,
+  testGeocodeMissingUnitIsHeld,
+  testNullGeocodeNeverEntersOutput,
+  testCleanCanadianAddressPassesWithoutGoogle,
+  testMalformedLocalAddressIsHeld,
+  testSoldVerificationUnavailableIsHeld,
+  testSoldVerificationRequiresNonActiveStatus,
   testDetailFreshnessBlocksStaleJustListed,
   testCachedDetailFreshnessAgesForward,
   testDetailFreshnessAuditsButKeepsFiveToThirtyDays,

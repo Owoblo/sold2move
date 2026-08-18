@@ -394,6 +394,9 @@ function normalizeResult(r, regionConfig, nowIso) {
 }
 
 const LIVE_COLUMNS = 'zpid, region, status, address, city, lastcity, addressstreet, addresscity, addressstate, addresszipcode, description, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, market_segment, listing_categories, occupancy_state, outreach_target, property_signals, classification_confidence, classification_reasons, property_classified_at, property_classification_method, photo_fetch_attempts, photos_last_attempted_at, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, listing_representatives, listing_agent_names, listing_mls_id, listing_attribution_source, listing_attribution_captured_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
+// Archived rows omit heavy photo JSON but retain every lifecycle, routing, and
+// send-history field required if Zillow makes the listing active again.
+const ARCHIVED_COLUMNS = 'zpid, region, status, address, city, lastcity, addressstreet, addresscity, addressstate, addresszipcode, description, first_seen_at, last_seen_at, lastseenat, glitch_suspected, is_furnished, furniture_confidence, furniture_scan_date, furniture_scan_method, furniture_needs_retry, market_segment, listing_categories, occupancy_state, outreach_target, property_signals, classification_confidence, classification_reasons, property_classified_at, property_classification_method, photo_fetch_attempts, photos_last_attempted_at, imgsrc, detailurl, search_days_on_zillow, search_time_on_zillow, detail_days_on_zillow, detail_time_on_zillow, zillow_date_posted, zillow_detail_checked_at, listing_representatives, listing_agent_names, listing_mls_id, listing_attribution_source, listing_attribution_captured_at, just_listed_postcard_sent_at, sold_postcard_sent_at, last_postcard_sent_at, last_postcard_batch_id, last_postcard_type_sent, postcard_send_count, missing_scrape_count';
 
 function normalizeAddressKey(listing) {
   const street = (listing.addressstreet || '').toString();
@@ -460,7 +463,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   for (const city of regionConfig.cities) {
     const archived = await supabase
       .from('listings')
-      .select('zpid, status, region, addressstreet, addresszipcode, city, addresscity')
+      .select(ARCHIVED_COLUMNS)
       .eq('region', regionConfig.key)
       .eq('city', city)
       .eq('status', 'sold_archived')
@@ -490,7 +493,7 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   const knownCities = regionConfig.cities;
   const unknownArchived = await supabase
     .from('listings')
-    .select('zpid, status, region, addressstreet, addresszipcode, city, addresscity')
+    .select(ARCHIVED_COLUMNS)
     .eq('region', regionConfig.key)
     .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
     .eq('status', 'sold_archived')

@@ -17,6 +17,7 @@ const {
   readPipelineFile,
   writePipelineFile,
   formatAddress,
+  formatCanadianPostal,
   stepHeader,
   parseCliArgs,
 } = require('./postcard-lib.cjs');
@@ -51,17 +52,20 @@ function normalize(str) {
 }
 
 /**
- * All known street type suffixes (full + abbreviated).
- * Used to strip the suffix so we compare just the core name.
- * e.g. "Oak Street" and "Oak Avenue" both become "oak"
+ * Canonical street suffixes. Abbreviations normalize to the same street type,
+ * but different types (Street vs Avenue) remain distinct.
  */
-const STREET_SUFFIXES = [
-  'street', 'st', 'avenue', 'ave', 'boulevard', 'blvd', 'drive', 'dr',
-  'road', 'rd', 'crescent', 'cres', 'court', 'ct', 'place', 'pl',
-  'lane', 'ln', 'way', 'circle', 'cir', 'terrace', 'terr', 'trail',
-  'trl', 'parkway', 'pkwy', 'close', 'grove', 'glen', 'heights', 'hts',
-  'ridge', 'row', 'run', 'square', 'sq', 'crossing', 'xing',
-];
+const STREET_SUFFIXES = new Map(Object.entries({
+  street: 'street', st: 'street', avenue: 'avenue', ave: 'avenue',
+  boulevard: 'boulevard', blvd: 'boulevard', drive: 'drive', dr: 'drive',
+  road: 'road', rd: 'road', crescent: 'crescent', cres: 'crescent',
+  court: 'court', ct: 'court', place: 'place', pl: 'place', lane: 'lane', ln: 'lane',
+  way: 'way', circle: 'circle', cir: 'circle', terrace: 'terrace', terr: 'terrace',
+  trail: 'trail', trl: 'trail', parkway: 'parkway', pkwy: 'parkway',
+  close: 'close', grove: 'grove', glen: 'glen', heights: 'heights', hts: 'heights',
+  ridge: 'ridge', row: 'row', run: 'run', square: 'square', sq: 'square',
+  crossing: 'crossing', xing: 'crossing',
+}));
 
 /**
  * Strip the street number and type suffix to get just the core name.
@@ -69,16 +73,53 @@ const STREET_SUFFIXES = [
  * "235 Southwind Cres" -> "southwind"
  * "879 Michael Dr" -> "michael"
  */
-function coreStreetName(str) {
-  let s = normalize(str);
-  // Strip leading number + optional unit letter/dash
-  s = s.replace(/^\d+[\s\-]*[a-z]?\s*/, '');
-  // Strip unit info like "#215-301"
-  s = s.replace(/#[\d\-]+/g, '');
-  // Strip suffixes
-  const words = s.split(/\s+/).filter(Boolean);
-  const filtered = words.filter(w => !STREET_SUFFIXES.includes(w.replace(/\./g, '')));
-  return filtered.join(' ').trim();
+function parseStreet(str) {
+  let value = normalize(str).replace(/[.,]/g, ' ');
+  const number = value.match(/^(\d+[a-z]?)(?:\s|$)/)?.[1] || '';
+  value = value.replace(/^\d+[a-z]?(?:\s*-\s*\d+[a-z]?)?\s*/, '');
+  value = value.replace(/\b(?:apt|apartment|unit|suite|ste)\s*#?\s*[a-z0-9-]+\b.*$/i, '');
+  value = value.replace(/#\s*[a-z0-9-]+\b.*$/i, '');
+  const words = value.split(/\s+/).filter(Boolean);
+  const suffixKey = words.at(-1)?.replace(/\./g, '') || '';
+  const suffix = STREET_SUFFIXES.get(suffixKey) || '';
+  if (suffix) words.pop();
+  return { number, core: words.join(' ').trim(), suffix };
+}
+
+function extractListingUnit(str) {
+  const value = String(str || '');
+  return value.match(/\b(?:apt|apartment|unit|suite|ste)\s*#?\s*([a-z0-9-]+)\b/i)?.[1]?.toLowerCase()
+    || value.match(/#\s*([a-z0-9-]+)\b/i)?.[1]?.toLowerCase()
+    || '';
+}
+
+/**
+ * Free first-line deliverability gate. Zillow/MLS is the address authority;
+ * this validates that its address can be rendered deterministically for Canada
+ * Post without paying to re-geocode every normal listing.
+ */
+function verifyLocalAddress(listing) {
+  const parsed = parseStreet(listing.addressstreet);
+  const postal = formatCanadianPostal(listing.addresszipcode);
+  const province = String(listing.addressstate || '').trim().toUpperCase();
+  const city = String(listing.city || listing.addresscity || '').trim();
+  const issues = [];
+
+  if (!parsed.number) issues.push('missing street number');
+  if (!parsed.core || parsed.core.length < 2) issues.push('missing street name');
+  if (!postal) issues.push('missing or invalid Canadian postal code');
+  if (!city) issues.push('missing city');
+  if (!/^[A-Z]{2}$/.test(province)) issues.push('missing or invalid province');
+
+  if (issues.length > 0) {
+    return { verified: null, reason: `Local address validation held: ${issues.join('; ')}` };
+  }
+  return {
+    verified: true,
+    reason: 'Verified locally — numbered street and Canadian postal format confirmed',
+    canonical: `${parsed.number} ${parsed.core}${parsed.suffix ? ` ${parsed.suffix}` : ''}, ${city}, ${province} ${postal}`,
+    method: 'local_canonical_v1',
+  };
 }
 
 /**
@@ -120,56 +161,48 @@ function verifyMatch(listing, geocodeResult) {
   // --- CRITICAL: Street number must match ---
   const listingStreet = normalize(listing.addressstreet);
   const geoStreetNum = normalize(comp.street_number || '');
+  const parsedListing = parseStreet(listing.addressstreet);
 
   if (!geoStreetNum) {
-    // Google didn't return a street number - could be a partial/approximate match
-    if (geocodeResult.geometry?.location_type === 'APPROXIMATE') {
-      issues.push(`Address not found precisely — Google returned approximate location only`);
-    }
-  } else if (listingStreet) {
-    // Extract leading number(s) from listing address (e.g. "215-B" -> "215", "1487" -> "1487")
-    const listingNumMatch = listingStreet.match(/^(\d+)/);
-    const listingNum = listingNumMatch ? listingNumMatch[1] : '';
-
-    if (listingNum && geoStreetNum !== listingNum && !geoStreetNum.startsWith(listingNum)) {
-      issues.push(`Street number: listing has "${listingNum}" but Google resolved to "${comp.street_number}"`);
-    }
+    issues.push('Google did not return an exact street number');
+  } else if (!parsedListing.number) {
+    issues.push('Listing address has no parseable street number');
+  } else if (geoStreetNum !== parsedListing.number) {
+    issues.push(`Street number: listing has "${parsedListing.number}" but Google resolved to "${comp.street_number}"`);
   }
 
-  // --- Street name: compare core name, ignore suffix (St vs Ave doesn't matter) ---
+  // --- Street name and canonical suffix must agree ---
   const geoRoute = comp.route || '';
   if (geoRoute && listingStreet) {
-    const listingCore = coreStreetName(listing.addressstreet);
-    const geoCore = coreStreetName(geoRoute);
+    const parsedGeo = parseStreet(geoRoute);
+    const listingCore = parsedListing.core;
+    const geoCore = parsedGeo.core;
 
     if (listingCore && geoCore) {
-      // Also compare with spaces stripped (handles "Bob Lo" vs "Boblo", "River View" vs "Riverview")
+      // Space-only variations are acceptable ("Bob Lo" vs "Boblo").
       const listingCompact = listingCore.replace(/\s/g, '');
       const geoCompact = geoCore.replace(/\s/g, '');
-      const coreMatch = listingCore === geoCore
-        || listingCompact === geoCompact
-        || listingCore.includes(geoCore) || geoCore.includes(listingCore)
-        || listingCompact.includes(geoCompact) || geoCompact.includes(listingCompact);
+      const coreMatch = listingCore === geoCore || listingCompact === geoCompact;
 
       if (!coreMatch) {
-        // Completely different street name - this is a real problem
         issues.push(`Street name: "${listing.addressstreet}" vs Google's "${geoRoute}"`);
-      } else if (listingCore === geoCore) {
-        // Same core name but maybe different suffix (St vs Ave) - just a warning
-        const listingSuffix = normalize(listing.addressstreet).replace(/^\d+[\s\-]*[a-z]?\s*/, '').replace(listingCore, '').trim();
-        const geoSuffix = normalize(geoRoute).replace(geoCore, '').trim();
-        if (listingSuffix && geoSuffix && listingSuffix !== geoSuffix) {
-          warnings.push(`Street type differs: "${listing.addressstreet}" vs "${geoRoute}" (same street, mail will arrive)`);
-        }
+      } else if (parsedListing.suffix && parsedGeo.suffix && parsedListing.suffix !== parsedGeo.suffix) {
+        issues.push(`Street type: listing has "${parsedListing.suffix}" but Google resolved to "${parsedGeo.suffix}"`);
       }
     }
+  } else {
+    issues.push('Google did not return a street route');
   }
 
-  // --- WARNING: Apartment/unit detection ---
-  const hasUnit = /\b(apt|unit|suite|ste|#)\b/i.test(listing.addressstreet)
-    || /\d+[\s-]+\d+$/.test(listing.addressstreet.trim());
-  if (hasUnit) {
-    warnings.push('Has unit/apartment number — verify it can receive mail');
+  // --- Unit/subpremise must be present and exact when Google supplies one ---
+  const listingUnit = extractListingUnit(listing.addressstreet);
+  const geoUnit = normalize(comp.subpremise || '');
+  if (geoUnit && !listingUnit) {
+    issues.push(`Google resolved unit "${comp.subpremise}" but listing has no unit`);
+  } else if (geoUnit && listingUnit !== geoUnit) {
+    issues.push(`Unit: listing has "${listingUnit}" but Google resolved to "${comp.subpremise}"`);
+  } else if (listingUnit && !geoUnit) {
+    warnings.push('Listing includes a unit but Google returned only the building-level address');
   }
 
   // --- INFO only: city/postal (not used for pass/fail) ---
@@ -196,26 +229,37 @@ async function run(options) {
   const listings = readPipelineFile('step3-furniture.json');
   console.log(`  Loaded ${listings.length} listings from Step 3`);
 
-  // Check for already-verified listings (from previous runs)
-  const alreadyVerified = listings.filter(l => l._geocode_verified != null);
-  const needVerification = listings.filter(l => l._geocode_verified == null);
+  // Free local validation handles the normal path. Only unresolved exceptions
+  // are eligible for the optional paid Google check.
+  const alreadyVerified = listings.filter(l => l._geocode_verified === true);
+  const needVerification = listings.filter(l => l._geocode_verified !== true);
+
+  for (const listing of needVerification) {
+    const local = verifyLocalAddress(listing);
+    listing._geocode_verified = local.verified;
+    listing._geocode_reason = local.reason;
+    listing._geocode_method = local.method || 'local_canonical_v1';
+    if (local.canonical) listing._canonical_mailing_address = local.canonical;
+  }
+  const googleCandidates = listings.filter(l => l._geocode_verified !== true);
 
   console.log(`  Already verified: ${alreadyVerified.length}`);
-  console.log(`  Need verification: ${needVerification.length}`);
+  console.log(`  Verified locally: ${needVerification.length - googleCandidates.length}`);
+  console.log(`  Local exceptions held: ${googleCandidates.length}`);
 
   if (opts.dryRun) {
-    console.log(`\n  [DRY RUN] Would geocode ${needVerification.length} addresses.`);
+    console.log(`\n  [DRY RUN] Would hold ${googleCandidates.length} local exception(s).`);
     writePipelineFile('step4-verified.json', listings);
     return listings;
   }
 
+  const googleMode = String(process.env.GOOGLE_GEOCODING_MODE || 'off').toLowerCase();
   const apiKey = process.env.GOOGLE_GEOCODING_API_KEY;
-  if (!apiKey) {
-    console.log('  WARNING: GOOGLE_GEOCODING_API_KEY not set - skipping geocoding');
-    console.log('  All listings will be marked as unverified.');
-    for (const listing of needVerification) {
-      listing._geocode_verified = null;
-      listing._geocode_reason = 'Skipped - no API key';
+  if (googleMode !== 'exceptions' || !apiKey || googleCandidates.length === 0) {
+    if (googleCandidates.length > 0) {
+      console.log(`  Google exception verification is ${googleMode === 'exceptions' ? 'unavailable' : 'disabled'}; held ${googleCandidates.length} exception(s) at zero API cost.`);
+    } else {
+      console.log('  No paid Google lookups needed.');
     }
     writePipelineFile('step4-verified.json', listings);
     return listings;
@@ -226,9 +270,9 @@ async function run(options) {
   let failed = 0;
   let mismatched = 0;
 
-  console.log(`  Geocoding ${needVerification.length} addresses...`);
+  console.log(`  Paid Google exception lookup: ${googleCandidates.length} address(es)...`);
 
-  for (const listing of needVerification) {
+  for (const listing of googleCandidates) {
     await rateLimiter();
     const fullAddress = formatAddress(listing);
 
@@ -245,6 +289,7 @@ async function run(options) {
         listing._geocode_formatted = result.formatted_address;
         listing._geocode_location = result.geometry?.location;
         listing._geocode_location_type = result.geometry?.location_type;
+        listing._geocode_method = 'google_exception_v1';
 
         if (match.verified) {
           verified++;
@@ -252,9 +297,8 @@ async function run(options) {
           mismatched++;
         }
       } else if (response.status === 'REQUEST_DENIED') {
-        // API key disabled/invalid — treat as skipped so listings still pass through
         listing._geocode_verified = null;
-        listing._geocode_reason = `Geocoding skipped: API key denied`;
+        listing._geocode_reason = 'Geocoding unavailable: API key denied — held';
         failed++;
       } else {
         listing._geocode_verified = false;
@@ -263,7 +307,7 @@ async function run(options) {
       }
 
       const total = verified + mismatched + failed;
-      process.stdout.write(`  Processed ${total}/${needVerification.length} (${verified} verified, ${mismatched} mismatched, ${failed} failed)\r`);
+      process.stdout.write(`  Processed ${total}/${googleCandidates.length} (${verified} verified, ${mismatched} mismatched, ${failed} failed)\r`);
     } catch (err) {
       listing._geocode_verified = null;
       listing._geocode_reason = `Error: ${err.message}`;
@@ -320,4 +364,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run };
+module.exports = { run, verifyMatch, verifyLocalAddress, parseStreet, extractListingUnit };
