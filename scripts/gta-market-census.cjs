@@ -25,7 +25,7 @@ const SEARCH_ACTOR = 'maxcopell~zillow-scraper';
 // This reduces border spillover and keeps every Zillow search below its
 // approximate 500-result cap. Large urban markets use a denser grid.
 const MUNICIPALITIES = [
-  { name: 'Toronto', region: 'Toronto', bounds: [-79.64, -79.12, 43.58, 43.86], grid: [4, 5] },
+  { name: 'Toronto', region: 'Toronto', bounds: [-79.64, -79.12, 43.58, 43.86], grid: [4, 5], aliases: ['Etobicoke', 'North York', 'Scarborough', 'East York', 'Centre Toronto'] },
   { name: 'Brampton', region: 'Peel', bounds: [-80.00, -79.63, 43.62, 43.85], grid: [2, 3] },
   { name: 'Caledon', region: 'Peel', bounds: [-80.15, -79.67, 43.82, 44.10], grid: [2, 2], aliases: ['Bolton', 'Caledon East', 'Palgrave', 'Inglewood', 'Cheltenham', 'Alton', 'Mono Mills'] },
   { name: 'Mississauga', region: 'Peel', bounds: [-79.81, -79.54, 43.47, 43.73], grid: [3, 3] },
@@ -50,7 +50,7 @@ const MUNICIPALITIES = [
   { name: 'Scugog', region: 'Durham', bounds: [-79.11, -78.70, 44.03, 44.29], grid: [2, 2], aliases: ['Port Perry', 'Blackstock', 'Greenbank'] },
   { name: 'Uxbridge', region: 'Durham', bounds: [-79.36, -79.05, 44.00, 44.28], grid: [2, 2], aliases: ['Goodwood', 'Zephyr'] },
   { name: 'Whitby', region: 'Durham', bounds: [-79.00, -78.86, 43.84, 44.00], grid: [2, 2], aliases: ['Brooklin'] },
-  { name: 'Hamilton', region: 'Hamilton', bounds: [-80.25, -79.62, 43.10, 43.40], grid: [3, 5], aliases: ['Ancaster', 'Dundas', 'Flamborough', 'Stoney Creek', 'Waterdown', 'Binbrook', 'Glanbrook'] },
+  { name: 'Hamilton', region: 'Hamilton', bounds: [-80.25, -79.62, 43.10, 43.40], grid: [3, 5], aliases: ['Ancaster', 'Dundas', 'Flamborough', 'Stoney Creek', 'Waterdown', 'Binbrook', 'Glanbrook', 'Freelton', 'Hannon', 'Millgrove'] },
 ];
 
 function key(value) {
@@ -205,6 +205,8 @@ async function main() {
       listings: rows.length,
       ...Object.fromEntries(fields.map(name => [`${name}_pct`, completeness(rows, name)])),
       with_photos_pct: rows.length ? Math.round(1000 * rows.filter(row => row.photo_count > 0).length / rows.length) / 10 : 0,
+      plausible_sale_price_pct: rows.length ? Math.round(1000 * rows.filter(row => row.price >= 10000 && row.price <= 100000000).length / rows.length) / 10 : 0,
+      usable_days_on_zillow_pct: rows.length ? Math.round(1000 * rows.filter(row => Number(row.days_on_zillow) >= 0).length / rows.length) / 10 : 0,
     };
   });
 
@@ -230,6 +232,12 @@ async function main() {
     out_of_province_rows: outOfProvince.length,
     municipalities_with_zero_rows: municipalities.filter(row => row.listings === 0).map(row => row.municipality),
     overall_completeness_pct: Object.fromEntries(fields.map(name => [name, completeness(gta, name)])),
+    quality_gates: {
+      plausible_sale_price_rows: gta.filter(row => row.price >= 10000 && row.price <= 100000000).length,
+      implausible_sale_price_rows: gta.filter(row => !(row.price >= 10000 && row.price <= 100000000)).length,
+      usable_days_on_zillow_rows: gta.filter(row => Number(row.days_on_zillow) >= 0).length,
+      note: 'Presence is not validity: Zillow commonly emits -1 for unknown days and low rental-like or price-on-request values in its Canadian for-sale feed.',
+    },
     municipalities,
     unknown_city_labels: unknownLabels,
   };
