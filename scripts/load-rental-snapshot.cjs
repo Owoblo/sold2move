@@ -268,6 +268,10 @@ async function applyLifecycle(previous) {
   const lifecycle = diffInventory({
     lane: 'rental', current: records, previous, successfulScopes,
   });
+  const previousScopes = new Set(previous.filter(row => row.active)
+    .map(row => `${row.source}|${row.acquisition_scope || row.city}`));
+  const baselineScopes = successfulScopes
+    .filter(scope => !previousScopes.has(`${scope.source}|${scope.city}`));
   for (const batch of chunks(lifecycle.missingUpdates, 100)) {
     await query(`
       UPDATE rental_source_records r SET
@@ -283,7 +287,7 @@ async function applyLifecycle(previous) {
   }
   const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active');
   fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'),
-    `${JSON.stringify({ summary: lifecycle.summary, events: reportable }, null, 2)}\n`);
+    `${JSON.stringify({ summary: lifecycle.summary, baseline_scopes: baselineScopes, events: reportable }, null, 2)}\n`);
 }
 
 (async () => {

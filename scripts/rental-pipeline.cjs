@@ -23,10 +23,13 @@ const {
 const { runSearchScraper } = require('./postcard-step0-scrape.cjs');
 const { REGION_CONFIG } = require('./postcard-region-config.cjs');
 
-const MARKET_REGION_KEYS = Object.freeze(['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg']);
+const DEFAULT_MARKET_REGION_KEYS = ['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg', 'gta'];
+const MARKET_REGION_KEYS = Object.freeze((process.env.MARKET_REGIONS || DEFAULT_MARKET_REGION_KEYS.join(','))
+  .split(',').map(value => value.trim()).filter(value => REGION_CONFIG[value]));
 const REGION_ROOTS = Object.freeze({
   windsor: 'Windsor', chatham: 'Chatham-Kent', sarnia: 'Sarnia',
   london: 'London', woodstock: 'Woodstock', wkg: 'Kitchener',
+  gta: 'Toronto',
 });
 const LIVE_REGION_DATASETS = MARKET_REGION_KEYS.flatMap(region => {
   const config = REGION_CONFIG[region];

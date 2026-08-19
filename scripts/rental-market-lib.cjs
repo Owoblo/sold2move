@@ -18,6 +18,13 @@ function stripUnit(street) {
     .trim();
 }
 
+function extractUnitLabel(street) {
+  const value = text(street);
+  const leading = value.match(/^\s*(?:UNIT|APT|APARTMENT|SUITE|#)\s*#?\s*([\w-]+)/i);
+  const trailing = value.match(/\s+(?:UNIT|APT|APARTMENT|SUITE|#)\s*#?\s*([\w-]+)\s*$/i);
+  return (leading || trailing)?.[1]?.toUpperCase() || null;
+}
+
 function addressKey(street) {
   return stripUnit(street).toUpperCase()
     .replace(/\bSTREET\b/g, 'ST')
@@ -44,12 +51,17 @@ function normalizeZillow(row) {
   const street = row.addressStreet || row.listingAddress?.street || row.hdpData?.homeInfo?.streetAddress;
   const city = row.addressCity || row.listingAddress?.city || row.hdpData?.homeInfo?.city;
   const province = row.addressState || row.listingAddress?.state || row.hdpData?.homeInfo?.state;
+  const homeType = text(row.homeType || row.propertyType || row.hdpData?.homeInfo?.homeType).toUpperCase();
+  const unitLabel = extractUnitLabel(street);
   return {
     source: 'zillow',
     source_family: sourceFamily('zillow'),
     source_listing_id: text(row.zpid || row.id || row.providerListingId),
     source_url: row.detailUrl || row.propertyUrl,
     street_address: stripUnit(street),
+    unit_label: unitLabel,
+    property_type: homeType || null,
+    entity_type: unitLabel ? 'unit' : 'property',
     address_key: addressKey(street),
     city: text(city),
     province: text(province).toUpperCase(),
@@ -167,6 +179,7 @@ module.exports = {
   normalizeRentCafe,
   normalizeRentSeeker,
   normalizeZillow,
+  extractUnitLabel,
   sourceFamily,
   stripUnit,
 };

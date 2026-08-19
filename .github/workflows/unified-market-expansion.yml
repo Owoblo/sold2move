@@ -1,0 +1,178 @@
+name: Unified Market Expansion — Rental then Commercial
+
+on:
+  push:
+    branches: [agent/unified-market-expansion]
+    paths:
+      - .github/workflows/unified-market-expansion.yml
+      - scripts/rental-pipeline.cjs
+      - scripts/commercial-pipeline.cjs
+      - scripts/market-postcard-output.cjs
+      - scripts/market-ai-classify.cjs
+      - scripts/load-rental-snapshot.cjs
+      - scripts/load-commercial-snapshot.cjs
+  schedule:
+    # Runs every two days after the 14:00 UTC residential postcard workflow.
+    - cron: '0 18 */2 * *'
+  workflow_dispatch:
+    inputs:
+      lanes:
+        description: 'Comma-separated lanes: rental,commercial'
+        required: false
+        default: 'rental,commercial'
+      regions:
+        description: 'Comma-separated regions'
+        required: false
+        default: 'windsor,chatham,sarnia,london,woodstock,wkg,gta'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unified-market-expansion
+  cancel-in-progress: false
+
+jobs:
+  rental-then-commercial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+
+      - name: Resolve run controls
+        id: controls
+        shell: bash
+        run: |
+          LANES='${{ github.event.inputs.lanes }}'
+          REGIONS='${{ github.event.inputs.regions }}'
+          echo "lanes=${LANES:-rental,commercial}" >> "$GITHUB_OUTPUT"
+          echo "regions=${REGIONS:-windsor,chatham,sarnia,london,woodstock,wkg,gta}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate all market decision logic
+        run: |
+          node scripts/test-market-lifecycle.cjs
+          node scripts/test-rental-market-lib.cjs
+          node scripts/test-commercial-market-lib.cjs
+          node scripts/test-market-intelligence-playbooks.cjs
+          node scripts/test-market-postcard-output.cjs
+
+      - name: Apply shared market schemas
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260723_rental_market_hub.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260723_commercial_market_hub.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_relocation_engine.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_transition_ai_v2.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260819_market_mail_ledger.sql
+
+      - name: Rental — scrape all selected markets
+        if: contains(steps.controls.outputs.lanes, 'rental')
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          MARKET_REGIONS: ${{ steps.controls.outputs.regions }}
+        run: node scripts/rental-pipeline.cjs
+
+      - name: Rental — persist and lifecycle diff
+        if: contains(steps.controls.outputs.lanes, 'rental')
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/load-rental-snapshot.cjs
+
+      - name: Rental — quality classification
+        if: contains(steps.controls.outputs.lanes, 'rental')
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MARKET_AI_BACKFILL_LIMIT: '1000'
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
+          node scripts/market-ai-classify.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
+
+      - name: Rental — qualified postcard CSV and PDF
+        if: contains(steps.controls.outputs.lanes, 'rental')
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MARKET_MAIL_BATCH_ID: rental-${{ github.run_id }}
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
+          node scripts/market-postcard-output.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
+
+      - name: Rental — email intelligence and mailing artifacts
+        if: contains(steps.controls.outputs.lanes, 'rental')
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MARKET_REPORT_EMAIL: business@starmovers.ca
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
+          node scripts/market-email-results.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
+
+      - name: Commercial — scrape after rental completes
+        if: contains(steps.controls.outputs.lanes, 'commercial')
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          MARKET_REGIONS: ${{ steps.controls.outputs.regions }}
+          COMMERCIAL_DETAIL_ENRICHMENT: '1'
+          COMMERCIAL_APIFY_CONCURRENCY: '2'
+        run: node scripts/commercial-pipeline.cjs
+
+      - name: Commercial — persist and lifecycle diff
+        if: contains(steps.controls.outputs.lanes, 'commercial')
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/load-commercial-snapshot.cjs
+
+      - name: Commercial — occupant transition classification
+        if: contains(steps.controls.outputs.lanes, 'commercial')
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MARKET_AI_BACKFILL_LIMIT: '1000'
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
+          node scripts/market-ai-classify.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
+
+      - name: Commercial — qualified postcard CSV and PDF
+        if: contains(steps.controls.outputs.lanes, 'commercial')
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          MARKET_MAIL_BATCH_ID: commercial-${{ github.run_id }}
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
+          node scripts/market-postcard-output.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
+
+      - name: Commercial — email intelligence and mailing artifacts
+        if: contains(steps.controls.outputs.lanes, 'commercial')
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MARKET_REPORT_EMAIL: business@starmovers.ca
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
+          node scripts/market-email-results.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
+
+      - name: Upload all rental and commercial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-market-expansion-${{ github.run_id }}
+          path: |
+            scripts/.pipeline-rentals/
+            scripts/.pipeline-commercial/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
