@@ -34,11 +34,9 @@ jobs:
       - name: Scrape and audit all 26 GTA municipalities
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          # The first live census succeeded, but its hidden output directory
-          # was excluded by upload-artifact. Recover that exact recent dataset
-          # without launching or billing another actor run.
-          RECOVER_LATEST: 'true'
-          RECOVER_AFTER: '2026-08-18T02:40:00Z'
+          # This remains manual-only. Each dispatch launches a fresh census so
+          # separate runs can be compared for new, removed, and changed stock.
+          RECOVER_LATEST: 'false'
         run: node scripts/gta-market-census.cjs
 
       - name: Upload raw data and quality reports
