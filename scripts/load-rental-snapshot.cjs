@@ -12,9 +12,40 @@ const pipelineRoot = path.join(__dirname, '.pipeline-rentals');
 const runId = process.argv[2] || fs.readFileSync(path.join(pipelineRoot, 'latest-run.txt'), 'utf8').trim();
 const runDir = path.join(pipelineRoot, runId);
 const properties = JSON.parse(fs.readFileSync(path.join(runDir, 'canonical-properties.json'), 'utf8'));
-const records = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json'), 'utf8'));
+const snapshotRecords = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json'), 'utf8'));
 const summary = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
 const { diffInventory } = require('./market-lifecycle-lib.cjs');
+
+function recordCompleteness(record) {
+  return [
+    record.street_address,
+    record.city,
+    record.province,
+    record.postal_code,
+    record.description,
+    record.contact_name,
+    record.contact_company,
+    record.contact_phone,
+    record.online_leasing_url,
+  ].filter(Boolean).length + (record.photo_urls || []).length;
+}
+
+function collapseDuplicateSourceRecords(input) {
+  const unique = new Map();
+  for (const record of input) {
+    const key = `${record.source}:${record.source_listing_id}`;
+    const current = unique.get(key);
+    if (!current || recordCompleteness(record) > recordCompleteness(current)) {
+      unique.set(key, record);
+    }
+  }
+  return [...unique.values()];
+}
+
+// Region bounds intentionally overlap so edge municipalities are not missed.
+// A source listing is nevertheless one lifecycle record and must only appear
+// once in a single INSERT ... ON CONFLICT statement.
+const records = collapseDuplicateSourceRecords(snapshotRecords);
 
 function query(sql) {
   const body = JSON.stringify({ query: sql });
