@@ -11,6 +11,16 @@ const MODEL = process.env.GTA_VISION_MODEL || 'gpt-4o';
 const MAX_WAIT_MINUTES = Number(process.env.GTA_VISION_MAX_WAIT_MINUTES || 330);
 const BATCH_REQUEST_LIMIT = Number(process.env.GTA_VISION_BATCH_REQUEST_LIMIT || 4500);
 
+async function datasetForApifyRun(token, runId) {
+  const runResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${encodeURIComponent(token)}`);
+  if (!runResponse.ok) throw new Error(`Could not read Apify run ${runId} (${runResponse.status})`);
+  const datasetId = (await runResponse.json())?.data?.defaultDatasetId;
+  if (!datasetId) throw new Error(`Apify run ${runId} has no dataset`);
+  const datasetResponse = await fetch(`https://api.apify.com/v2/datasets/${datasetId}/items?token=${encodeURIComponent(token)}&format=json`);
+  if (!datasetResponse.ok) throw new Error(`Could not download Apify dataset ${datasetId} (${datasetResponse.status})`);
+  return datasetResponse.json();
+}
+
 const SYSTEM_PROMPT = `You classify Canadian real-estate listings for moving-company homeowner outreach. Be conservative and use only supplied metadata and photos.
 Return JSON only with:
 - market_segment: owner_occupied, investor_flip, student_housing, rental, new_construction, land_lot, unknown
@@ -128,9 +138,22 @@ async function main() {
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is required');
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  console.log('Recovering the completed full GTA census...');
-  const raw = await recoverLatestSuccessfulDataset(process.env.APIFY_TOKEN);
-  const unique = [...new Map(raw.map(item => [String(item.zpid || item.id), item])).values()];
+  let raw;
+  let baselineIds = null;
+  if (process.env.GTA_VISION_CURRENT_APIFY_RUN && process.env.GTA_VISION_BASELINE_APIFY_RUN) {
+    console.log('Loading current and baseline GTA censuses for an incremental vision scan...');
+    const [current, baseline] = await Promise.all([
+      datasetForApifyRun(process.env.APIFY_TOKEN, process.env.GTA_VISION_CURRENT_APIFY_RUN),
+      datasetForApifyRun(process.env.APIFY_TOKEN, process.env.GTA_VISION_BASELINE_APIFY_RUN),
+    ]);
+    raw = current;
+    baselineIds = new Set(baseline.map(item => String(item.zpid || item.id || '')).filter(Boolean));
+  } else {
+    console.log('Recovering the completed full GTA census...');
+    raw = await recoverLatestSuccessfulDataset(process.env.APIFY_TOKEN);
+  }
+  const unique = [...new Map(raw.map(item => [String(item.zpid || item.id), item])).values()]
+    .filter(item => !baselineIds || !baselineIds.has(String(item.zpid || item.id)));
   const rejected = [];
   const manifest = [];
   const requests = [];
