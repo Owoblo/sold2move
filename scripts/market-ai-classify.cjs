@@ -122,6 +122,11 @@ async function classify(openai, row) {
   let classified = 0;
   let failed = 0;
   let quotaBlocked = false;
+  let attempted = 0;
+  console.log(JSON.stringify({
+    event: 'classification_started', lane, unique_candidates: candidates.length,
+    cached_records: cache.size,
+  }));
   if (openai) {
     const concurrency = Math.max(1, Number(process.env.MARKET_AI_CONCURRENCY || 4));
     let cursor = 0;
@@ -162,6 +167,14 @@ async function classify(openai, row) {
           quotaBlocked = true;
           console.error('OpenAI quota is unavailable; stopping this run without fabricating classifications.');
           break;
+        }
+      } finally {
+        attempted++;
+        if (attempted % 25 === 0 || attempted === candidates.length) {
+          console.log(JSON.stringify({
+            event: 'classification_progress', lane, attempted,
+            persisted: classified, failed, total: candidates.length,
+          }));
         }
       }
       }
