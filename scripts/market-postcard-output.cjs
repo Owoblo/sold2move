@@ -52,8 +52,6 @@ function query(sql) {
 }
 
 function rentalEligibility(row) {
-  if (!newEvents.has(key(row))) return 'not_new_this_run';
-  if (baselineScopes.has(sourceScope(row))) return 'baseline_seed_hold';
   if (!numberedStreet(row.street_address)) return 'no_street_number';
   if (!validPostal(row.postal_code)) return 'invalid_or_missing_postal';
   const text = String(row.description || '').toLowerCase();
@@ -68,8 +66,6 @@ function rentalEligibility(row) {
 }
 
 function commercialEligibility(row) {
-  if (!newEvents.has(key(row))) return 'not_new_this_run';
-  if (baselineScopes.has(sourceScope(row))) return 'baseline_seed_hold';
   if (!numberedStreet(row.street_address)) return 'no_street_number';
   if (!validPostal(row.postal_code)) return 'invalid_or_missing_postal';
   if (row.relocation_candidate_type !== 'outgoing_tenant') return 'not_outgoing_tenant';
@@ -97,18 +93,16 @@ for (const row of candidates) {
   if (!unique.has(identity)) unique.set(identity, row);
 }
 const eventType = lane === 'rental' ? 'rental_turnover' : 'commercial_move_out';
-const cooldownDays = lane === 'rental' ? 120 : 365;
 const entityKey = row => [addressKey(row.street_address), String(row.unit_label || '').toUpperCase(),
   String(row.postal_code || '').replace(/\s/g, '').toUpperCase()].join('|');
 const history = await query(`SELECT entity_key FROM market_mail_items
   WHERE lane=${sqlText(lane)} AND event_type=${sqlText(eventType)}
-    AND status IN ('generated','mailed')
-    AND created_at >= now() - interval '${cooldownDays} days';`);
+    AND status IN ('generated','mailed');`);
 const suppressedKeys = new Set(history.map(row => row.entity_key));
 const historySuppressed = [];
 const eligible = [...unique.values()].filter(row => {
   if (!suppressedKeys.has(entityKey(row))) return true;
-  historySuppressed.push({ source: row.source, source_listing_id: row.source_listing_id, reason: `address_event_mailed_within_${cooldownDays}_days` });
+  historySuppressed.push({ source: row.source, source_listing_id: row.source_listing_id, reason: 'address_unit_event_already_generated_or_mailed' });
   return false;
 }).sort((a, b) =>
   Number((b.relocation_probability || b.classification_confidence) || 0) -

@@ -32,9 +32,12 @@ let result = runLane('rental', [rental], [{ event_type: 'just_listed', source: '
 assert.equal(result.summary.mail_eligible, 1);
 assert.equal(result.rows[0].addressstreet, '804-123 Main Street');
 
+result = runLane('rental', [rental], []);
+assert.equal(result.summary.mail_eligible, 1, 'visible qualified inventory must not depend on a same-run lifecycle event');
+
 result = runLane('rental', [rental], [{ event_type: 'just_listed', source: 'zillow', source_listing_id: 'r1' }],
   [{ source: 'zillow', city: 'gta' }]);
-assert.equal(result.summary.mail_eligible, 0, 'first regional baseline must never mail');
+assert.equal(result.summary.mail_eligible, 1, 'first regional inventory may mail when it passes every quality rule');
 
 const commercial = {
   source: 'realtor_ca_commercial', source_listing_id: 'c1', acquisition_scope: 'gta',
