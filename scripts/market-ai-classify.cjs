@@ -103,8 +103,7 @@ async function classify(openai, row) {
   for (const row of records) Object.assign(row, cache.get(key(row)) || {});
 
   const justListed = new Set((lifecycle.events || []).filter(event => event.event_type === 'just_listed').map(key));
-  const limit = Number(process.env.MARKET_AI_BACKFILL_LIMIT || 150);
-  const candidates = records.filter(row => lane === 'commercial'
+  const candidateRows = records.filter(row => lane === 'commercial'
     ? (row.listing_scope === 'unit' && row.transaction_type === 'lease' && row.classification_method !== 'openai-commercial-transition-v2')
       || justListed.has(key(row)) || !row.classified_at
     : justListed.has(key(row)) || !row.classified_at)
@@ -115,13 +114,22 @@ async function classify(openai, row) {
         return priority(b) - priority(a);
       }
       return Number(justListed.has(key(b))) - Number(justListed.has(key(a)));
-    }).slice(0, limit);
+    });
+  // Overlapping acquisition bounds may return the same source listing more
+  // than once. Classify every unique candidate, with no volume ceiling.
+  const candidates = [...new Map(candidateRows.map(row => [key(row), row])).values()];
   const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
   let classified = 0;
   let failed = 0;
   let quotaBlocked = false;
   if (openai) {
-    for (const row of candidates) {
+    const concurrency = Math.max(1, Number(process.env.MARKET_AI_CONCURRENCY || 4));
+    let cursor = 0;
+    async function worker() {
+      while (!quotaBlocked) {
+        const index = cursor++;
+        if (index >= candidates.length) return;
+        const row = candidates[index];
       try {
         const result = await classify(openai, row);
         Object.assign(row, result);
@@ -156,7 +164,9 @@ async function classify(openai, row) {
           break;
         }
       }
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(concurrency, candidates.length) }, worker));
   }
   fs.writeFileSync(filePath, `${JSON.stringify(records, null, 2)}\n`);
   if (lane === 'commercial') {

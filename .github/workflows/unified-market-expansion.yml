@@ -95,7 +95,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          MARKET_AI_BACKFILL_LIMIT: '1000'
+          MARKET_AI_CONCURRENCY: '4'
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
           node scripts/market-ai-classify.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
@@ -141,7 +141,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          MARKET_AI_BACKFILL_LIMIT: '1000'
+          MARKET_AI_CONCURRENCY: '4'
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
           node scripts/market-ai-classify.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
