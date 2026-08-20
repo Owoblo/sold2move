@@ -18,14 +18,20 @@ const slugify = value => String(value).toLowerCase().normalize('NFKD')
 const REGION_ROOTS = {
   windsor: 'Windsor', chatham: 'Chatham-Kent', sarnia: 'Sarnia',
   london: 'London', woodstock: 'Woodstock', wkg: 'Kitchener-Waterloo-Cambridge-Guelph',
+  gta: 'Toronto',
 };
-const SERVICE_CITIES = Object.freeze(Object.entries(REGION_CONFIG).flatMap(([region, config]) =>
+const DEFAULT_MARKET_REGION_KEYS = ['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg', 'gta'];
+const MARKET_REGION_KEYS = new Set((process.env.MARKET_REGIONS || DEFAULT_MARKET_REGION_KEYS.join(','))
+  .split(',').map(value => value.trim()).filter(value => REGION_CONFIG[value]));
+for (const region of Object.keys(REGION_ROOTS)) if (!MARKET_REGION_KEYS.has(region)) delete REGION_ROOTS[region];
+const SERVICE_CITIES = Object.freeze(Object.entries(REGION_CONFIG).filter(([region]) => MARKET_REGION_KEYS.has(region)).flatMap(([region, config]) =>
   [...new Set(config.cities)].map(city => ({ city, region }))));
 const SPACELIST_INPUTS = Object.freeze([
   ['windsor', 'Windsor'], ['windsor', 'Amherstburg'], ['windsor', 'Kingsville'],
   ['chatham', 'Chatham'], ['chatham', 'Thamesville'],
   ['sarnia', 'Sarnia'], ['sarnia', 'Petrolia'],
   ['london', 'London'], ['london', 'Ilderton'], ['london', 'Strathroy'],
+  ['gta', 'Toronto'], ['gta', 'Hamilton'], ['gta', 'Mississauga'], ['gta', 'Vaughan'],
 ].map(([region, city]) => ({ city, region, slug: slugify(city) })));
 const REALTOR_SUPPLEMENTAL_MARKETS = Object.freeze({
   windsor: ['LaSalle', 'Tecumseh', 'Amherstburg', 'Lakeshore', 'Leamington', 'Kingsville', 'Essex'],
@@ -34,6 +40,7 @@ const REALTOR_SUPPLEMENTAL_MARKETS = Object.freeze({
   london: ['St. Thomas', 'Strathroy-Caradoc', 'Middlesex Centre', 'Thames Centre', 'Aylmer', 'Central Elgin', 'South Huron', 'North Middlesex'],
   woodstock: ['Ingersoll', 'Tillsonburg', 'Norwich', 'Zorra', 'East Zorra-Tavistock', 'South-West Oxford'],
   wkg: ['Waterloo', 'Cambridge', 'Guelph', 'Woolwich', 'Wilmot', 'Wellesley', 'North Dumfries', 'Centre Wellington', 'Puslinch', 'Guelph-Eramosa', 'Wellington North', 'Mapleton', 'Minto', 'Stratford', 'Brantford', 'Brant', 'North Perth', 'Perth East'],
+  gta: REGION_CONFIG.gta.cities.filter(city => city !== 'Toronto'),
 });
 const REALTOR_SEARCH_PLAN = Object.freeze([
   ...Object.entries(REGION_ROOTS).flatMap(([region, location]) =>

@@ -1,5 +1,41 @@
 const REGION_CONFIG = {
 
+  // ─── GTA 26-MUNICIPALITY MARKET ──────────────────────────────────────────
+  // Acquisition uses a dense map grid. Returned city labels are still
+  // allow-listed here; official municipal polygons can later replace labels
+  // as the final ownership authority without changing source acquisition.
+  gta: {
+    key: 'gta',
+    label: 'Greater Toronto and Hamilton Area — 26 municipalities',
+    outputPrefix: 'GTA',
+    printRecipientLabel: 'GTA print batch',
+    state: 'ON',
+    cities: [
+      'Toronto', 'Brampton', 'Caledon', 'Mississauga',
+      'Burlington', 'Halton Hills', 'Milton', 'Oakville',
+      'Aurora', 'East Gwillimbury', 'Georgina', 'King', 'Markham',
+      'Newmarket', 'Richmond Hill', 'Vaughan', 'Whitchurch-Stouffville',
+      'Ajax', 'Brock', 'Clarington', 'Oshawa', 'Pickering', 'Scugog',
+      'Uxbridge', 'Whitby', 'Hamilton',
+    ],
+    cityAliases: {
+      'Etobicoke': 'Toronto', 'North York': 'Toronto', 'Scarborough': 'Toronto',
+      'East York': 'Toronto', 'Centre Toronto': 'Toronto',
+      'Unionville': 'Markham', 'King City': 'King', 'Stouffville': 'Whitchurch-Stouffville',
+      'Holland Landing': 'East Gwillimbury', 'Keswick': 'Georgina',
+      'Bowmanville': 'Clarington', 'Courtice': 'Clarington', 'Brooklin': 'Whitby',
+      'Ancaster': 'Hamilton', 'Dundas': 'Hamilton', 'Stoney Creek': 'Hamilton',
+      'Waterdown': 'Hamilton', 'Flamborough': 'Hamilton',
+    },
+    bounds: { west: -80.25, east: -78.45, south: 43.10, north: 44.50 },
+    gridSplit: { rows: 10, cols: 13 },
+    returnAddressLines: [
+      'SSM | Saturn Star Movers',
+      'GTA Operations',
+      'Ontario',
+    ],
+  },
+
   // ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
   windsor: {
     key: 'windsor',

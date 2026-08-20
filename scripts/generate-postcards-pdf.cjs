@@ -71,6 +71,7 @@ async function getStampImage() {
   }
 
   // Extract from template
+  if (!fs.existsSync(TEMPLATE_PATH)) return null;
   const JSZip = require('jszip');
   const templateBuffer = fs.readFileSync(TEMPLATE_PATH);
   const zip = await JSZip.loadAsync(templateBuffer);
