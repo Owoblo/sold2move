@@ -2,8 +2,9 @@ name: Postcard Pipeline — Ottawa Only
 
 on:
   schedule:
-    # Runs after the core-region workflow so Ottawa has its own time budget.
-    - cron: '30 16 */2 * *'
+    # Weekly on Monday, after the core workflow, so Ottawa has its own time
+    # budget. Manual dispatch remains available for an urgent refresh.
+    - cron: '30 16 * * 1'
   workflow_dispatch:
     inputs:
       from_date:

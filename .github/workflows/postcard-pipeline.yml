@@ -2,8 +2,9 @@ name: Postcard Pipeline — Core Regions (Windsor · Chatham · Sarnia · London
 
 on:
   schedule:
-    # Every 2 days at 10 AM EDT (2 PM UTC) — gives ~2hr buffer before noon worst-case
-    - cron: '0 14 */2 * *'
+    # Weekly on Monday at 10 AM EDT (2 PM UTC). Full-inventory Apify scrapes
+    # are the dominant pipeline cost; manual dispatch remains available.
+    - cron: '0 14 * * 1'
   workflow_dispatch:
     inputs:
       from_date:
