@@ -821,6 +821,9 @@ async function upsertListings(supabase, rows) {
     process.stdout.write(`  Upserted ${Math.min(i + BATCH, rows.length)}/${rows.length}${success ? '' : ' (some errors)'}\r`);
   }
   process.stdout.write('\n');
+  if (errors > 0) {
+    throw new Error(`Database persistence incomplete: ${errors} listing row(s) failed after retries`);
+  }
   return { upserted, errors };
 }
 
@@ -926,12 +929,23 @@ async function run(options) {
   // be currently active, treat it as degraded — a partial Apify result must
   // not increment miss counters (two degraded scrapes in a row would
   // otherwise mass-flip healthy listings to sold).
-  const knownActive = existingRows.filter(r => ['active', 'just_listed'].includes(r.status)).length;
+  const knownActiveRows = existingRows.filter(r => ['active', 'just_listed'].includes(r.status));
+  const knownActive = knownActiveRows.length;
   const SANITY_MIN_KNOWN = 20;
-  const SANITY_RATIO = 0.5;
-  const degraded = knownActive >= SANITY_MIN_KNOWN && liveRows.length < knownActive * SANITY_RATIO;
+  // Compare known inventory against this scrape by zpid AND normalized
+  // address. Address matching prevents legitimate Zillow identity changes
+  // from looking like missing coverage. A region-wide result-count comparison
+  // could hide one failed/truncated grid cell behind results from other cells.
+  const currentZpids = new Set(liveRows.map(r => String(r.zpid)));
+  const currentAddresses = new Set(liveRows.map(normalizeAddressKey).filter(Boolean));
+  const knownSeen = knownActiveRows.filter(row =>
+    currentZpids.has(String(row.zpid)) || currentAddresses.has(normalizeAddressKey(row))
+  ).length;
+  const coverageRatio = knownActive > 0 ? knownSeen / knownActive : 1;
+  const SANITY_RATIO = 0.8;
+  const degraded = knownActive >= SANITY_MIN_KNOWN && coverageRatio < SANITY_RATIO;
   if (degraded) {
-    console.warn(`  WARNING: DEGRADED SCRAPE — got ${liveRows.length} listings but ${knownActive} are known active (<${SANITY_RATIO * 100}%).`);
+    console.warn(`  WARNING: DEGRADED SCRAPE — saw ${knownSeen}/${knownActive} known active listings (${(coverageRatio * 100).toFixed(1)}%, below ${SANITY_RATIO * 100}%).`);
     console.warn('  Miss counters will NOT be incremented this run. Check Apify credits / actor health.');
   }
 

@@ -305,6 +305,7 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
   for (const listing of finalListings) {
     const key = normalizeAddressKey(listing);
     const prior = sentByAddress.get(key);
+    const postcardType = listing.status === 'sold' ? 'sold' : 'just_listed';
 
     if (prior) {
       const fromOtherZpid = [...prior.zpids].some(z => z !== String(listing.zpid));
@@ -317,6 +318,15 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
         continue;
       }
     }
+
+    // Also reserve the address as candidates are accepted. The database query
+    // above only knows about earlier mailings; without this reservation two
+    // different zpids for the same address could both enter this batch.
+    const batchEntry = prior || { jl: false, sold: false, zpids: new Set() };
+    if (postcardType === 'just_listed') batchEntry.jl = true;
+    else batchEntry.sold = true;
+    batchEntry.zpids.add(String(listing.zpid));
+    sentByAddress.set(key, batchEntry);
     kept.push(listing);
   }
 
@@ -337,6 +347,12 @@ const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail
 const VERIFY_CHUNK_SIZE = Number.parseInt(process.env.SOLD_VERIFY_CHUNK_SIZE || '25', 10);
 const VERIFY_TIMEOUT_MINUTES = Number.parseInt(process.env.SOLD_VERIFY_TIMEOUT_MINUTES || '4', 10);
 const STILL_ON_MARKET = new Set(['FOR_SALE', 'PENDING', 'COMING_SOON', 'ACTIVE', 'FOR_RENT']);
+// The lifecycle's primary evidence is disappearance across two healthy full
+// scrapes. Zillow commonly changes the detail page to OFF_MARKET instead of
+// exposing a literal SOLD state, so either explicit sold or confirmed
+// off-market is enough to corroborate that disappearance. Unknown statuses
+// remain held; active statuses are pulled back.
+const CONFIRMED_NOT_ACTIVE = new Set(['SOLD', 'RECENTLY_SOLD', 'OFF_MARKET']);
 const JUST_LISTED_FRESHNESS_AUDIT_MIN_DAYS = 5;
 const JUST_LISTED_FRESHNESS_BLOCK_AFTER_DAYS = 30;
 
@@ -451,10 +467,13 @@ function partitionSoldVerification(listings, statusByZpid) {
     const verifiedStatus = statusByZpid.get(String(listing.zpid));
     if (verifiedStatus && STILL_ON_MARKET.has(verifiedStatus)) {
       pulled.push({ listing, verifiedStatus });
-    } else if (!verifiedStatus) {
-      held.push({ listing, reason: listing.detailurl ? 'sold_verification_unavailable: no_status' : 'sold_verification_unavailable: no_detail_url' });
-    } else {
+    } else if (verifiedStatus && CONFIRMED_NOT_ACTIVE.has(verifiedStatus)) {
       kept.push(listing);
+    } else {
+      const reason = !verifiedStatus
+        ? (listing.detailurl ? 'sold_verification_unavailable: no_status' : 'sold_verification_unavailable: no_detail_url')
+        : `sold_verification_unconfirmed_status: ${verifiedStatus}`;
+      held.push({ listing, reason });
     }
   }
   return { kept, pulled, held };
@@ -778,6 +797,7 @@ module.exports = {
   applyOutputFilters,
   homeownerAudienceEligibility,
   partitionSoldVerification,
+  filterAddressDuplicates,
   normalizeAddressKey,
   applyJustListedFreshnessGuard,
   generatePDF,

@@ -13,6 +13,7 @@ const {
   applyJustListedFreshnessGuard,
   normalizeAddressKey: normalizeOutputAddressKey,
   partitionSoldVerification,
+  filterAddressDuplicates,
 } = require('./postcard-step5-output.cjs');
 const {
   filterJustListedSeenInCurrentScrape,
@@ -281,6 +282,43 @@ function testSoldVerificationRequiresNonActiveStatus() {
   assert.equal(confirmed.kept.length, 1);
 }
 
+function testSoldVerificationAcceptsOffMarketAfterTwoScrapeDisappearance() {
+  const sold = listing({ zpid: '402', status: 'sold', detailurl: 'https://example.test/402' });
+  const result = partitionSoldVerification([sold], new Map([['402', 'OFF_MARKET']]));
+  assert.equal(result.kept.length, 1);
+  assert.equal(result.held.length, 0);
+}
+
+function testSoldVerificationHoldsUnknownStatus() {
+  const sold = listing({ zpid: '403', status: 'sold', detailurl: 'https://example.test/403' });
+  const result = partitionSoldVerification([sold], new Map([['403', 'UNKNOWN']]));
+  assert.equal(result.kept.length, 0);
+  assert.equal(result.held.length, 1);
+  assert.equal(result.held[0].reason, 'sold_verification_unconfirmed_status: UNKNOWN');
+}
+
+async function testSameBatchAddressDuplicateIsHeld() {
+  const supabase = {
+    from() {
+      return {
+        select() { return this; },
+        eq() { return this; },
+        or() { return this; },
+        order() { return this; },
+        range() { return Promise.resolve({ data: [], error: null }); },
+      };
+    },
+  };
+  const candidates = [
+    listing({ zpid: '501', status: 'just_listed', addressstreet: '123 Main St.' }),
+    listing({ zpid: '502', status: 'just_listed', addressstreet: '123 Main Street' }),
+  ];
+  const result = await filterAddressDuplicates(supabase, 'windsor', candidates);
+  assert.equal(result.kept.length, 1);
+  assert.equal(result.rejected.length, 1);
+  assert.equal(result.rejected[0].reason, 'address_already_sent_just_listed (relist)');
+}
+
 function testDetailFreshnessBlocksStaleJustListed() {
   const rows = [listing({
     zpid: '100',
@@ -484,6 +522,9 @@ const tests = [
   testMalformedLocalAddressIsHeld,
   testSoldVerificationUnavailableIsHeld,
   testSoldVerificationRequiresNonActiveStatus,
+  testSoldVerificationAcceptsOffMarketAfterTwoScrapeDisappearance,
+  testSoldVerificationHoldsUnknownStatus,
+  testSameBatchAddressDuplicateIsHeld,
   testDetailFreshnessBlocksStaleJustListed,
   testCachedDetailFreshnessAgesForward,
   testDetailFreshnessAuditsButKeepsFiveToThirtyDays,
@@ -500,9 +541,13 @@ const tests = [
   testSearchUrlSortsByNewestWithoutDaysFilter,
 ];
 
-for (const test of tests) {
-  test();
-  console.log(`✓ ${test.name}`);
-}
-
-console.log(`\n${tests.length} postcard lifecycle tests passed`);
+(async () => {
+  for (const test of tests) {
+    await test();
+    console.log(`✓ ${test.name}`);
+  }
+  console.log(`\n${tests.length} postcard lifecycle tests passed`);
+})().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
