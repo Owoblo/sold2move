@@ -41,9 +41,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      regions: ${{ steps.regions.outputs.json }}
+    steps:
+      - name: Resolve and validate regions
+        id: regions
+        env:
+          REQUESTED_REGIONS: ${{ github.event.inputs.regions }}
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const allowed = ['windsor', 'chatham', 'sarnia', 'london', 'woodstock', 'wkg'];
+          const requested = (process.env.REQUESTED_REGIONS || allowed.join(','))
+            .split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+          const invalid = requested.filter(value => !allowed.includes(value));
+          if (invalid.length) throw new Error(`Invalid postcard region(s): ${invalid.join(', ')}`);
+          const regions = [...new Set(requested)];
+          if (!regions.length) throw new Error('At least one postcard region is required');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `json=${JSON.stringify(regions)}\n`);
+          console.log(`Regions: ${regions.join(', ')}`);
+          NODE
+
   run-pipeline:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        region: ${{ fromJSON(needs.prepare.outputs.regions) }}
 
     steps:
       - name: Checkout code
@@ -182,17 +211,10 @@ jobs:
           fi
           echo "flags=$FLAGS" >> $GITHUB_OUTPUT
 
-      - name: Resolve regions
-        id: regions
-        run: |
-          REGIONS="${{ github.event.inputs.regions }}"
-          if [ -z "$REGIONS" ]; then REGIONS="windsor,chatham,sarnia,london,woodstock,wkg"; fi
-          echo "list=$REGIONS" >> $GITHUB_OUTPUT
-
       # ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
 
       - name: Run Windsor pipeline
-        if: contains(steps.regions.outputs.list, 'windsor')
+        if: matrix.region == 'windsor'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -235,7 +257,7 @@ jobs:
       # ─── ZONE 2: CHATHAM-KENT ─────────────────────────────────────────────────
 
       - name: Run Chatham pipeline
-        if: contains(steps.regions.outputs.list, 'chatham')
+        if: matrix.region == 'chatham'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -278,7 +300,7 @@ jobs:
       # ─── ZONE 3: SARNIA / LAMBTON COUNTY ─────────────────────────────────────
 
       - name: Run Sarnia pipeline
-        if: contains(steps.regions.outputs.list, 'sarnia')
+        if: matrix.region == 'sarnia'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -321,7 +343,7 @@ jobs:
       # ─── ZONE 4: LONDON / MIDDLESEX ───────────────────────────────────────────
 
       - name: Run London pipeline
-        if: contains(steps.regions.outputs.list, 'london')
+        if: matrix.region == 'london'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -364,7 +386,7 @@ jobs:
       # ─── ZONE 5: WOODSTOCK / OXFORD COUNTY ───────────────────────────────────
 
       - name: Run Woodstock pipeline
-        if: contains(steps.regions.outputs.list, 'woodstock')
+        if: matrix.region == 'woodstock'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -407,7 +429,7 @@ jobs:
       # ─── ZONE 6: KITCHENER / WATERLOO / CAMBRIDGE / GUELPH ──────────────────
 
       - name: Run WKG pipeline
-        if: contains(steps.regions.outputs.list, 'wkg')
+        if: matrix.region == 'wkg'
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -453,7 +475,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: postcards-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
+          name: postcards-${{ matrix.region }}-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
           path: |
             Windsor_Postcards_*.csv
             Windsor_Postcards_*.pdf
@@ -482,41 +504,28 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          IFS=',' read -ra REGIONS <<< "${{ steps.regions.outputs.list }}"
-          for REGION in "${REGIONS[@]}"; do
-            node scripts/backfill-listing-attribution-openai.cjs \
-              --region "$REGION" \
-              --statuses sold,sold_archived \
-              --since-days 3 \
-              --limit 100 \
-              --concurrency 3 \
-              --retry-hours 1 \
-              --pass first
-          done
-
-      - name: Sync confirmed sales into partnership Recent Sales
-        if: success()
-        env:
-          RECENT_SALES_SYNC_SECRET: ${{ secrets.RECENT_SALES_SYNC_SECRET }}
-        run: |
-          curl --fail-with-body --retry 3 \
-            -X POST \
-            -H "Authorization: Bearer $RECENT_SALES_SYNC_SECRET" \
-            https://go.quote2move.com/api/marketing/recent-sales/sync
+          node scripts/backfill-listing-attribution-openai.cjs \
+            --region "${{ matrix.region }}" \
+            --statuses sold,sold_archived \
+            --since-days 3 \
+            --limit 100 \
+            --concurrency 3 \
+            --retry-hours 1 \
+            --pass first
 
       - name: Notify when a selected region produced no postcards
         if: |
           always() && !failure() && !cancelled() && (
-            (contains(steps.regions.outputs.list, 'windsor')  && steps.windsor_files.outputs.found  != 'true') ||
-            (contains(steps.regions.outputs.list, 'chatham')  && steps.chatham_files.outputs.found  != 'true') ||
-            (contains(steps.regions.outputs.list, 'sarnia')   && steps.sarnia_files.outputs.found   != 'true') ||
-            (contains(steps.regions.outputs.list, 'london')   && steps.london_files.outputs.found   != 'true') ||
-            (contains(steps.regions.outputs.list, 'woodstock')&& steps.woodstock_files.outputs.found!= 'true') ||
-            (contains(steps.regions.outputs.list, 'wkg')      && steps.wkg_files.outputs.found      != 'true')
+            (matrix.region == 'windsor'   && steps.windsor_files.outputs.found   != 'true') ||
+            (matrix.region == 'chatham'   && steps.chatham_files.outputs.found   != 'true') ||
+            (matrix.region == 'sarnia'    && steps.sarnia_files.outputs.found    != 'true') ||
+            (matrix.region == 'london'    && steps.london_files.outputs.found    != 'true') ||
+            (matrix.region == 'woodstock' && steps.woodstock_files.outputs.found != 'true') ||
+            (matrix.region == 'wkg'       && steps.wkg_files.outputs.found       != 'true')
           )
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          REGION_LIST: ${{ steps.regions.outputs.list }}
+          REGION_LIST: ${{ matrix.region }}
           WINDSOR_FOUND:   ${{ steps.windsor_files.outputs.found }}
           CHATHAM_FOUND:   ${{ steps.chatham_files.outputs.found }}
           SARNIA_FOUND:    ${{ steps.sarnia_files.outputs.found }}
@@ -586,7 +595,7 @@ jobs:
                 <table style=\"border-collapse: collapse; width: 100%; margin: 16px 0;\">
                   <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Workflow</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ github.workflow }}</td></tr>
                   <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Date range</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ steps.dates.outputs.from }} to ${{ steps.dates.outputs.to }}</td></tr>
-                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Regions</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ steps.regions.outputs.list }}</td></tr>
+                  <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Region</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ matrix.region }}</td></tr>
                   <tr><td style=\"padding: 8px; border: 1px solid #ddd; background: #f5f5f5;\">Run ID</td><td style=\"padding: 8px; border: 1px solid #ddd;\">${{ github.run_id }}</td></tr>
                 </table>
                 <p><a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\" style=\"background: #1d4ed8; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;\">View Full Logs</a></p>
@@ -602,3 +611,17 @@ jobs:
           req.on('error', e => console.error('Alert failed:', e.message));
           req.write(body); req.end();
           "
+
+  sync-recent-sales:
+    needs: run-pipeline
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync confirmed sales into partnership Recent Sales
+        env:
+          RECENT_SALES_SYNC_SECRET: ${{ secrets.RECENT_SALES_SYNC_SECRET }}
+        run: |
+          curl --fail-with-body --retry 3 \
+            -X POST \
+            -H "Authorization: Bearer $RECENT_SALES_SYNC_SECRET" \
+            https://go.quote2move.com/api/marketing/recent-sales/sync
