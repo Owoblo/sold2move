@@ -761,6 +761,11 @@ function normalizeForUpsert(row) {
     postcard_send_count: row.postcard_send_count ?? 0,
     missing_scrape_count: row.missing_scrape_count ?? 0,
     glitch_suspected: row.glitch_suspected ?? false,
+    // Older rows can predate the classification migration and contain nulls.
+    // PostgreSQL defaults do not apply when an upsert explicitly sends null.
+    listing_categories: Array.isArray(row.listing_categories) ? row.listing_categories : [],
+    property_signals: Array.isArray(row.property_signals) ? row.property_signals : [],
+    classification_reasons: row.classification_reasons ?? [],
   };
   // Step 0 lifecycle lookups intentionally avoid the heavy carouselphotos JSONB
   // column for large regions like Ottawa. If this row does not have fresh photo
@@ -977,4 +982,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };
+module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, normalizeForUpsert, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };

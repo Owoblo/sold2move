@@ -5,6 +5,7 @@ const {
   buildLifecycleRows,
   normalizeAddressKey,
   normalizeResult,
+  normalizeForUpsert,
   resolveRegionCity,
   buildZillowSearchUrl,
 } = require('./postcard-step0-scrape.cjs');
@@ -18,6 +19,7 @@ const {
 const {
   filterJustListedSeenInCurrentScrape,
   mergeListingsByZpid,
+  selectQualityRecovery,
 } = require('./postcard-step1-filter.cjs');
 const {
   needsDetailFreshness,
@@ -175,6 +177,26 @@ function testQualityRecoveryMergeDeduplicatesSelectedRows() {
   const merged = mergeListingsByZpid([selected], [recoveryDuplicate, recoveryOnly]);
   assert.equal(merged.length, 2);
   assert.equal(merged.find(row => row.zpid === '100').status, 'just_listed');
+}
+
+function testQualityRecoveryIsCappedNewestFirst() {
+  const rows = [
+    listing({ zpid: '100', lastseenat: '2026-08-01T00:00:00Z' }),
+    listing({ zpid: '200', lastseenat: '2026-08-03T00:00:00Z' }),
+    listing({ zpid: '300', lastseenat: '2026-08-02T00:00:00Z' }),
+  ];
+  assert.deepEqual(selectQualityRecovery(rows, 2).map(row => row.zpid), ['200', '300']);
+}
+
+function testLegacyClassificationNullsAreSafeForUpsert() {
+  const normalized = normalizeForUpsert(listing({
+    listing_categories: null,
+    property_signals: null,
+    classification_reasons: null,
+  }));
+  assert.deepEqual(normalized.listing_categories, []);
+  assert.deepEqual(normalized.property_signals, []);
+  assert.deepEqual(normalized.classification_reasons, []);
 }
 
 function testRentalNeverEntersHomeownerPostcardOutput() {
@@ -511,6 +533,8 @@ const tests = [
   testIncludeUnscannedIsExplicitOverride,
   testActiveRecoveryNeverEntersPostcardOutput,
   testQualityRecoveryMergeDeduplicatesSelectedRows,
+  testQualityRecoveryIsCappedNewestFirst,
+  testLegacyClassificationNullsAreSafeForUpsert,
   testRentalNeverEntersHomeownerPostcardOutput,
   testUnknownClassificationIsHeld,
   testGeocodeStreetNumberIsExact,

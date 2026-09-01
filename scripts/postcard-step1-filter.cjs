@@ -33,6 +33,12 @@ function mergeListingsByZpid(...groups) {
   return [...merged.values()];
 }
 
+function selectQualityRecovery(listings, limit = 100) {
+  const deduped = mergeListingsByZpid(listings);
+  deduped.sort((a, b) => String(b.lastseenat || '').localeCompare(String(a.lastseenat || '')));
+  return deduped.slice(0, Math.max(0, limit));
+}
+
 async function fetchAllPages(buildQuery, pageSize = 1000) {
   const rows = [];
   for (let from = 0; ; from += pageSize) {
@@ -203,11 +209,6 @@ async function run(options) {
       recoveryListings = recoveryListings.concat(data);
     }
   }
-  if (recoveryListings.length > 0) {
-    console.log(`  Active quality recovery: ${recoveryListings.length} unclassified/retry listing(s)`);
-    allListings = mergeListingsByZpid(allListings, recoveryListings);
-  }
-
   const knownCities = opts.cities.map(c => `"${c}"`).join(',');
   const { data: unmappedRecoveryRows, error: unmappedRecoveryError } = await fetchAllPages(() => supabase
     .from('listings')
@@ -222,8 +223,17 @@ async function run(options) {
   if (unmappedRecoveryError) {
     console.error(`  Error querying unmapped active quality recovery:`, unmappedRecoveryError.message);
   } else if (unmappedRecoveryRows.length > 0) {
-    console.log(`  Unmapped active quality recovery: ${unmappedRecoveryRows.length} listing(s)`);
-    allListings = mergeListingsByZpid(allListings, unmappedRecoveryRows);
+    recoveryListings = recoveryListings.concat(unmappedRecoveryRows);
+  }
+
+  // Background enrichment must never crowd actual just-listed/sold candidates
+  // out of the workflow timeout. Process a small, newest-first recovery slice
+  // each run; campaign candidates above remain complete and uncapped.
+  const recoveryLimit = Math.max(0, Number.parseInt(process.env.POSTCARD_QUALITY_RECOVERY_LIMIT || '100', 10) || 0);
+  const selectedRecovery = selectQualityRecovery(recoveryListings, recoveryLimit);
+  if (recoveryListings.length > 0) {
+    console.log(`  Active quality recovery: selected ${selectedRecovery.length}/${recoveryListings.length} unclassified/retry listing(s)`);
+    allListings = mergeListingsByZpid(allListings, selectedRecovery);
   }
 
   const { data: unmappedCityRows, error: unmappedCityError } = await fetchAllPages(() => supabase
@@ -401,4 +411,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, filterJustListedSeenInCurrentScrape, mergeListingsByZpid };
+module.exports = { run, filterJustListedSeenInCurrentScrape, mergeListingsByZpid, selectQualityRecovery };
