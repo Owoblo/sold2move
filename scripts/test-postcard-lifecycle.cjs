@@ -491,6 +491,30 @@ function testNormalizeResultKeepsConfiguredOntarioCity() {
   assert.equal(row.addressstate, 'ON');
 }
 
+function testNormalizeResultSupportsCurrentApifyListingSchema() {
+  const result = normalizeResult({
+    zpid: 123456,
+    listingAddress: {
+      street: '442 Grandview Ave',
+      city: 'Wilmot',
+      state: 'ON',
+      zipCode: 'N3A1L6',
+    },
+    listingPrice: { amount: 599900, currency: 'CAD', formatted: 'C$599,900' },
+    propertyUrl: 'https://www.zillow.com/homedetails/123456_zpid/',
+    mainImage: { url: 'https://photos.example/main.jpg' },
+    listingPhotos: [{ url: 'https://photos.example/one.jpg' }],
+    homeType: 'SINGLE_FAMILY',
+  }, { key: 'wkg', state: 'ON', cities: ['Wilmot'], cityAliases: {} }, now);
+  assert.equal(result.zpid, '123456');
+  assert.equal(result.addressstreet, '442 Grandview Ave');
+  assert.equal(result.addresszipcode, 'N3A1L6');
+  assert.equal(result.unformattedprice, 599900);
+  assert.equal(result.detailurl, 'https://www.zillow.com/homedetails/123456_zpid/');
+  assert.equal(result.imgsrc, 'https://photos.example/main.jpg');
+  assert.equal(result.carouselphotos.length, 1);
+}
+
 function testNormalizeResultDropsBorderSpillover() {
   const row = normalizeResult({
     zpid: '100',
@@ -584,6 +608,7 @@ const tests = [
   testJustListedMustBeSeenInCurrentScrape,
   testSkipScrapeAllowsExistingJustListedRows,
   testNormalizeResultKeepsConfiguredOntarioCity,
+  testNormalizeResultSupportsCurrentApifyListingSchema,
   testNormalizeResultDropsBorderSpillover,
   testNormalizeResultUsesConfiguredStateBoundary,
   testNormalizeResultKeepsUnmappedOntarioCity,

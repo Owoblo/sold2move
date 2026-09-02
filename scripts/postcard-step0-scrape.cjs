@@ -241,6 +241,15 @@ async function runSearchScraper(token, searchUrls) {
 }
 
 function extractAddress(r) {
+  if (r.listingAddress && typeof r.listingAddress === 'object') {
+    const a = r.listingAddress;
+    return {
+      addressstreet: a.street || a.streetAddress || '',
+      addresscity: a.city || '',
+      addressstate: a.state || 'ON',
+      addresszipcode: a.zipCode || a.zipcode || a.postalCode || '',
+    };
+  }
   if (r.streetAddress || r.addressStreet) {
     return {
       addressstreet: r.streetAddress || r.addressStreet || '',
@@ -326,7 +335,10 @@ function normalizeResult(r, regionConfig, nowIso) {
     normalizeResult._aliasedCities.set(rawCity, matchedCity);
   }
 
-  const rawPrice = r.price || r.listPrice || r.unformattedPrice || 0;
+  const listingPrice = r.listingPrice && typeof r.listingPrice === 'object'
+    ? r.listingPrice.amount
+    : r.listingPrice;
+  const rawPrice = r.price || r.listPrice || r.unformattedPrice || listingPrice || 0;
   const unformattedprice = typeof rawPrice === 'number'
     ? rawPrice
     : parseInt(String(rawPrice).replace(/[^\d]/g, ''), 10) || 0;
@@ -336,8 +348,9 @@ function normalizeResult(r, regionConfig, nowIso) {
 
   const contenttype = r.homeType || r.propertyType || r.contentType || 'SINGLE_FAMILY';
 
-  const imgsrc = r.imgSrc || r.thumbnail || r.mainImage || null;
-  const detailurl = r.detailUrl || r.url || null;
+  const mainImage = typeof r.mainImage === 'string' ? r.mainImage : r.mainImage?.url;
+  const imgsrc = r.imgSrc || r.thumbnail || mainImage || null;
+  const detailurl = r.detailUrl || r.url || r.propertyUrl || null;
 
   // Capture listing description if Apify returns it
   const description = r.description || r.homeDescription || r.hdpData?.homeInfo?.description || null;
@@ -346,7 +359,7 @@ function normalizeResult(r, regionConfig, nowIso) {
   const searchTime = r.timeOnZillow || r.hdpData?.homeInfo?.timeOnZillow || null;
 
   let carouselphotos = null;
-  const photoArrays = [r.responsivePhotos, r.originalPhotos, r.photos, r.images, r.big];
+  const photoArrays = [r.responsivePhotos, r.originalPhotos, r.photos, r.images, r.big, r.listingPhotos];
   for (const arr of photoArrays) {
     if (!Array.isArray(arr) || arr.length === 0) continue;
     const extracted = arr.map(p => {
