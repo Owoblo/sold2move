@@ -489,8 +489,12 @@ jobs:
             Woodstock_Postcards_*.pdf
             WKG_Postcards_*.csv
             WKG_Postcards_*.pdf
-            scripts/.pipeline-*/step2-detail-summary.json
-            scripts/.pipeline-*/step5-health-summary.json
+            scripts/.pipeline-*/batches/*/step2-detail-summary.json
+            scripts/.pipeline-*/batches/*/step3-classification-summary.json
+            scripts/.pipeline-*/batches/*/step5-freshness-audit.json
+            scripts/.pipeline-*/batches/*/step5-health-summary.json
+            scripts/.pipeline-*/batches/*/step5-final.json
+            scripts/.pipeline-*/batches/*/batch-manifest.json
           if-no-files-found: ignore
           retention-days: 30
 

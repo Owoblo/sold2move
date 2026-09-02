@@ -598,6 +598,9 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
 
     if (existing) {
       activeCount++;
+      const retainedStatus = existing.status === 'just_listed' && !existing.just_listed_postcard_sent_at
+        ? 'just_listed'
+        : 'active';
       nextRows.push({
         ...scraped,
         ...carryClassification(existing),
@@ -605,7 +608,10 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
         // scrape the same listing. Keep the region that first captured it so
         // the row doesn't flap between regions on alternating runs.
         region: existing.region || regionConfig.key,
-        status: 'active',
+        // Keep an unmailed new listing eligible across transient classifier,
+        // photo, geocoder, or API failures. Previously the very next scrape
+        // demoted it to active and permanently lost the postcard opportunity.
+        status: retainedStatus,
         first_seen_at: existing.first_seen_at || scraped.first_seen_at,
         last_seen_at: nowIso,
         lastseenat: nowIso,

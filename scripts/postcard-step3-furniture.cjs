@@ -159,6 +159,14 @@ function writeClassificationOutputs(listings) {
   });
 }
 
+function classificationHealthFailure(readyCount, scanned, failed) {
+  if (readyCount < 5 || failed < 5) return null;
+  const attempted = scanned + failed;
+  const failureRate = attempted > 0 ? failed / attempted : 0;
+  if (failureRate < 0.8) return null;
+  return `Classifier health gate: ${failed}/${attempted} attempted classifications failed (${(failureRate * 100).toFixed(1)}%)`;
+}
+
 async function classifyProperty(openai, listing, photoUrls) {
   const contentType = String(listing.contenttype || '').toUpperCase();
   if (contentType === 'LOT' || contentType === 'LAND') {
@@ -377,6 +385,8 @@ async function run(options) {
   console.log(`  Overall: ${totalFurnished} furnished, ${totalUnfurnished} unfurnished, ${totalUnknown} unknown`);
 
   writeClassificationOutputs(listings);
+  const healthFailure = classificationHealthFailure(readyToClassify.length, scanned, failed);
+  if (healthFailure) throw new Error(healthFailure);
   return listings;
 }
 
@@ -394,4 +404,5 @@ module.exports = {
   getInteriorPhotoUrls,
   getClassificationPhotoUrls,
   countValues,
+  classificationHealthFailure,
 };

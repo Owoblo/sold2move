@@ -25,6 +25,9 @@ const {
   needsDetailFreshness,
 } = require('./postcard-step2-photos.cjs');
 const {
+  classificationHealthFailure,
+} = require('./postcard-step3-furniture.cjs');
+const {
   verifyMatch,
   verifyLocalAddress,
 } = require('./postcard-step4-geocode.cjs');
@@ -79,6 +82,26 @@ function testNewZpidAtKnownAddressIsNotJustListed() {
   assert.equal(nextRows[0].postcard_skip_reason, 'known_address_relist: 100');
   assert.equal(summary.justListedCount, 0);
   assert.equal(summary.activeCount, 1);
+}
+
+function testUnmailedJustListedSurvivesNextScrape() {
+  const existing = [listing({ zpid: '100', status: 'just_listed', just_listed_postcard_sent_at: null })];
+  const scraped = [listing({ zpid: '100' })];
+  const { nextRows } = buildLifecycleRows(scraped, existing, region, now);
+  assert.equal(nextRows[0].status, 'just_listed');
+}
+
+function testMailedJustListedBecomesActiveOnNextScrape() {
+  const existing = [listing({ zpid: '100', status: 'just_listed', just_listed_postcard_sent_at: now })];
+  const scraped = [listing({ zpid: '100' })];
+  const { nextRows } = buildLifecycleRows(scraped, existing, region, now);
+  assert.equal(nextRows[0].status, 'active');
+}
+
+function testClassifierHealthGateStopsCollapsedRun() {
+  assert.match(classificationHealthFailure(144, 0, 144), /144\/144/);
+  assert.equal(classificationHealthFailure(10, 9, 1), null);
+  assert.equal(classificationHealthFailure(4, 0, 4), null);
 }
 
 function testMissingTwiceBecomesSold() {
@@ -524,6 +547,9 @@ function testSearchUrlSortsByNewestWithoutDaysFilter() {
 const tests = [
   testSeedModeStoresUnseenAsActive,
   testNewZpidAtKnownAddressIsNotJustListed,
+  testUnmailedJustListedSurvivesNextScrape,
+  testMailedJustListedBecomesActiveOnNextScrape,
+  testClassifierHealthGateStopsCollapsedRun,
   testMissingTwiceBecomesSold,
   testDegradedScrapeDoesNotBurnMiss,
   testSoldArchivedReappearanceRoutesToVerifiedJustListed,
