@@ -496,6 +496,7 @@ jobs:
             scripts/.pipeline-*/batches/*/step5-final.json
             scripts/.pipeline-*/batches/*/batch-manifest.json
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 30
 
       # ─── NOTIFICATIONS ────────────────────────────────────────────────────────

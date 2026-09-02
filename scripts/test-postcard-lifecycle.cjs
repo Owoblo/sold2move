@@ -15,6 +15,7 @@ const {
   normalizeAddressKey: normalizeOutputAddressKey,
   partitionSoldVerification,
   filterAddressDuplicates,
+  normalizeZillowStatus,
 } = require('./postcard-step5-output.cjs');
 const {
   filterJustListedSeenInCurrentScrape,
@@ -342,6 +343,12 @@ function testSoldVerificationHoldsUnknownStatus() {
   assert.equal(result.held[0].reason, 'sold_verification_unconfirmed_status: UNKNOWN');
 }
 
+function testCurrentApifyDetailStatusesNormalize() {
+  assert.equal(normalizeZillowStatus('offMarket'), 'OFF_MARKET');
+  assert.equal(normalizeZillowStatus('recentlySold'), 'RECENTLY_SOLD');
+  assert.equal(normalizeZillowStatus('forSale'), 'FOR_SALE');
+}
+
 async function testSameBatchAddressDuplicateIsHeld() {
   const supabase = {
     from() {
@@ -598,6 +605,7 @@ const tests = [
   testSoldVerificationRequiresNonActiveStatus,
   testSoldVerificationAcceptsOffMarketAfterTwoScrapeDisappearance,
   testSoldVerificationHoldsUnknownStatus,
+  testCurrentApifyDetailStatusesNormalize,
   testSameBatchAddressDuplicateIsHeld,
   testDetailFreshnessBlocksStaleJustListed,
   testCachedDetailFreshnessAgesForward,

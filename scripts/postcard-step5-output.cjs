@@ -389,6 +389,14 @@ function extractZpidFromResult(r) {
   return null;
 }
 
+function normalizeZillowStatus(value) {
+  return String(value || '')
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[\s-]+/g, '_')
+    .toUpperCase();
+}
+
 function normalizeDaysOnZillow(value) {
   if (value == null || value === '') return null;
   const n = Number(value);
@@ -532,7 +540,9 @@ async function verifySoldCandidates(supabase, finalListings) {
 
       for (const r of items.data) {
         const zpid = extractZpidFromResult(r);
-        const homeStatus = (r?.homeStatus || r?.hdpData?.homeInfo?.homeStatus || r?.status || '').toUpperCase();
+        const homeStatus = normalizeZillowStatus(
+          r?.homeStatus || r?.hdpData?.homeInfo?.homeStatus || r?.listingStatus || r?.status
+        );
         if (zpid && homeStatus) statusByZpid.set(zpid, homeStatus);
       }
       verifiedCount += chunk.length;
@@ -798,6 +808,7 @@ module.exports = {
   homeownerAudienceEligibility,
   partitionSoldVerification,
   filterAddressDuplicates,
+  normalizeZillowStatus,
   normalizeAddressKey,
   applyJustListedFreshnessGuard,
   generatePDF,
