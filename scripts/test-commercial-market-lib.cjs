@@ -10,12 +10,13 @@ const {
 } = require('./commercial-market-lib.cjs');
 const { REALTOR_SEARCH_PLAN, SERVICE_CITIES, SPACELIST_INPUTS } = require('./commercial-pipeline.cjs');
 
-assert.equal(SERVICE_CITIES.length, 211);
-assert.equal(SPACELIST_INPUTS.length, 10);
-assert.equal(REALTOR_SEARCH_PLAN.length, 64);
-assert.equal(REALTOR_SEARCH_PLAN.filter(run => run.scope_level === 'broad_region' && run.deal_type === 'sold').length, 6);
+assert.equal(SERVICE_CITIES.length, 217);
+assert.equal(SPACELIST_INPUTS.length, 14);
+assert.equal(REALTOR_SEARCH_PLAN.length, 92);
+assert.equal(REALTOR_SEARCH_PLAN.filter(run => run.scope_level === 'broad_region' && run.deal_type === 'sold').length, 7);
 assert.ok(REALTOR_SEARCH_PLAN.some(run => run.location === 'Waterloo' && run.deal_type === 'lease'));
 assert.ok(REALTOR_SEARCH_PLAN.some(run => run.location === 'Cambridge' && run.deal_type === 'lease'));
+assert.ok(REALTOR_SEARCH_PLAN.some(run => run.region === 'gta' && run.location === 'Hamilton' && run.deal_type === 'lease'));
 
 const html = `
 <div id="cluster-map" data-data='{"features":[{"geometry":{"coordinates":[-81.2,42.9]},"properties":{"id":123}}]}'></div>
