@@ -417,7 +417,7 @@ async function run(options, dependencies = {}) {
       region_label: input.region_label || input.city,
       dataset_id: input.datasetId || null,
       raw_records: rows.length,
-      complete: true,
+      complete: !rows.some(row => row.error || row.errorDescription),
       status: 'succeeded',
       fresh: input.source === 'rentseeker' || Boolean(canRefreshZillow),
     });

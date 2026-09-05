@@ -37,7 +37,7 @@ async function classify(runDir, { db = query, client } = {}) {
     else Object.assign(row, { current_occupancy: 'unknown', classification_stale: true });
   }
   const newIds = new Set(lifecycle.events.filter(e => ['just_listed', 'relisted'].includes(e.event_type)).map(e => `${e.source}|${e.source_listing_id}`));
-  const candidates = rows.filter(r => r.acquisition_fresh && r.classification_stale && (r.unit_label || r.single_home))
+  const candidates = rows.filter(r => r.acquisition_fresh && r.classification_stale && (r.unit_label || r.single_home) && newIds.has(`${r.source}|${r.source_listing_id}`))
     .sort((a, b) => Number(newIds.has(`${b.source}|${b.source_listing_id}`)) - Number(newIds.has(`${a.source}|${a.source_listing_id}`))).slice(0, 150);
   if (!client && process.env.OPENAI_API_KEY) { const OpenAI = require('openai'); client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); }
   let classified = 0, failed = 0;

@@ -12,7 +12,7 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
   const records = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json')));
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
   // If mailing history cannot be read, this throws before a batch is generated.
-  const history = await db('SELECT mailing_key FROM rental_postcard_recipients');
+  const history = await db("SELECT mailing_key FROM rental_postcard_recipients WHERE created_at > now() - interval '180 days'");
   const queue = buildRentalQueue(records, lifecycle.events, history);
   fs.writeFileSync(path.join(runDir, 'rental-review-queue.json'), JSON.stringify(queue, null, 2));
   fs.writeFileSync(path.join(runDir, 'rental-review-queue.csv'), Papa.unparse(queue.map(r => ({
@@ -32,10 +32,17 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
     delivery_status: 'generated_for_review', physical_mailing_confirmed: false };
   // Build a concrete artifact before reserving it. A transaction collision fails without emailing it.
   await render(manifest, path.join(runDir, 'postcards'));
+  if (!recipients.length) { console.log('No qualified rental recipients; saved review artifacts only.'); return manifest; }
   await db(`BEGIN;
     INSERT INTO rental_postcard_batches(batch_id, manifest) VALUES (${quote(batchId)}, ${quote(JSON.stringify(manifest))}::jsonb);
     INSERT INTO rental_postcard_recipients(mailing_key, batch_id, recipient)
-      SELECT r->>'mailing_key', ${quote(batchId)}, r FROM jsonb_array_elements(${quote(JSON.stringify(recipients))}::jsonb) r;
+      SELECT r->>'mailing_key', ${quote(batchId)}, r FROM jsonb_array_elements(${quote(JSON.stringify(recipients))}::jsonb) r
+      ON CONFLICT(mailing_key) DO UPDATE SET batch_id=EXCLUDED.batch_id, recipient=EXCLUDED.recipient, created_at=now()
+      WHERE rental_postcard_recipients.created_at <= now() - interval '180 days';
+    DO $$ BEGIN
+      IF (SELECT count(*) FROM rental_postcard_recipients WHERE batch_id=${quote(batchId)}) <> ${recipients.length}
+      THEN RAISE EXCEPTION 'Rental address reservation conflict; batch not authorized'; END IF;
+    END $$;
     COMMIT;`);
   console.log(`Rental batch: ${recipients.length} current-occupant recipients; ${queue.length - recipients.length} held/review records.`);
   return manifest;

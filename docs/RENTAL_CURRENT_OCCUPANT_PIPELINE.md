@@ -8,7 +8,7 @@ Rental inventory runs once weekly, Tuesday at 16:30 UTC, covering the six core r
 
 Zillow and RentSeeker are live sources. Historical hard-coded RentCafe datasets and Zillow detail datasets were removed from the defaults. Optional enrichment requires an observation timestamp within seven days and exact listing-ID matching; it cannot replace a current price. RentSeeker pagination must complete and supplied/source-URL municipality and province are preserved; the requested city is not substituted for missing geography. Failed sources are recorded separately and cannot establish disappearance.
 
-Fresh Zillow details are fetched only for new/relisted unit-specific or single-home candidates, up to 150 per run. AI classifies up to 150 candidates, prioritizing new/relisted records. It separately records current occupancy and offered furnishing. Reusable classifications require the same description/photos/unit fingerprint and classifier version and must be under 30 days old. Reappearances require fresh classification. Missing/failed/low-confidence evidence stays in review.
+Fresh Zillow details are fetched only for new/relisted unit-specific or single-home candidates, up to 150 per run. AI classifies up to 150 new/relisted candidates; it does not rescan the whole active inventory each week. It separately records current occupancy and offered furnishing. Reusable classifications require the same description/photos/unit fingerprint and classifier version and must be under 30 days old. Reappearances require fresh classification. Missing/failed/low-confidence evidence stays in review.
 
 ## Rental eligibility
 
@@ -19,7 +19,7 @@ A postcard candidate requires:
 - Current occupied evidence at confidence >= 0.80 from the rental occupancy classifier.
 - Fresh acquisition, a complete Ontario postal address, and no missing required unit.
 - No shared-room, shared-kitchen or short-term-rental evidence.
-- No existing rental batch reservation for the same address and unit.
+- No rental batch reservation for the same address and unit in the last 180 days. This initial cooldown permits later tenant turnover without mailing the same household repeatedly.
 
 Furnishings included in the lease are not occupancy evidence. An occupied rental offered unfurnished can qualify. Empty, staged and unknown occupancy do not. Student-oriented housing is not categorically excluded if it is a complete, occupied dwelling; shared-room listings remain review-only.
 
@@ -27,7 +27,7 @@ Source-level lifecycle still uses two successful misses for leased_or_withdrawn 
 
 ## Saved artwork
 
-`rental-postcards.cjs` reads history, builds the current-occupant review queue, generates a regional A7 envelope PDF and recipient CSV, and reserves the exact recipient list in a rental-only batch transaction. Different units at one property are independent mailing identities. These are generated batches, not claims of physical mailing. Database/history failures prevent batch authorization.
+`rental-postcards.cjs` reads history, builds the current-occupant review queue, generates a regional A7 envelope PDF and recipient CSV, and reserves the exact recipient list in a rental-only batch transaction. Different units at one property are independent mailing identities. A later batch can reserve the address after the 180-day cooldown; previous batch manifests remain immutable. Empty results do not reserve a batch. These are generated batches, not claims of physical mailing. Database/history failures prevent batch authorization.
 
 The owner report includes XLSX inventory, saved manifest, recipient CSV and rental envelope PDFs. It is sent to business@starmovers.ca for review; no new automated rental print instruction to LooniePrints was added.
 

@@ -27,5 +27,24 @@ if (process.argv.includes('--database')) {
       IF (SELECT count(*) FROM rental_source_records WHERE unit_label='4' AND raw_payload->>'fixture'='true') <> 1 THEN RAISE EXCEPTION 'Rental unit persistence failed'; END IF;
       IF (SELECT count(*) FROM rental_pipeline_runs) <> 1 THEN RAISE EXCEPTION 'Rental replay marker missing'; END IF;
     END $$; ROLLBACK;`;
-  require('./market-db.cjs').query(testSQL).then(() => console.log('Rental loader passed against temporary live-schema tables; transaction rolled back.')).catch(e => { console.error(e.message); process.exitCode = 1; });
+  require('./market-db.cjs').query(testSQL).then(async () => {
+    console.log('Rental loader passed against temporary live-schema tables; transaction rolled back.');
+    const { build } = require('./rental-postcards.cjs');
+    const { CLASSIFIER_VERSION } = require('./rental-outreach-lib.cjs');
+    const candidate = { ...row, observed_at: new Date().toISOString(), current_occupancy: 'occupied', classification_confidence: 0.95, classification_method: CLASSIFIER_VERSION };
+    fs.writeFileSync(path.join(dir, 'normalized-source-records.json'), JSON.stringify([candidate]));
+    let batchSQL;
+    const manifest = await build(dir, { render: async () => {}, db: async sql => { if (sql.startsWith('BEGIN;')) batchSQL = sql; return []; } });
+    assert.equal(manifest.recipients.length, 1);
+    const key = manifest.recipients[0].mailing_key.replaceAll("'", "''");
+    await require('./market-db.cjs').query(`BEGIN;
+      CREATE TEMP TABLE rental_postcard_batches (LIKE public.rental_postcard_batches INCLUDING ALL) ON COMMIT DROP;
+      CREATE TEMP TABLE rental_postcard_recipients (LIKE public.rental_postcard_recipients INCLUDING ALL) ON COMMIT DROP;
+      INSERT INTO rental_postcard_recipients(mailing_key,batch_id,recipient,created_at) VALUES ('${key}','old-fixture','{}',now()-interval '181 days');
+      ${batchSQL.replace(/^BEGIN;/, '').replace(/COMMIT;\s*$/, '')}
+      DO $$ BEGIN
+        IF (SELECT count(*) FROM rental_postcard_recipients WHERE batch_id='${manifest.batch_id}') <> 1 THEN RAISE EXCEPTION 'Rental cooldown reservation failed'; END IF;
+      END $$; ROLLBACK;`);
+    console.log('Rental batch reservation and cooldown passed against temporary live-schema tables; transaction rolled back.');
+  }).catch(e => { console.error(e.message); process.exitCode = 1; });
 } else console.log('Rental loader transaction and unit-persistence SQL checks passed.');
