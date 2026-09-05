@@ -28,3 +28,6 @@ assert.equal(corrected.recipients.length,1);assert.equal(corrected.recipients[0]
 assert.equal(manifest.recipients[0].addressstreet,'123 Main St');
 assert.throws(()=>correct([manifest],[{...row,street_address:'999 Different Rd',postal_code:'N9A1A1'}]),/property identity/);
 assert.throws(()=>correct([manifest,manifest],[{...row,postal_code:'N9A1A1'}]),/Duplicate/);
+
+assert.equal(resolveRentalAddress({street_address:'1568 Pierre Ave',description:'Welcome to your new home at 1568 Pierre - Main, a charming house.'}).unit_label,'MAIN');
+assert.equal(resolveRentalAddress({street_address:'1568 Other Ave',description:'Welcome to 1568 Pierre - Main.'}).unit_label,null);

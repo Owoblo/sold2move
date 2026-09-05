@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { buildMarketWorkbook } = require('./market-xlsx-report.cjs');
-const { targets } = require('./rental-screening-lib.cjs');
+const { targets, detailTargets } = require('./rental-screening-lib.cjs');
 const { buildRentalQueue } = require('./rental-outreach-lib.cjs');
 const labels = { windsor: 'Windsor', chatham: 'Chatham', sarnia: 'Sarnia', london: 'London', woodstock: 'Woodstock', wkg: 'Waterloo / Kitchener / Guelph' };
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,6 +18,7 @@ async function buildRentalReport(runDir) {
   if (!['postcards','postcards-supplement'].includes(folder)) throw new Error('Invalid rental output pointer');
   const manifest = read(`${folder}/rental-batch.json`), recipients = manifest.recipients;
   const candidates = targets(inventory,lifecycle.events || []);
+  const addressReview = detailTargets(inventory,lifecycle.events || []).filter(r=>!candidates.includes(r));
   const screened = candidates.filter(r=>!r.classification_stale);
   const counts = screened.reduce((a,r)=>(a[r.current_occupancy||'unknown']=(a[r.current_occupancy||'unknown']||0)+1,a),{});
   const qualified = buildRentalQueue(inventory,lifecycle.events || []).filter(r=>r.postcard_eligible).length;
@@ -43,14 +44,16 @@ async function buildRentalReport(runDir) {
     <h2 style="color:#1a1a1a">Rental Postcard Pipeline — ${date}</h2><p>${intro}</p>
     ${section('Pipeline Summary')}${table([
       ['Total source listings found',inventory.length],
-      ['New or relisted unit/home candidates',candidates.length],
+      ['All new or relisted listings',candidates.length+addressReview.length],
+      ['Specific unit/home candidates',candidates.length],
+      ['Address or unit unresolved — review',addressReview.length],
       ['Candidates screened',screened.length],['Pending checks',pending],
       ['Current occupant detected',counts.occupied||0],['Vacant — held',counts.vacant||0],
       ['Staged — held',counts.staged||0],['Uncertain occupancy — held',counts.unknown||0],
       ['Qualified addresses in this snapshot',qualified],
     ])}
     <table style="border-collapse:collapse;width:100%;margin:0 0 20px"><tr style="background:#e0f2fe"><td style="${cell}font-weight:bold">${manifest.supplemental?'Additional postcards attached':'Final postcards attached'}</td><td style="${cell}font-weight:bold;font-size:18px;text-align:center">${recipients.length}</td></tr></table>
-    <p style="color:${pending?'#b45309':'#166534'}">${pending?`${pending} checks remain pending; they have not been rejected.`:'Screening complete across all six regions.'}</p>
+    <p style="color:${pending?'#b45309':'#166534'}">${pending?`${pending} checks remain pending; they have not been rejected.`:`Screening complete for ${candidates.length} address-identifiable candidates across all six regions. ${addressReview.length} listings remain in address review.`}</p>
     ${section('By Region')}${table(rows,['Region','Listings','Candidates','Screened','Attached'])}
     ${recipients.length?section('Postcards by City')+table(Object.entries(cityCounts),['City','Postcards']):''}
     ${section('Rental Disappearance Tracking')}
@@ -61,6 +64,7 @@ async function buildRentalReport(runDir) {
     <hr style="border:none;border-top:1px solid #eee;margin:24px 0"><p style="color:#888;font-size:12px">Automated by Sold2Move Postcard Pipeline — Rentals</p></div>`;
   const dir = path.join(runDir,folder);
   const attachments = recipients.length ? fs.readdirSync(dir).filter(n=>/\.(pdf|csv)$/.test(n)&&fs.statSync(path.join(dir,n)).size>0).map(n=>({filename:n,content:fs.readFileSync(path.join(dir,n)).toString('base64')})) : [];
+  if (addressReview.length) attachments.push({filename:'rental-address-review.csv',content:Buffer.from(require('papaparse').unparse(addressReview.map(r=>({address:r.mailing_street||r.street_address,city:r.city,source:r.source,source_url:r.source_url,details:r.details_status||(r.details_fetched_at?'fetched':'unavailable'),reason:r.unit_address_unresolved?'Advertised unit ambiguous':'Specific unit or whole-home evidence missing'})))).toString('base64')});
   if (followup.length) attachments.push({filename:'rental-followup-review.csv',content:fs.readFileSync(path.join(runDir,'rental-followup-review.csv')).toString('base64')});
   const workbook = await buildMarketWorkbook('rental',inventory,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`rental-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});

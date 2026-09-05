@@ -4,6 +4,10 @@ function resolveRentalAddress(row) {
   const identity = unitIdentity(row.street_address, row.unit_label);
   let unit = identity.unit_label, evidence = unit ? 'Source address/unit field' : null;
   const description = String(row.description || '');
+  const abbreviated = identity.street_address.replace(/\s+(?:ST|STREET|RD|ROAD|AVE|AVENUE|DR|DRIVE|CT|COURT|BLVD|BOULEVARD|LANE|LN|CRES|CRESCENT)(?:\s+[NSEW])?$/i, '');
+  const safeStreet = abbreviated.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const addressMention = description.match(new RegExp('\\b'+safeStreet+'(?:\\s+(?:St|Street|Rd|Road|Ave|Avenue|Dr|Drive))?\\s*[-,]\\s*(MAIN|UPPER|LOWER|BASEMENT|BSMT|GROUND)\\b','i'));
+  if (!unit && addressMention) { unit = floorLabel(addressMention[1]); evidence = `Listing description address: ${addressMention[0]}`; }
   // Match the advertised unit, not ordinary room locations such as "main floor kitchen".
   const mentions = [...description.matchAll(/\b(main|upper|lower|basement|bsmt|ground)[ -]*(?:(?:floor|level)[ -]*)?(?:unit|suite|apartment)\b/gi)];
   const first = mentions.filter(m=>m.index < 500 && !/\b(?:with|includes?|including|plus|and|separate)\s+(?:a\s+)?$/i.test(description.slice(Math.max(0,m.index-30),m.index)));

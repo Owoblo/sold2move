@@ -10,7 +10,7 @@ const {buildRentalReport}=require('./rental-email-report.cjs');
  write('postcards/rental-batch.json',{recipients:[],supplemental:true});
  fs.writeFileSync(path.join(dir,'postcards/rental-recipients.csv'),'');
  let report=await buildRentalReport(dir);
- assert.match(report.subject,/Pipeline Complete/);assert.match(report.html,/Screening complete across all six regions/);
+ assert.match(report.subject,/Pipeline Complete/);assert.match(report.html,/address-identifiable candidates across all six regions/);
  assert.match(report.html,/1 listings were absent/);assert.equal(report.attachments.length,1);assert(report.attachments[0].content.length);
  assert(!report.subject.includes('Postcards Ready'));
  write('postcards/rental-batch.json',{recipients:[{region:'windsor',city:'<script>bad</script>'}],supplemental:true});
