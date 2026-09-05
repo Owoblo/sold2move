@@ -133,8 +133,7 @@ function applyOutputFilters(listings, opts) {
   // No matter how the status flaps (e.g. just_listed → sold → just_listed → sold
   // because of Zillow API hiccups), no zpid ever receives more than MAX_SENDS
   // postcards lifetime. This is the last line of defence against over-mailing,
-  // independent of the upstream "is it really sold?" question that Tier 2 (in
-  // step0) handles.
+  // independent of the upstream disappearance inference in step0.
   const MAX_SENDS = 2;
   {
     const next = [];
@@ -347,8 +346,8 @@ const DETAIL_ACTOR = process.env.ZILLOW_DETAIL_ACTOR || 'maxcopell~zillow-detail
 const VERIFY_CHUNK_SIZE = Number.parseInt(process.env.SOLD_VERIFY_CHUNK_SIZE || '25', 10);
 const VERIFY_TIMEOUT_MINUTES = Number.parseInt(process.env.SOLD_VERIFY_TIMEOUT_MINUTES || '4', 10);
 const STILL_ON_MARKET = new Set(['FOR_SALE', 'PENDING', 'COMING_SOON', 'ACTIVE', 'FOR_RENT']);
-// The lifecycle's primary evidence is disappearance across two healthy full
-// scrapes. Zillow commonly changes the detail page to OFF_MARKET instead of
+// This verifier is temporarily bypassed by the first-disappearance policy.
+// Zillow commonly changes the detail page to OFF_MARKET instead of
 // exposing a literal SOLD state, so either explicit sold or confirmed
 // off-market is enough to corroborate that disappearance. Unknown statuses
 // remain held; active statuses are pulled back.
@@ -668,18 +667,10 @@ async function run(options) {
   }
   const addressRejected = rejected.slice(initialRejected.length + freshnessRejected.length);
 
-  // Verify sold candidates against their live Zillow pages. Still-active rows
-  // return to active; unavailable evidence is held for a later run.
-  let soldPulled = [];
-  let soldHeld = [];
-  if (!opts.dryRun && finalListings.some(l => l.status === 'sold')) {
-    const supabase = getSupabase();
-    const { kept, pulled, held } = await verifySoldCandidates(supabase, finalListings);
-    finalListings = kept;
-    soldPulled = pulled;
-    soldHeld = held;
-    rejected = rejected.concat(held.map(({ listing, reason }) => ({ zpid: listing.zpid, reason })));
-  }
+  // Temporary policy: first-disappearance candidates bypass Zillow detail verification.
+  // Retain the verifier for when corroboration is re-enabled.
+  const soldPulled = [];
+  const soldHeld = [];
 
   writePipelineFile('step5-final.json', finalListings);
 
@@ -717,6 +708,8 @@ async function run(options) {
       rejected_by_reason: countBy(addressRejected, r => r.reason),
     },
     sold_verification: {
+      bypassed: true,
+      bypass_reason: 'temporary_first_disappearance_policy',
       candidates_before_verification: finalListings.filter(l => l.status === 'sold').length + soldPulled.length + soldHeld.length,
       pulled_back_count: soldPulled.length,
       pulled_back: soldPulled.map(({ listing, verifiedStatus }) => ({

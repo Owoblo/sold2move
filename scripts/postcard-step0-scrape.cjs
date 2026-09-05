@@ -4,7 +4,7 @@
  *
  * For this Canada workflow, "sold" is inferred by disappearance:
  * - freshly scraped listings not seen before -> just_listed
- * - previously live listings missing from TWO consecutive full scrapes -> sold
+ * - previously live listings missing from the first completed nonempty scrape -> sold
  * - previously live listings still present -> active
  *
  * Disappearance-inference is only valid when the scrape covers the whole
@@ -12,9 +12,7 @@
  * are grid-split into sub-searches to stay under Zillow's ~500/search cap.
  *
  * Guards:
- * - degraded-scrape gate: a scrape returning <50% of known-active listings
- *   freezes miss counters for the run (partial Apify results can't create
- *   phantom solds)
+ * - Temporary policy: coverage gating and the second-miss wait are bypassed.
  * - --seed: first run for a new region stores everything as 'active' so
  *   onboarding never mass-mails a region's existing backlog
  *
@@ -525,13 +523,8 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
 }
 
 function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lifecycleOpts = {}) {
-  // degraded: this scrape returned far fewer rows than we know to be active,
-  //   so "missing from scrape" is meaningless — process what we saw, but do
-  //   NOT increment anyone's miss counter.
-  // seedMode: first run for a brand-new region — insert unseen listings as
-  //   'active' (existing inventory) instead of 'just_listed', so onboarding
-  //   a region doesn't mass-mail its entire backlog.
-  const { degraded = false, seedMode = false } = lifecycleOpts;
+  // Temporary first-disappearance policy: degraded coverage does not freeze misses.
+  const { seedMode = false } = lifecycleOpts;
   const existingByZpid = new Map(existingRows.map(row => [String(row.zpid), row]));
   const existingByAddress = new Map();
   for (const row of existingRows) {
@@ -551,14 +544,6 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
   let glitchCount = 0;
   let pendingMissCount = 0;
   let seededCount = 0;
-
-  // Tier 2: a listing missing from one scrape is not enough evidence it's sold.
-  // Wait until it's missing from this many CONSECUTIVE scrapes before flipping
-  // to status='sold'. At our every-2-day cron, 2 misses ≈ 4-6 days — long
-  // enough to filter Zillow API hiccups, pagination drift, and short delistings,
-  // short enough that real sold listings still get caught while sellers are
-  // packing.
-  const REQUIRED_CONSECUTIVE_MISSES = 2;
 
   for (const scraped of scrapedRows) {
     if (currentByZpid.has(scraped.zpid)) continue;
@@ -719,45 +704,25 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
     }
   }
 
-  // Disappearance pass — skipped entirely on degraded scrapes so a flaky
-  // Apify run can't burn anyone's Tier-2 miss strikes.
-  if (!degraded) {
-    for (const existing of existingRows) {
-      const zpid = String(existing.zpid);
-      if (currentByZpid.has(zpid)) continue;
-      const existingAddressKey = normalizeAddressKey(existing);
-      if (existingAddressKey && currentAddressKeys.has(existingAddressKey)) continue;
-      if (!['active', 'just_listed'].includes(existing.status)) continue;
+  // Temporary policy: the first disappearance enters the sold postcard pipeline.
+  // A matching address under another Zillow ID still counts as present.
+  for (const existing of existingRows) {
+    const zpid = String(existing.zpid);
+    if (currentByZpid.has(zpid)) continue;
+    const existingAddressKey = normalizeAddressKey(existing);
+    if (existingAddressKey && currentAddressKeys.has(existingAddressKey)) continue;
+    if (!['active', 'just_listed'].includes(existing.status)) continue;
 
-      const newMissingCount = (existing.missing_scrape_count || 0) + 1;
-
-      if (newMissingCount >= REQUIRED_CONSECUTIVE_MISSES) {
-        // Confirmed missing across enough scrapes — flip to sold.
-        soldCount++;
-        nextRows.push({
-          zpid,
-          region: existing.region || regionConfig.key,
-          status: 'sold',
-          lastseenat: nowIso,
-          missing_scrape_count: newMissingCount,
-          postcard_send_count: existing.postcard_send_count || 0,
-          glitch_suspected: false,
-        });
-      } else {
-        // First (or sub-threshold) miss — bump the counter but don't flip status.
-        // The row stays active/just_listed and is NOT eligible for a sold
-        // postcard this run. We don't touch lastseenat — we didn't see it.
-        pendingMissCount++;
-        nextRows.push({
-          zpid,
-          region: existing.region || regionConfig.key,
-          status: existing.status,
-          missing_scrape_count: newMissingCount,
-          postcard_send_count: existing.postcard_send_count || 0,
-          glitch_suspected: false,
-        });
-      }
-    }
+    soldCount++;
+    nextRows.push({
+      zpid,
+      region: existing.region || regionConfig.key,
+      status: 'sold',
+      lastseenat: nowIso,
+      missing_scrape_count: (existing.missing_scrape_count || 0) + 1,
+      postcard_send_count: existing.postcard_send_count || 0,
+      glitch_suspected: false,
+    });
   }
 
   return {
@@ -949,32 +914,9 @@ async function run(options) {
     }
   }
 
-  // Sanity gate: if this scrape returned far fewer listings than we know to
-  // be currently active, treat it as degraded — a partial Apify result must
-  // not increment miss counters (two degraded scrapes in a row would
-  // otherwise mass-flip healthy listings to sold).
-  const knownActiveRows = existingRows.filter(r => ['active', 'just_listed'].includes(r.status));
-  const knownActive = knownActiveRows.length;
-  const SANITY_MIN_KNOWN = 20;
-  // Compare known inventory against this scrape by zpid AND normalized
-  // address. Address matching prevents legitimate Zillow identity changes
-  // from looking like missing coverage. A region-wide result-count comparison
-  // could hide one failed/truncated grid cell behind results from other cells.
-  const currentZpids = new Set(liveRows.map(r => String(r.zpid)));
-  const currentAddresses = new Set(liveRows.map(normalizeAddressKey).filter(Boolean));
-  const knownSeen = knownActiveRows.filter(row =>
-    currentZpids.has(String(row.zpid)) || currentAddresses.has(normalizeAddressKey(row))
-  ).length;
-  const coverageRatio = knownActive > 0 ? knownSeen / knownActive : 1;
-  const SANITY_RATIO = 0.8;
-  const degraded = knownActive >= SANITY_MIN_KNOWN && coverageRatio < SANITY_RATIO;
-  if (degraded) {
-    console.warn(`  WARNING: DEGRADED SCRAPE — saw ${knownSeen}/${knownActive} known active listings (${(coverageRatio * 100).toFixed(1)}%, below ${SANITY_RATIO * 100}%).`);
-    console.warn('  Miss counters will NOT be incremented this run. Check Apify credits / actor health.');
-  }
-
-  const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso, { degraded, seedMode });
-  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (not yet sold)${summary.seededCount ? `, ${summary.seededCount} seeded` : ''}${degraded ? ' [DEGRADED — misses frozen]' : ''}`);
+  // Coverage gating is temporarily bypassed; failed/empty scrapes still abort above.
+  const { nextRows, summary } = buildLifecycleRows(liveRows, existingRows, regionConfig, nowIso, { seedMode });
+  console.log(`  Lifecycle summary: ${summary.justListedCount} just_listed, ${summary.activeCount} active, ${summary.soldCount} sold, ${summary.glitchCount} glitch, ${summary.pendingMissCount} pending_miss (not yet sold)${summary.seededCount ? `, ${summary.seededCount} seeded` : ''}`);
 
   writePipelineFile('step0-current.json', liveRows.map(row => ({
     zpid: row.zpid,

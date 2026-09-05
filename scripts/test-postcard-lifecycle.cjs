@@ -105,21 +105,22 @@ function testClassifierHealthGateStopsCollapsedRun() {
   assert.equal(classificationHealthFailure(4, 0, 4), null);
 }
 
-function testMissingTwiceBecomesSold() {
-  const existing = [listing({ zpid: '100', status: 'active', missing_scrape_count: 1, postcard_send_count: null })];
+function testFirstDisappearanceBecomesSold() {
+  const existing = [listing({ zpid: '100', status: 'active', missing_scrape_count: 0, postcard_send_count: null })];
   const { nextRows, summary } = buildLifecycleRows([], existing, region, now);
   assert.equal(nextRows.length, 1);
   assert.equal(nextRows[0].status, 'sold');
-  assert.equal(nextRows[0].missing_scrape_count, 2);
+  assert.equal(nextRows[0].missing_scrape_count, 1);
   assert.equal(nextRows[0].postcard_send_count, 0);
   assert.equal(summary.soldCount, 1);
 }
 
-function testDegradedScrapeDoesNotBurnMiss() {
+function testDegradedScrapeStillMarksSold() {
   const existing = [listing({ zpid: '100', status: 'active', missing_scrape_count: 1 })];
   const { nextRows, summary } = buildLifecycleRows([], existing, region, now, { degraded: true });
-  assert.equal(nextRows.length, 0);
-  assert.equal(summary.soldCount, 0);
+  assert.equal(nextRows.length, 1);
+  assert.equal(nextRows[0].status, 'sold');
+  assert.equal(summary.soldCount, 1);
   assert.equal(summary.pendingMissCount, 0);
 }
 
@@ -581,8 +582,8 @@ const tests = [
   testUnmailedJustListedSurvivesNextScrape,
   testMailedJustListedBecomesActiveOnNextScrape,
   testClassifierHealthGateStopsCollapsedRun,
-  testMissingTwiceBecomesSold,
-  testDegradedScrapeDoesNotBurnMiss,
+  testFirstDisappearanceBecomesSold,
+  testDegradedScrapeStillMarksSold,
   testSoldArchivedReappearanceRoutesToVerifiedJustListed,
   testAddressKeyFallsBackToCityWhenPostalMissing,
   testAddressKeyCanonicalizesStreetSuffixFormatting,
