@@ -275,7 +275,10 @@ async function applyLifecycle(previous) {
       WHERE r.source = x.source AND r.source_listing_id = x.source_listing_id;
     `);
   }
-  const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active');
+  const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active').map(event => {
+    const { raw_payload, ...record } = event.record;
+    return { ...event, record };
+  });
   lifecycleResult = { summary: lifecycle.summary, events: reportable };
 }
 
@@ -304,11 +307,10 @@ async function applyLifecycle(previous) {
   await loadRuns();
   await applyLifecycle(previous || []);
   // All source/property/miss updates commit together; retrying this run cannot double-count a miss.
-  const sql = pendingWrites.join('\n');
+  pendingWrites.push(`INSERT INTO rental_pipeline_runs(run_id, lifecycle) VALUES ('${runId.replaceAll("'", "''")}', ${literal(lifecycleResult)});`);
+  const statements = pendingWrites;
   pendingWrites = null;
-  await databaseQuery(`BEGIN; ${sql}
-    INSERT INTO rental_pipeline_runs(run_id, lifecycle) VALUES ('${runId.replaceAll("'", "''")}', ${literal(lifecycleResult)});
-    COMMIT;`);
+  await require('./rental-import.cjs').executeTransaction(statements);
   fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'), JSON.stringify(lifecycleResult, null, 2));
   const counts = await query(`
     SELECT

@@ -9,6 +9,13 @@ on:
         description: Validate code, database access and schema without paid acquisition or emails
         type: boolean
         default: false
+      source_run_id:
+        description: Resume a saved rental scrape from this workflow run; leave blank for fresh acquisition
+        required: false
+
+permissions:
+  contents: read
+  actions: read
 
 concurrency:
   group: rental-market-pipeline
@@ -42,13 +49,25 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260905_rental_occupant_campaign.sql
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260905_rental_import_chunks.sql
       - name: Verify rental persistence against temporary schema tables
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/test-rental-loader.cjs --database
+      - name: Restore saved rental acquisition
+        if: inputs.validate_only != true && inputs.source_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh run download "$SOURCE_RUN_ID" --pattern 'rental-market-*' --dir rental-resume-source
+          cp -R rental-resume-source/scripts/.pipeline-rentals scripts/.pipeline-rentals
+          mkdir -p reports/apify-costs
+          cp rental-resume-source/reports/apify-costs/*.jsonl reports/apify-costs/
       - name: Scrape and categorize rental inventory
-        if: inputs.validate_only != true
+        if: inputs.validate_only != true && inputs.source_run_id == ''
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: node scripts/rental-pipeline.cjs

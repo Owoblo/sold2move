@@ -13,7 +13,7 @@ for (const [name, value] of Object.entries({ 'normalized-source-records.json': [
 const capture = path.join(dir, 'sql.json');
 const loader = path.join(__dirname, 'load-rental-snapshot.cjs');
 const dbFile = path.join(__dirname, 'market-db.cjs');
-const code = `const fs=require('fs'); require(${JSON.stringify(dbFile)}).query=async(sql)=>{if(sql.startsWith('BEGIN;')) fs.writeFileSync(${JSON.stringify(capture)},JSON.stringify(sql)); return []}; process.argv=['node',${JSON.stringify(loader)},'rental-sql-fixture']; require(${JSON.stringify(loader)});`;
+const code = `const fs=require('fs'); require(${JSON.stringify(dbFile)}).query=async()=>[]; require(${JSON.stringify(path.join(__dirname, 'rental-import.cjs'))}).executeTransaction=async(statements)=>fs.writeFileSync(${JSON.stringify(capture)},JSON.stringify('BEGIN;'+statements.join('\\n')+'COMMIT;')); process.argv=['node',${JSON.stringify(loader)},'rental-sql-fixture']; require(${JSON.stringify(loader)});`;
 execFileSync(process.execPath, ['-e', code], { env: { ...process.env, RENTAL_RUN_DIR: dir, SUPABASE_PROJECT_REF: 'test', SUPABASE_ACCESS_TOKEN: 'test' }, stdio: 'pipe' });
 const sql = JSON.parse(fs.readFileSync(capture));
 assert(sql.includes('unit_label = EXCLUDED.unit_label'));
@@ -27,8 +27,8 @@ if (process.argv.includes('--database')) {
       IF (SELECT count(*) FROM rental_source_records WHERE unit_label='4' AND raw_payload->>'fixture'='true') <> 1 THEN RAISE EXCEPTION 'Rental unit persistence failed'; END IF;
       IF (SELECT count(*) FROM rental_pipeline_runs) <> 1 THEN RAISE EXCEPTION 'Rental replay marker missing'; END IF;
     END $$; ROLLBACK;`;
-  require('./market-db.cjs').query(testSQL).then(async () => {
-    console.log('Rental loader passed against temporary live-schema tables; transaction rolled back.');
+  require('./rental-import.cjs').executeTransaction([testSQL.replace(/^BEGIN;/, '').replace(/ROLLBACK;\s*$/, '')]).then(async () => {
+    console.log('Rental chunked loader passed against temporary live-schema tables; temporary records removed at commit.');
     const { build } = require('./rental-postcards.cjs');
     const { CLASSIFIER_VERSION } = require('./rental-outreach-lib.cjs');
     const candidate = { ...row, observed_at: new Date().toISOString(), current_occupancy: 'occupied', classification_confidence: 0.95, classification_method: CLASSIFIER_VERSION };
