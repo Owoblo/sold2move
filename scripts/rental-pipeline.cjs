@@ -37,16 +37,8 @@ const LIVE_REGION_DATASETS = MARKET_REGION_KEYS.flatMap(region => {
   };
   return [{ source: 'zillow', ...common }, { source: 'rentseeker', ...common }];
 });
-const DEFAULT_DATASETS = Object.freeze([
-  ...LIVE_REGION_DATASETS,
-  { source: 'rentcafe', city: 'Windsor', datasetId: 'LwiqEJxtx7qTKqOfJ' },
-  { source: 'rentcafe', city: 'London', datasetId: 'uteVNNe6yFMbhRIzb' },
-]);
-const DEFAULT_ENRICHMENTS = Object.freeze([
-  { source: 'zillow', datasetId: 'YuXrQVG9xJPBHONES' },
-  { source: 'zillow', city: 'London', datasetId: 'gmjM9dGUcB1dr3pQb' },
-  { source: 'zillow', city: 'Windsor', datasetId: '1kgg81JquzKBRj4ST' },
-]);
+const DEFAULT_DATASETS = Object.freeze([...LIVE_REGION_DATASETS]);
+const DEFAULT_ENRICHMENTS = Object.freeze([]);
 
 function parseArgs(argv) {
   const options = {
@@ -115,8 +107,10 @@ async function fetchDataset(datasetId) {
   return fetchJson(`${base}?format=json&clean=true&limit=10000`);
 }
 
-async function fetchRentSeeker(bounds) {
-  const response = await postJson(
+async function fetchRentSeeker(bounds, request = postJson) {
+  const hits = [];
+  for (let page = 0; page < 100; page++) {
+  const response = await request(
     'https://8HVK5I2WD9-dsn.algolia.net/1/indexes/rentseeker_prod_properties/query',
     {
       'X-Algolia-Application-Id': '8HVK5I2WD9',
@@ -126,11 +120,18 @@ async function fetchRentSeeker(bounds) {
     {
       query: '',
       hitsPerPage: 1000,
-      page: 0,
+      page,
       insideBoundingBox: [[bounds.south, bounds.west, bounds.north, bounds.east]],
     }
   );
-  return response.hits || [];
+  if (!Array.isArray(response.hits) || !Number.isInteger(response.nbPages)) throw new Error('RentSeeker pagination metadata missing');
+  hits.push(...response.hits);
+  if (page + 1 >= response.nbPages) {
+    if (Number.isFinite(response.nbHits) && hits.length < response.nbHits) throw new Error('RentSeeker results truncated');
+    return [...new Map(hits.map(row => [row.objectID || row.id, row])).values()];
+  }
+  }
+  throw new Error('RentSeeker pagination exceeded 100 pages');
 }
 
 function buildZillowRentalUrl(bounds) {
@@ -317,9 +318,9 @@ function mergeZillowDetail(record, detail) {
   }).filter(Boolean);
   return {
     ...record,
-    description: detail.description || detail.homeDescription || record.description,
-    monthly_price: detail.price ?? detail.unformattedPrice ?? detail.listingPrice?.amount ?? record.monthly_price,
-    photo_urls: detailPhotoUrls.length ? detailPhotoUrls : record.photo_urls,
+    description: record.description || detail.description || detail.homeDescription,
+    monthly_price: record.monthly_price,
+    photo_urls: record.photo_urls?.length ? record.photo_urls : detailPhotoUrls,
     contact_name: detail.attributionInfo?.agentName || detail.listing_agent?.name || record.contact_name,
     contact_company: detail.attributionInfo?.brokerName || detail.brokerageName ||
       detail.listing_agent?.office || record.contact_company,
@@ -363,7 +364,10 @@ function writeJson(outputDir, filename, value) {
   fs.writeFileSync(path.join(outputDir, filename), `${JSON.stringify(value, null, 2)}\n`);
 }
 
-async function run(options) {
+async function run(options, dependencies = {}) {
+  const readDataset = dependencies.fetchDataset || fetchDataset;
+  const readRentSeeker = dependencies.fetchRentSeeker || fetchRentSeeker;
+  const search = dependencies.runSearchScraper || runSearchScraper;
   const runId = new Date().toISOString().replace(/[:.]/g, '-');
   const outputDir = path.join(options.outputDir, runId);
   fs.mkdirSync(outputDir, { recursive: true });
@@ -376,7 +380,10 @@ async function run(options) {
   const enrichmentCounts = {};
 
   for (const input of options.enrichments) {
-    const rows = await fetchDataset(input.datasetId);
+    const age = Date.now() - Date.parse(input.observedAt);
+    if (!Number.isFinite(age) || age < 0 || age > 7 * 86400000) continue;
+    let rows;
+    try { rows = await readDataset(input.datasetId); } catch { continue; }
     if (!enrichmentIndexes[input.source]) enrichmentIndexes[input.source] = new Map();
     enrichmentCounts[input.source] = (enrichmentCounts[input.source] || 0) + rows.length;
     for (const row of rows) {
@@ -389,12 +396,20 @@ async function run(options) {
 
   for (const input of options.datasets) {
     const canRefreshZillow = input.source === 'zillow' && process.env.APIFY_TOKEN && input.bounds;
-    const rows = input.source === 'rentseeker'
-      ? await fetchRentSeeker(input.bounds)
+    require('./postcard-cost-report.cjs').startTracking(`rental-${input.region || input.city}`, `rental-${runId}-${input.source}-${input.region || input.city}`);
+    let rows;
+    try {
+    rows = input.source === 'rentseeker'
+      ? await readRentSeeker(input.bounds)
       : canRefreshZillow
-        ? await runSearchScraper(process.env.APIFY_TOKEN,
+        ? await search(process.env.APIFY_TOKEN,
           splitBoundsIntoGrid(input.bounds, input.gridSplit).map(buildZillowRentalUrl))
-        : await fetchDataset(input.datasetId);
+        : await readDataset(input.datasetId);
+    } catch (error) {
+      acquisitions.push({source: input.source, requested_city: input.city, requested_region: input.region, raw_records: 0, fresh: false, complete: false, status: 'failed', error: 'Source acquisition failed; inspect workflow logs'});
+      console.warn(`Rental source failed: ${input.source}/${input.region || input.city}`);
+      continue;
+    }
     acquisitions.push({
       source: input.source,
       requested_city: input.city,
@@ -402,6 +417,8 @@ async function run(options) {
       region_label: input.region_label || input.city,
       dataset_id: input.datasetId || null,
       raw_records: rows.length,
+      complete: true,
+      status: 'succeeded',
       fresh: input.source === 'rentseeker' || Boolean(canRefreshZillow),
     });
     raw.push(...rows.map(payload => ({ source: input.source, requested_city: input.city, payload })));
@@ -409,10 +426,11 @@ async function run(options) {
       let record = normalizeRow(input.source, row, input);
       if (input.source === 'zillow') {
         const index = enrichmentIndexes.zillow;
-        const detail = index?.get(`id:${record.source_listing_id}`) ||
-          index?.get(`address:${recordAddressLookupKey(record)}`);
+        const detail = index?.get(`id:${record.source_listing_id}`);
         record = mergeZillowDetail(record, detail);
       }
+      record.acquisition_fresh = input.source === 'rentseeker' || Boolean(canRefreshZillow);
+      record.observed_at = new Date().toISOString();
       record.requested_city = input.city;
       record.requested_region = input.region || input.city.toLocaleLowerCase();
       record.acquisition_scope = input.region || input.city.toLocaleLowerCase();
@@ -429,6 +447,8 @@ async function run(options) {
     }
   }
 
+  const unique = [...new Map(normalized.map(row => [`${row.source}|${row.source_listing_id}`, row])).values()];
+  normalized.splice(0, normalized.length, ...unique);
   const canonical = canonicalize(normalized);
   const categories = {};
   for (const property of canonical) {
@@ -514,6 +534,7 @@ async function run(options) {
   writeJson(outputDir, 'rejected-records.json', rejected);
   writeJson(outputDir, 'summary.json', summary);
   fs.writeFileSync(path.join(options.outputDir, 'latest-run.txt'), `${runId}\n`);
+  if (!acquisitions.some(a => a.fresh && a.complete)) throw new Error('No fresh rental source completed; inventory persistence blocked');
   console.log(JSON.stringify({ output_dir: outputDir, ...summary }, null, 2));
   return summary;
 }
@@ -534,6 +555,7 @@ module.exports = {
   mergeZillowDetail,
   metricsFor,
   normalizeRow,
+  fetchRentSeeker,
   parseArgs,
   run,
 };

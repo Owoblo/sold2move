@@ -28,7 +28,7 @@ function diffInventory({ lane, current, previous, successfulScopes, missingThres
     const old = before.get(key);
     events.push({
       event_id: crypto.createHash('sha256').update(`${lane}|${key}|${old ? 'seen' : 'new'}`).digest('hex'),
-      event_type: old ? 'still_active' : 'just_listed',
+      event_type: old ? (old.active === false ? 'relisted' : 'still_active') : 'just_listed',
       source: row.source,
       source_listing_id: row.source_listing_id,
       city: row.city,

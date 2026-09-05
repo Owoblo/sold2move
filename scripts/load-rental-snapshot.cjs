@@ -10,38 +10,18 @@ if (!project || !token) throw new Error('SUPABASE_PROJECT_REF and SUPABASE_ACCES
 
 const pipelineRoot = path.join(__dirname, '.pipeline-rentals');
 const runId = process.argv[2] || fs.readFileSync(path.join(pipelineRoot, 'latest-run.txt'), 'utf8').trim();
-const runDir = path.join(pipelineRoot, runId);
+const runDir = process.env.RENTAL_RUN_DIR || path.join(pipelineRoot, runId);
 const properties = JSON.parse(fs.readFileSync(path.join(runDir, 'canonical-properties.json'), 'utf8'));
 const records = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json'), 'utf8'));
 const summary = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
 const { diffInventory } = require('./market-lifecycle-lib.cjs');
 
-function query(sql) {
-  const body = JSON.stringify({ query: sql });
-  return new Promise((resolve, reject) => {
-    const request = https.request({
-      hostname: 'api.supabase.com',
-      path: `/v1/projects/${project}/database/query`,
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, response => {
-      let result = '';
-      response.on('data', chunk => { result += chunk; });
-      response.on('end', () => {
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          reject(new Error(`HTTP ${response.statusCode}: ${result.slice(0, 1000)}`));
-          return;
-        }
-        resolve(result ? JSON.parse(result) : null);
-      });
-    });
-    request.on('error', reject);
-    request.end(body);
-  });
+const { query: databaseQuery } = require('./market-db.cjs');
+let pendingWrites = null;
+let lifecycleResult;
+async function query(sql) {
+  if (pendingWrites) { pendingWrites.push(sql); return []; }
+  return databaseQuery(sql);
 }
 
 function literal(value) {
@@ -118,7 +98,10 @@ async function loadSourceRecords() {
       source_listing_id: record.source_listing_id,
       acquisition_scope: record.acquisition_scope,
       source_url: record.source_url,
-      source_address: [record.street_address, record.city, record.province, record.postal_code].filter(Boolean).join(', '),
+      unit_label: record.unit_label, entity_type: record.entity_type, single_home: !!record.single_home,
+      acquisition_fresh: !!record.acquisition_fresh, raw_payload: record.raw_payload || {},
+      bedrooms: record.bedrooms, bathrooms: record.bathrooms,
+      source_address: [record.mailing_street || record.street_address, record.city, record.province, record.postal_code].filter(Boolean).join(', '),
       monthly_price: record.monthly_price,
       description: record.description,
       photo_urls: record.photo_urls,
@@ -136,19 +119,20 @@ async function loadSourceRecords() {
         source_address, monthly_price, description, photo_urls, contact_name,
         contact_company, contact_phone, first_seen_at, last_seen_at, active
         , online_leasing_url, units_available
-        , acquisition_scope
+        , acquisition_scope, unit_label, entity_type, single_home, acquisition_fresh, raw_payload, bedrooms, bathrooms
       )
       SELECT p.id, x.source, x.source_family, x.source_listing_id, x.source_url,
         x.source_address, x.monthly_price, x.description,
         ARRAY(SELECT jsonb_array_elements_text(COALESCE(x.photo_urls, '[]'::jsonb))),
         x.contact_name, x.contact_company, x.contact_phone, now(), now(), true,
-        x.online_leasing_url, x.units_available, x.acquisition_scope
+        x.online_leasing_url, x.units_available, x.acquisition_scope, x.unit_label, x.entity_type, x.single_home, x.acquisition_fresh, x.raw_payload, x.bedrooms, x.bathrooms
       FROM jsonb_to_recordset(${literal(batch)}) AS x(
         property_address_key text, property_city text, property_province text,
         source text, source_family text, source_listing_id text, source_url text,
         source_address text, monthly_price numeric, description text,
         photo_urls jsonb, contact_name text, contact_company text, contact_phone text,
-        online_leasing_url text, units_available integer, acquisition_scope text
+        online_leasing_url text, units_available integer, acquisition_scope text,
+        unit_label text, entity_type text, single_home boolean, acquisition_fresh boolean, raw_payload jsonb, bedrooms numeric, bathrooms numeric
       )
       JOIN rental_properties p
         ON p.address_key = x.property_address_key
@@ -169,6 +153,10 @@ async function loadSourceRecords() {
         online_leasing_url = EXCLUDED.online_leasing_url,
         units_available = EXCLUDED.units_available,
         acquisition_scope = EXCLUDED.acquisition_scope,
+        unit_label = EXCLUDED.unit_label, entity_type = EXCLUDED.entity_type, single_home = EXCLUDED.single_home,
+        acquisition_fresh = EXCLUDED.acquisition_fresh, raw_payload = EXCLUDED.raw_payload,
+        bedrooms = EXCLUDED.bedrooms, bathrooms = EXCLUDED.bathrooms,
+        observation_count = rental_source_records.observation_count + 1,
         last_seen_at = now(), active = true, missing_run_count = 0,
         lifecycle_status = 'active';
     `);
@@ -239,6 +227,7 @@ async function loadRuns() {
     source_family: records.find(record => record.source === acquisition.source)?.source_family || acquisition.source,
     city: acquisition.requested_city,
     records_seen: acquisition.raw_records,
+    status: acquisition.status || 'unknown',
     canonical_properties_seen: properties.filter(property =>
       property.city === acquisition.requested_city &&
       property.source_families.includes(
@@ -251,11 +240,11 @@ async function loadRuns() {
       source, source_family, city, province, started_at, completed_at, status,
       records_seen, canonical_properties_seen, rejected_geography, diagnostics
     )
-    SELECT x.source, x.source_family, x.city, 'ON', now(), now(), 'succeeded',
+    SELECT x.source, x.source_family, x.city, 'ON', now(), now(), x.status,
       x.records_seen, x.canonical_properties_seen, x.rejected_geography,
       jsonb_build_object('snapshot_run_id', ${literal(runId)})
     FROM jsonb_to_recordset(${literal(rows)}) AS x(
-      source text, source_family text, city text, records_seen integer,
+      source text, source_family text, city text, status text, records_seen integer,
       canonical_properties_seen integer, rejected_geography integer
     );
   `);
@@ -263,7 +252,12 @@ async function loadRuns() {
 
 async function applyLifecycle(previous) {
   const successfulScopes = summary.acquisitions
-    .filter(item => item.fresh && item.raw_records > 0)
+    .filter(item => {
+      const scope = item.requested_region || item.requested_city.toLowerCase();
+      const prior = previous.filter(r => r.active && r.source === item.source && (r.acquisition_scope || r.city.toLowerCase()) === scope).length;
+      const accepted = records.filter(r => r.source === item.source && r.acquisition_scope === scope).length;
+      return item.fresh && item.complete && accepted > 0 && (prior < 20 || accepted >= prior * 0.8);
+    })
     .map(item => ({ source: item.source, city: item.requested_region || item.requested_city.toLocaleLowerCase() }));
   const lifecycle = diffInventory({
     lane: 'rental', current: records, previous, successfulScopes,
@@ -282,27 +276,40 @@ async function applyLifecycle(previous) {
     `);
   }
   const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active');
-  fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'),
-    `${JSON.stringify({ summary: lifecycle.summary, events: reportable }, null, 2)}\n`);
+  lifecycleResult = { summary: lifecycle.summary, events: reportable };
 }
 
 (async () => {
+  const replay = await query(`SELECT lifecycle FROM rental_pipeline_runs WHERE run_id = '${runId.replaceAll("'", "''")}'`);
+  if (replay.length) {
+    fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'), JSON.stringify(replay[0].lifecycle, null, 2));
+    console.log('Previously committed rental snapshot reused without incrementing missing counts.');
+    return;
+  }
   const previous = await query(`
     SELECT r.source, r.source_listing_id, r.source_url, r.monthly_price,
       r.bedrooms, r.bathrooms, r.photo_urls, r.contact_name, r.contact_phone,
       r.contact_company, r.occupancy_state, r.classification_confidence,
       r.classification_evidence, r.classification_method, r.classified_at,
-      r.acquisition_scope,
+      r.acquisition_scope, r.unit_label, r.entity_type, r.single_home, r.first_seen_at, r.observation_count,
       p.street_address, p.city, p.province, p.postal_code,
       p.listing_categories, p.property_signals, r.active, r.missing_run_count
     FROM rental_source_records r
     LEFT JOIN rental_properties p ON p.id = r.rental_property_id;
   `);
+  pendingWrites = [];
   await loadProperties();
   await loadSourceRecords();
   await loadUnits();
   await loadRuns();
   await applyLifecycle(previous || []);
+  // All source/property/miss updates commit together; retrying this run cannot double-count a miss.
+  const sql = pendingWrites.join('\n');
+  pendingWrites = null;
+  await databaseQuery(`BEGIN; ${sql}
+    INSERT INTO rental_pipeline_runs(run_id, lifecycle) VALUES ('${runId.replaceAll("'", "''")}', ${literal(lifecycleResult)});
+    COMMIT;`);
+  fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'), JSON.stringify(lifecycleResult, null, 2));
   const counts = await query(`
     SELECT
       (SELECT count(*) FROM rental_properties WHERE active) AS active_properties,

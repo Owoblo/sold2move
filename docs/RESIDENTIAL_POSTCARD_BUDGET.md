@@ -1,6 +1,6 @@
 # Residential postcard budget and operating policy
 
-The owner’s priority is residential postcards with an economical once-weekly acquisition cycle. Rental and commercial acquisition are manual-only while those campaigns are refined.
+The owner’s priority is residential postcards with an economical once-weekly acquisition cycle. Rental now has its own weekly current-occupant campaign; commercial acquisition remains manual-only.
 
 ## Schedule and reuse
 
@@ -13,7 +13,7 @@ The owner’s priority is residential postcards with an economical once-weekly a
 
 ## Cost reporting
 
-The owner's $200 monthly target is an operating goal, not an application-enforced cap. At the owner's request on September 5, 2026, the newly added $200 Apify account limit was undone and the pre-existing $400 account setting restored and verified. Workflow budget preflights were removed. Weekly residential schedules and manual-only rental/commercial schedules remain.
+The owner's $200 monthly target is an operating goal, not an application-enforced cap. At the owner's request on September 5, 2026, the newly added $200 Apify account limit was undone and the pre-existing $400 account setting restored and verified. Workflow budget preflights were removed. Weekly residential schedules remain. Rental is now weekly on Tuesday under its own current-occupant policy; commercial remains manual-only.
 
 Every inventory and detail actor run is recorded by its exact ID before polling, including failed attempts. After each residential workflow job, `postcard-cost-report.cjs` reads those runs' `usageTotalUsd` values and produces an area/stage breakdown, total, failed-run count, and account billing-cycle usage. Reports go to business@starmovers.ca, the GitHub job summary, and downloadable JSON/Markdown artifacts. Printer emails do not contain financial reports. The all-area inventory workflow sends a combined seven-area report; the full pipeline sends one report per regional job, including Ottawa.
 

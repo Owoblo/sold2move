@@ -1,0 +1,39 @@
+name: Regenerate saved rental artwork
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Rental workflow run containing the saved recipient manifest
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Download saved rental batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh run download "$SOURCE_RUN_ID" --pattern "rental-market-*" --dir rental-reprint-source
+      - name: Rebuild artwork from exact saved recipients
+        run: node scripts/rental-reprint.cjs
+      - name: Email replacement to owner
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/rental-reprint.cjs --email-only
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rental-artwork-replacement-${{ github.run_id }}
+          path: rental-reprint-output/

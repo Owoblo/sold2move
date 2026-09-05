@@ -40,25 +40,43 @@ function sourceFamily(source) {
   return SOURCE_FAMILIES[source] || source;
 }
 
+function unitIdentity(street, explicitUnit) {
+  const value = text(street);
+  const suffix = value.match(/\s+(?:UNIT|APT|APARTMENT|SUITE|#)\s*#?\s*([\w-]+)\s*$/i);
+  const prefix = value.match(/^\s*([\w]+)\s*-\s*(\d+\s+.+)$/);
+  const unit = text(explicitUnit || suffix?.[1] || prefix?.[1]);
+  const base = prefix ? prefix[2] : stripUnit(value);
+  return { street_address: base, address_key: addressKey(base), unit_label: unit || null,
+    mailing_street: unit ? `${base} Unit ${unit}` : base };
+}
+
 function normalizeZillow(row) {
-  const street = row.addressStreet || row.listingAddress?.street || row.hdpData?.homeInfo?.streetAddress;
-  const city = row.addressCity || row.listingAddress?.city || row.hdpData?.homeInfo?.city;
-  const province = row.addressState || row.listingAddress?.state || row.hdpData?.homeInfo?.state;
+  const home = row.hdpData?.homeInfo || {};
+  const address = row.address && typeof row.address === 'object' ? row.address : {};
+  const street = row.addressStreet || row.streetAddress || row.listingAddress?.street || home.streetAddress || address.streetAddress;
+  const city = row.addressCity || row.city || row.listingAddress?.city || home.city || address.city;
+  const province = row.addressState || row.state || row.listingAddress?.state || home.state || address.state;
+  const identity = unitIdentity(street, row.unitNumber || (typeof row.unit === 'string' ? row.unit : '') || row.listingAddress?.unitNumber || home.unitNumber || address.unitNumber);
+  const homeType = text(row.homeType || row.propertyType || home.homeType).toUpperCase();
+  const singleHome = ['SINGLE_FAMILY', 'SINGLE FAMILY', 'TOWNHOUSE', 'TOWNHOME'].includes(homeType);
+  const photos = row.listingPhotos || row.carouselPhotos || row.photos || (row.imgSrc ? [row.imgSrc] : []);
+  const url = row.detailUrl || row.propertyUrl || row.url;
   return {
-    source: 'zillow',
-    source_family: sourceFamily('zillow'),
+    source: 'zillow', source_family: sourceFamily('zillow'),
     source_listing_id: text(row.zpid || row.id || row.providerListingId),
-    source_url: row.detailUrl || row.propertyUrl,
-    street_address: stripUnit(street),
-    address_key: addressKey(street),
-    city: text(city),
-    province: text(province).toUpperCase(),
-    postal_code: text(row.addressZipcode || row.listingAddress?.zipCode),
-    latitude: row.latLong?.latitude ?? row.coordinates?.latitude,
-    longitude: row.latLong?.longitude ?? row.coordinates?.longitude,
-    monthly_price: row.unformattedPrice ?? row.listingPrice?.amount ?? null,
+    source_url: url?.startsWith('/') ? `https://www.zillow.com${url}` : url,
+    ...identity,
+    city: text(city), province: text(province).toUpperCase(),
+    postal_code: text(row.addressZipcode || row.zipcode || row.listingAddress?.zipCode || home.zipcode || address.zipcode),
+    latitude: row.latLong?.latitude ?? row.coordinates?.latitude ?? row.latitude ?? home.latitude,
+    longitude: row.latLong?.longitude ?? row.coordinates?.longitude ?? row.longitude ?? home.longitude,
+    monthly_price: row.unformattedPrice ?? row.listingPrice?.amount ?? (typeof row.price === 'number' ? row.price : null),
+    bedrooms: row.beds ?? row.bedrooms ?? home.bedrooms ?? null,
+    bathrooms: row.baths ?? row.bathrooms ?? home.bathrooms ?? null,
+    entity_type: identity.unit_label || singleHome ? 'unit' : 'property',
+    single_home: singleHome, property_type: homeType,
     description: row.description || null,
-    photo_urls: (row.listingPhotos || []).map(photo => photo.url).filter(Boolean),
+    photo_urls: photos.map(photo => typeof photo === 'string' ? photo : photo?.url).filter(Boolean),
     raw_payload: row,
   };
 }
@@ -70,8 +88,7 @@ function normalizeRentCafe(row) {
     source_family: sourceFamily('rentcafe'),
     source_listing_id: text(row.propertyId || row.url),
     source_url: row.url,
-    street_address: stripUnit(street),
-    address_key: addressKey(street),
+    ...unitIdentity(street, row.unitNumber || row.unit_label),
     city: text(row.address?.city),
     province: text(row.address?.state).toUpperCase(),
     postal_code: text(row.address?.zip),
@@ -99,16 +116,19 @@ function normalizeRentCafe(row) {
 function normalizeRentSeeker(row, requestedCity, province = 'ON') {
   const street = row.name;
   const furnished = row.features?.furnished === true;
+  const location = String(row.url || '').match(/^https:\/\/(?:www\.)?rentseeker\.ca\/rent\/[^/]+\/([^/]+)\/([^/]+)\//i);
+  const urlProvince = location?.[1] === 'ontario' ? 'ON' : '';
+  const urlCity = location?.[2]?.replace(/-/g, ' ') || '';
   return {
     source: 'rentseeker',
     source_family: sourceFamily('rentseeker'),
     source_listing_id: text(row.objectID || row.id),
     source_url: row.url,
-    street_address: stripUnit(street),
-    address_key: addressKey(street),
-    city: requestedCity,
-    province,
-    postal_code: '',
+    ...unitIdentity(street, row.unitNumber || row.unit_label),
+    city: text(row.city || row.address?.city || urlCity),
+    province: text(row.province || row.address?.province || row.state || urlProvince).replace(/^Ontario$/i, 'ON').toUpperCase(),
+    postal_code: text(row.postal_code || row.postalCode || row.address?.postalCode),
+    geography_verified: Boolean(row.city || row.address?.city || urlCity) && Boolean(row.province || row.address?.province || row.state || urlProvince),
     latitude: Number(row._geoloc?.lat),
     longitude: Number(row._geoloc?.lng),
     monthly_price: Number.isFinite(Number(row.price_low)) ? Number(row.price_low) / 100 : null,
@@ -151,8 +171,8 @@ function classifyDescription(description) {
     add('student_housing', 'explicit student-housing language');
   }
   if (/\b(senior|seniors|retirement|assisted living|55\+|independent living)\b/.test(value)) add('senior_housing', 'senior/retirement language');
-  if (/\bfully furnished\b|\bfurnished\b/.test(value)) add('furnished', 'furnished language');
-  if (/\bpartially furnished\b|\bpartly furnished\b/.test(value)) add('partially_furnished', 'partially furnished language');
+  if (!/\b(?:not|never|non)[ -]+(?:fully |partially )?furnished\b|\bunfurnished\b/.test(value) && /\bfurnished\b/.test(value)) add('furnished', 'furnished language');
+  if (!/\bnot (?:partially|partly) furnished\b/.test(value) && /\b(?:partially|partly) furnished\b/.test(value)) add('partially_furnished', 'partially furnished language');
   if (/\bpurpose[- ]built rental\b|\bprofessionally managed\b/.test(value)) add('purpose_built_rental', 'purpose-built/managed language');
   if (/\bnew construction\b|\bbrand new build\b|\bnewly built\b/.test(value)) add('new_construction', 'new-build language');
   return { categories, signals };
@@ -169,4 +189,5 @@ module.exports = {
   normalizeZillow,
   sourceFamily,
   stripUnit,
+  unitIdentity,
 };

@@ -54,7 +54,7 @@ function render(report) {
   const rows = Object.entries(report.regions).map(([region, r]) =>
     `| ${region} | ${money(r.inventory)} | ${money(r.details)} | ${money(r.knownUsd)}${r.pending ? ' (partial)' : ''} | ${r.failed} |`);
   return [
-    '# Residential scrape costs (USD)', '',
+    '# Scrape costs (USD)', '',
     '| Area | Inventory | Detail fetching | Known total | Failed actor runs |',
     '| --- | ---: | ---: | ---: | ---: |', ...rows, '',
     `**${report.complete ? 'Total' : 'Known subtotal — charges incomplete'}: ${money(report.knownTotalUsd)}**`, '',
