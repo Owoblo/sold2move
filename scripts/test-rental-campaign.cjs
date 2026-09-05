@@ -83,6 +83,15 @@ const { diffInventory } = require('./market-lifecycle-lib.cjs');
     const pdf = await PDFDocument.load(fs.readFileSync(path.join(reprint, fs.readdirSync(reprint).find(f => f.endsWith('.pdf')))));
     assert.equal(pdf.getPageCount(), 2);
     assert.equal(pdf.getPage(0).getWidth(), 522);
+    process.env.RENTAL_BATCH_SUPPLEMENT = 'test-source-run';
+    try {
+      const supplemental = await build(tmp, { db: async sql => sql.includes('SELECT mailing_key') ? [{ mailing_key: manifest.recipients[0].mailing_key }] : [] });
+      assert.equal(supplemental.recipients.length, 1);
+      assert(supplemental.supplemental);
+      assert.notEqual(supplemental.recipients[0].mailing_key, manifest.recipients[0].mailing_key);
+      assert.equal(fs.readFileSync(path.join(tmp, 'current-postcard-output.txt'), 'utf8'), 'postcards-supplement');
+      assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'postcards', 'rental-batch.json'))).recipients.length, 2);
+    } finally { delete process.env.RENTAL_BATCH_SUPPLEMENT; }
     assert.throws(() => validateManifest({ ...manifest, recipients: [] }), /changed/);
     await assert.rejects(build(tmp, { db: async () => { throw new Error('History unavailable'); } }), /History unavailable/);
   } finally { [https.request, https.get, http.request, http.get, global.fetch] = original; }

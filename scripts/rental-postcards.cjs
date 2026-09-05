@@ -6,9 +6,12 @@ const { buildRentalQueue } = require('./rental-outreach-lib.cjs');
 const { digest, renderRental } = require('./rental-artwork.cjs');
 const quote = v => `'${String(v).replaceAll("'", "''")}'`;
 async function build(runDir, { db = query, render = renderRental } = {}) {
-  const batchId = `rental-${path.basename(runDir)}`;
+  const supplement = process.env.RENTAL_BATCH_SUPPLEMENT || '';
+  if (supplement && !/^[a-zA-Z0-9_-]+$/.test(supplement)) throw new Error('Invalid rental supplement ID');
+  const batchId = `rental-${path.basename(runDir)}${supplement ? '-supplement-' + supplement : ''}`;
+  const outputDir = path.join(runDir, supplement ? 'postcards-supplement' : 'postcards');
   const prior = await db(`SELECT manifest FROM rental_postcard_batches WHERE batch_id=${quote(batchId)}`);
-  if (prior.length) { await render(prior[0].manifest, path.join(runDir, 'postcards')); return prior[0].manifest; }
+  if (prior.length) { await render(prior[0].manifest, outputDir); fs.writeFileSync(path.join(runDir, 'current-postcard-output.txt'), path.basename(outputDir)); return prior[0].manifest; }
   const records = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json')));
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
   // If mailing history cannot be read, this throws before a batch is generated.
@@ -29,10 +32,10 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
   }));
   const manifest = { campaign: 'rental-current-occupant-v1', batch_id: batchId,
     created_at: new Date().toISOString(), recipients, recipient_sha256: digest(recipients),
-    delivery_status: 'generated_for_review', physical_mailing_confirmed: false };
+    delivery_status: 'generated_for_review', supplemental: Boolean(supplement), original_batch_id: supplement ? `rental-${path.basename(runDir)}` : null, physical_mailing_confirmed: false };
   // Build a concrete artifact before reserving it. A transaction collision fails without emailing it.
-  await render(manifest, path.join(runDir, 'postcards'));
-  if (!recipients.length) { console.log('No qualified rental recipients; saved review artifacts only.'); return manifest; }
+  await render(manifest, outputDir);
+  if (!recipients.length) { fs.writeFileSync(path.join(runDir, 'current-postcard-output.txt'), path.basename(outputDir)); console.log('No qualified rental recipients; saved review artifacts only.'); return manifest; }
   await db(`BEGIN;
     INSERT INTO rental_postcard_batches(batch_id, manifest) VALUES (${quote(batchId)}, ${quote(JSON.stringify(manifest))}::jsonb);
     INSERT INTO rental_postcard_recipients(mailing_key, batch_id, recipient)
@@ -44,6 +47,7 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
       THEN RAISE EXCEPTION 'Rental address reservation conflict; batch not authorized'; END IF;
     END $$;
     COMMIT;`);
+  fs.writeFileSync(path.join(runDir, 'current-postcard-output.txt'), path.basename(outputDir));
   console.log(`Rental batch: ${recipients.length} current-occupant recipients; ${queue.length - recipients.length} held/review records.`);
   return manifest;
 }

@@ -18,6 +18,7 @@ function validateManifest(manifest) {
 async function renderRental(manifest, outputDir) {
   validateManifest(manifest);
   fs.mkdirSync(outputDir, { recursive: true });
+  for (const name of fs.readdirSync(outputDir)) if (/^Rental_.*\.pdf$/.test(name)) fs.unlinkSync(path.join(outputDir, name));
   fs.writeFileSync(path.join(outputDir, 'rental-batch.json'), JSON.stringify(manifest, null, 2));
   fs.writeFileSync(path.join(outputDir, 'rental-recipients.csv'), Papa.unparse(manifest.recipients, { newline: '\n' }));
   const outputs = [];

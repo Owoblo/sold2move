@@ -6,9 +6,8 @@ async function enrich(runDir, fetchDetails = fetchDetailsViaApify) {
   const file = path.join(runDir, 'normalized-source-records.json');
   const rows = JSON.parse(fs.readFileSync(file));
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
-  const fresh = new Set(lifecycle.events.filter(e => ['just_listed', 'relisted'].includes(e.event_type)).map(e => `${e.source}|${e.source_listing_id}`));
-  const candidates = rows.filter(r => r.source === 'zillow' && r.acquisition_fresh && fresh.has(`${r.source}|${r.source_listing_id}`)
-    && (r.unit_label || r.single_home)).slice(0, 150);
+  const { targets, reusableForObservation } = require('./rental-screening-lib.cjs');
+  const candidates = targets(rows, lifecycle.events).filter(r => r.source === 'zillow' && !r.details_fetched_at && !reusableForObservation(r, r));
   let enriched = 0;
   for (const region of [...new Set(candidates.map(r => r.acquisition_scope))]) {
     startTracking(`rental-${region}`, `rental-${path.basename(runDir)}-details-${region}`);
