@@ -1,7 +1,7 @@
 const assert = require('assert/strict'), fs = require('fs'), path = require('path'), os = require('os');
 const { targets, roundRobin, reusableForObservation } = require('./rental-screening-lib.cjs');
 const { CLASSIFIER_VERSION, classificationFingerprint } = require('./rental-outreach-lib.cjs');
-const { classify } = require('./rental-classify.cjs');
+const { classify, assess } = require('./rental-classify.cjs');
 (async () => {
   const areas = ['windsor','chatham','sarnia','london','woodstock','wkg'];
   const rows = areas.flatMap((region, n) => Array.from({ length: n === 0 ? 161 : 3 }, (_, i) => ({
@@ -28,5 +28,17 @@ const { classify } = require('./rental-classify.cjs');
   for(const region of areas) { assert.equal(summary.regions[region].pending,0); assert(summary.regions[region].classified>0); }
   await classify(dir,{db:async sql=>sql.startsWith('SELECT')?JSON.parse(fs.readFileSync(path.join(dir,'normalized-source-records.json'))):[],client});
   assert.equal(calls,175); // Retry adds no AI calls.
+  let attempts = 0;
+  const fallback = await assess({ ...rows[0], photo_urls: ['https://example.com/broken.jpg'] }, { chat: { completions: { create: async request => {
+    if (!attempts++) throw Object.assign(new Error('Invalid image'), { status: 400 });
+    assert.equal(request.messages[0].content.length, 1);
+    assert.match(request.messages[0].content[0].text, /Do not claim visual evidence/);
+    return { choices: [{ message: { content: '{"current_occupancy":"unknown","confidence":0}' } }] };
+  } } } });
+  assert.equal(fallback.current_occupancy, 'unknown');
+  assert(fallback.classification_evidence.some(e => e.includes('Photos unavailable')));
+  attempts = 0;
+  await assess(rows[0], { chat: { completions: { create: async () => ({ choices: [{ message: { content: attempts++ ? '{"current_occupancy":"unknown"}' : '{' } }] }) } } });
+  assert.equal(attempts, 2);
   console.log('All-region screening, round-robin ordering and completed-work reuse tests passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});
