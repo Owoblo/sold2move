@@ -41,11 +41,13 @@ function sourceFamily(source) {
 }
 
 function unitIdentity(street, explicitUnit) {
-  const value = text(street);
-  const suffix = value.match(/\s+(?:UNIT|APT|APARTMENT|SUITE|#)\s*#?\s*([\w-]+)\s*$/i);
+  const value = text(street).replace(/\s+/g, ' ');
+  const suffix = value.match(/\s*(?:\bUNIT|\bAPT|\bAPARTMENT|\bSUITE|#)\s*#?\s*([\w-]+(?:\s+\d+)?)\s*$/i);
   const prefix = value.match(/^\s*([\w]+)\s*-\s*(\d+\s+.+)$/);
-  const unit = text(explicitUnit || suffix?.[1] || prefix?.[1]);
-  const base = prefix ? prefix[2] : stripUnit(value);
+  const floor = value.match(/^(\d+\s+.+\b(?:ST|STREET|RD|ROAD|AVE|AVENUE|DR|DRIVE|CT|COURT|BLVD|BOULEVARD|LANE|LN|CRES|CRESCENT)(?:\s+[NSEW])?)\s+(MAIN|UPPER|LOWER|BASEMENT|BSMT|GROUND)(?:\s+(\d+))?$/i);
+  const rawUnit = text(explicitUnit || suffix?.[1] || prefix?.[1] || (floor ? `${floor[2]}${floor[3] ? ' '+floor[3] : ''}` : ''));
+  const unit = rawUnit.replace(/^(?:UNIT|APT|SUITE)\s*#?\s*/i, '').replace(/^#\s*/, '').replace(/\s+(?:FLOOR|LEVEL)$/i, '').toUpperCase();
+  const base = prefix ? prefix[2] : suffix ? value.slice(0,suffix.index).trim() : floor ? floor[1] : value;
   return { street_address: base, address_key: addressKey(base), unit_label: unit || null,
     mailing_street: unit ? `${base} Unit ${unit}` : base };
 }

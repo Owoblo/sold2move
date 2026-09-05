@@ -353,6 +353,7 @@ async function fetchDetailsViaApify(listings, token) {
     if (zpid) {
       byZpid.set(String(zpid), {
         photos: extractPhotosFromApify(result),
+        address: (() => { const normalized = require('./rental-market-lib.cjs').normalizeZillow(result); return { unit_label: normalized.unit_label, single_home: normalized.single_home }; })(),
         freshness: extractDetailFreshness(result),
         description: extractDescription(result),
         attribution: extractListingAttribution(result),

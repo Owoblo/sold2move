@@ -33,6 +33,12 @@ async function main() {
   const lane = process.argv[2];
   const runDir = process.argv[3];
   if (!['rental', 'commercial'].includes(lane) || !runDir) throw new Error('Usage: market-email-results.cjs rental|commercial RUN_DIR');
+  if (lane === 'rental') {
+    const report = await require('./rental-email-report.cjs').buildRentalReport(runDir);
+    await send(report);
+    console.log(`Sent ${report.subject}`);
+    return;
+  }
   const summary = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json'), 'utf8'));
   const inventoryFile = lane === 'rental' ? 'normalized-source-records.json' : 'source-records.json';

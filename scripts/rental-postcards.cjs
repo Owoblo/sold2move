@@ -15,7 +15,10 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
   const records = JSON.parse(fs.readFileSync(path.join(runDir, 'normalized-source-records.json')));
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
   // If mailing history cannot be read, this throws before a batch is generated.
-  const history = await db("SELECT mailing_key FROM rental_postcard_recipients WHERE created_at > now() - interval '180 days'");
+  const history = await db("SELECT mailing_key, recipient, created_at, batch_id FROM rental_postcard_recipients WHERE created_at > now() - interval '180 days'");
+  const followup = require('./rental-followup-lib.cjs').followups(lifecycle.events, history);
+  fs.writeFileSync(path.join(runDir, 'rental-followup-review.json'), JSON.stringify(followup, null, 2));
+  fs.writeFileSync(path.join(runDir, 'rental-followup-review.csv'), Papa.unparse(followup, { newline: '\n' }));
   const queue = buildRentalQueue(records, lifecycle.events, history);
   fs.writeFileSync(path.join(runDir, 'rental-review-queue.json'), JSON.stringify(queue, null, 2));
   fs.writeFileSync(path.join(runDir, 'rental-review-queue.csv'), Papa.unparse(queue.map(r => ({

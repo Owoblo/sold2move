@@ -15,7 +15,7 @@ function mailingKey(row) {
 function evaluateRental(row, eventType, now = Date.now()) {
   const reasons = [];
   const text = String(row.description || '').toLowerCase();
-  const specific = Boolean(row.unit_label || row.single_home);
+  const specific = !row.unit_address_unresolved && Boolean(row.unit_label || row.single_home);
   const occupied = row.current_occupancy === 'occupied' && row.classification_confidence >= 0.8
     && row.classification_method === CLASSIFIER_VERSION && !row.classification_stale;
   const shared = /\b(?:roommate|shared accommodation|shared kitchen|room for rent|rent a room|per[- ]room|short[- ]term|vacation rental|airbnb)\b/.test(text);
@@ -40,10 +40,11 @@ function evaluateRental(row, eventType, now = Date.now()) {
 function buildRentalQueue(records, events, history = [], now = Date.now()) {
   const eventMap = new Map(events.map(e => [`${e.source}|${e.source_listing_id}`, e.event_type]));
   const mailed = new Set(history.map(r => r.mailing_key));
+  const reservedSources = new Set(history.filter(r => r.recipient?.source && r.recipient?.source_listing_id).map(r => `${r.recipient.source}|${r.recipient.source_listing_id}`));
   const seen = new Set();
   return records.map(row => {
     const candidate = evaluateRental(row, eventMap.get(`${row.source}|${row.source_listing_id}`) || 'still_active', now);
-    if (candidate.postcard_eligible && (mailed.has(candidate.mailing_key) || seen.has(candidate.mailing_key))) {
+    if (candidate.postcard_eligible && (mailed.has(candidate.mailing_key) || seen.has(candidate.mailing_key) || reservedSources.has(`${row.source}|${row.source_listing_id}`))) {
       candidate.postcard_eligible = false;
       candidate.recommended_action = 'rental_review';
       candidate.hold_reasons.push('Address/unit already in a rental batch');

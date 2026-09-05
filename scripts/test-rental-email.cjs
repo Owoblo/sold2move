@@ -1,0 +1,21 @@
+const fs=require('fs'),path=require('path'),os=require('os'),assert=require('assert/strict');
+const {buildRentalReport}=require('./rental-email-report.cjs');
+(async()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'rental-email-test-'));
+ const write=(name,value)=>fs.writeFileSync(path.join(dir,name),JSON.stringify(value));
+ const row={source:'zillow',source_listing_id:'1',acquisition_scope:'windsor',acquisition_fresh:true,single_home:true,observed_at:new Date().toISOString(),classification_stale:false,current_occupancy:'vacant'};
+ write('normalized-source-records.json',[row]);write('summary.json',{cities:[]});
+ write('lifecycle-summary.json',{events:[{source:'zillow',source_listing_id:'1',event_type:'just_listed'},{source:'zillow',source_listing_id:'gone',event_type:'leased_or_withdrawn'}]});
+ write('ai-classification-summary.json',{});fs.mkdirSync(path.join(dir,'postcards'));
+ write('postcards/rental-batch.json',{recipients:[],supplemental:true});
+ fs.writeFileSync(path.join(dir,'postcards/rental-recipients.csv'),'');
+ let report=await buildRentalReport(dir);
+ assert.match(report.subject,/Pipeline Complete/);assert.match(report.html,/Screening complete across all six regions/);
+ assert.match(report.html,/1 listings were absent/);assert.equal(report.attachments.length,1);assert(report.attachments[0].content.length);
+ assert(!report.subject.includes('Postcards Ready'));
+ write('postcards/rental-batch.json',{recipients:[{region:'windsor',city:'<script>bad</script>'}],supplemental:true});
+ fs.writeFileSync(path.join(dir,'postcards/rental-recipients.csv'),'city\nWindsor');
+ report=await buildRentalReport(dir);assert.match(report.subject,/1 additional/);assert.equal(report.attachments.length,2);
+ assert(!report.html.includes('<script>'));assert.match(report.html,/&lt;script&gt;/);assert.match(report.html,/keep the previously delivered PDFs/);
+ console.log('Rental report zero-recipient attachment, summary and escaping checks passed.');
+})().catch(e=>{console.error(e);process.exitCode=1});

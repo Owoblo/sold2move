@@ -9,6 +9,10 @@ on:
         description: Validate code, database access and schema without paid acquisition or emails
         type: boolean
         default: false
+      report_only:
+        description: Email the saved rental report without scraping, classification or batch generation
+        type: boolean
+        default: false
       source_run_id:
         description: Resume a saved rental scrape from this workflow run; leave blank for fresh acquisition
         required: false
@@ -33,13 +37,15 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate lifecycle logic
-        run: node scripts/test-market-lifecycle.cjs && node scripts/test-rental-market-lib.cjs && node scripts/test-rental-campaign.cjs && node scripts/test-rental-screening.cjs
+        run: node scripts/test-market-lifecycle.cjs && node scripts/test-rental-market-lib.cjs && node scripts/test-rental-campaign.cjs && node scripts/test-rental-screening.cjs && node scripts/test-rental-email.cjs && node scripts/test-rental-address.cjs
       - name: Verify database access before acquisition
+        if: inputs.report_only != true
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/market-db.cjs
       - name: Apply rental lifecycle schema
+        if: inputs.report_only != true
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -51,10 +57,16 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260905_rental_occupant_campaign.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260905_rental_import_chunks.sql
       - name: Verify rental persistence against temporary schema tables
+        if: inputs.report_only != true
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/test-rental-loader.cjs --database
+      - name: Validate report-only input
+        if: inputs.report_only == true
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: '[[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]'
       - name: Restore saved rental acquisition
         if: inputs.validate_only != true && inputs.source_run_id != ''
         env:
@@ -65,25 +77,25 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --pattern 'rental-market-*' --dir rental-resume-source
           node scripts/rental-resume.cjs
       - name: Scrape and categorize rental inventory
-        if: inputs.validate_only != true && inputs.source_run_id == ''
+        if: inputs.validate_only != true && inputs.report_only != true && inputs.source_run_id == ''
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: node scripts/rental-pipeline.cjs
       - name: Persist and diff rental inventory
-        if: inputs.validate_only != true
+        if: inputs.validate_only != true && inputs.report_only != true
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: node scripts/load-rental-snapshot.cjs
       - name: Fetch fresh details for new occupant candidates
-        if: inputs.validate_only != true
+        if: inputs.validate_only != true && inputs.report_only != true
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
           node scripts/rental-enrich.cjs "scripts/.pipeline-rentals/$RUN_ID"
       - name: Classify current rental occupancy
-        if: inputs.validate_only != true
+        if: inputs.validate_only != true && inputs.report_only != true
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -92,7 +104,7 @@ jobs:
           RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
           node scripts/rental-classify.cjs "scripts/.pipeline-rentals/$RUN_ID"
       - name: Generate saved current-occupant rental batch
-        if: inputs.validate_only != true
+        if: inputs.validate_only != true && inputs.report_only != true
         env:
           RENTAL_BATCH_SUPPLEMENT: ${{ inputs.source_run_id }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -109,7 +121,7 @@ jobs:
           RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
           node scripts/market-email-results.cjs rental "scripts/.pipeline-rentals/$RUN_ID"
       - name: Report rental acquisition costs
-        if: always() && inputs.validate_only != true
+        if: always() && inputs.validate_only != true && inputs.report_only != true
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

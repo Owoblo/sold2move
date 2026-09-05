@@ -4,10 +4,11 @@ const { fetchDetailsViaApify } = require('./postcard-step2-photos.cjs');
 const { startTracking } = require('./postcard-cost-report.cjs');
 async function enrich(runDir, fetchDetails = fetchDetailsViaApify) {
   const file = path.join(runDir, 'normalized-source-records.json');
-  const rows = JSON.parse(fs.readFileSync(file));
+  const { resolveRentalAddress } = require('./rental-address.cjs');
+  const rows = JSON.parse(fs.readFileSync(file)).map(resolveRentalAddress);
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
-  const { targets, reusableForObservation } = require('./rental-screening-lib.cjs');
-  const candidates = targets(rows, lifecycle.events).filter(r => r.source === 'zillow' && !r.details_fetched_at && !reusableForObservation(r, r));
+  const { detailTargets, reusableForObservation } = require('./rental-screening-lib.cjs');
+  const candidates = detailTargets(rows, lifecycle.events).filter(r => r.source === 'zillow' && !r.details_fetched_at && !reusableForObservation(r, r));
   let enriched = 0;
   for (const region of [...new Set(candidates.map(r => r.acquisition_scope))]) {
     startTracking(`rental-${region}`, `rental-${path.basename(runDir)}-details-${region}`);
@@ -22,6 +23,9 @@ async function enrich(runDir, fetchDetails = fetchDetailsViaApify) {
           if (!detail) continue;
           row.description = detail.description || row.description;
           if (detail.photos?.length) row.photo_urls = detail.photos;
+          if (detail.address?.unit_label && !row.unit_label) row.unit_label = detail.address.unit_label;
+          if (detail.address?.single_home) row.single_home = true;
+          Object.assign(row, resolveRentalAddress(row));
           row.details_fetched_at = new Date().toISOString();
           enriched++;
         }

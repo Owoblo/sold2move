@@ -1,8 +1,11 @@
 const { reusableClassification } = require('./rental-outreach-lib.cjs');
 const key = row => `${row.source}|${row.source_listing_id}`;
-function targets(rows, events) {
+function detailTargets(rows, events) {
   const fresh = new Set(events.filter(e => ['just_listed','relisted'].includes(e.event_type)).map(key));
-  return rows.filter(r => r.acquisition_fresh && (r.unit_label || r.single_home) && fresh.has(key(r)));
+  return rows.filter(r => r.acquisition_fresh && fresh.has(key(r)));
+}
+function targets(rows, events) {
+  return detailTargets(rows, events).filter(r => !r.unit_address_unresolved && (r.unit_label || r.single_home));
 }
 function reusableForObservation(row, cached) {
   // A reappearance invalidates evidence from before this observation, not work already completed during it.
@@ -15,4 +18,4 @@ function roundRobin(rows) {
   for (let i = 0; ordered.length < rows.length; i++) for (const group of groups.values()) if (group[i]) ordered.push(group[i]);
   return ordered;
 }
-module.exports = { key, targets, reusableForObservation, roundRobin };
+module.exports = { key, targets, detailTargets, reusableForObservation, roundRobin };

@@ -73,7 +73,7 @@ async function classify(runDir, { db = query, client } = {}) {
     const row = candidates[next++];
     try {
       const result = await assess(row, client);
-      await db(`UPDATE rental_source_records SET current_occupancy=${sqlText(result.current_occupancy)}, occupancy_state=${sqlText(result.occupancy_state)},
+      await db(`UPDATE rental_source_records SET unit_label=${row.unit_label ? sqlText(row.unit_label) : 'NULL'}, single_home=${!!row.single_home}, source_address=${sqlText([row.mailing_street, row.city, row.province, row.postal_code].filter(Boolean).join(', '))}, description=${sqlText(row.description || '')}, current_occupancy=${sqlText(result.current_occupancy)}, occupancy_state=${sqlText(result.occupancy_state)},
         furniture_visible=${result.furniture_visible}, classification_confidence=${result.classification_confidence},
         classification_evidence=ARRAY[${result.classification_evidence.map(sqlText).join(',')}]::text[],
         classification_method=${sqlText(result.classification_method)}, classification_fingerprint=${sqlText(result.classification_fingerprint)}, classified_at=now()
