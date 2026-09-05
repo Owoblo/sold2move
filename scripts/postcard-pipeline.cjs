@@ -14,6 +14,7 @@ async function runPipeline(rawArgs) {
   const regionConfig = getRegionConfig(options.region);
   options.batchId = options.batchId || `${regionConfig.key}-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}`;
 
+  require('./postcard-cost-report.cjs').startTracking(regionConfig.key, options.batchId);
   setPipelineRegion(regionConfig.key, options.batchId);
   writePipelineFile('batch-manifest.json', {
     batch_id: options.batchId,
@@ -104,7 +105,12 @@ async function runPipeline(rawArgs) {
 }
 
 if (require.main === module) {
-  runPipeline(process.argv.slice(2)).catch(err => {
+  runPipeline(process.argv.slice(2)).finally(async () => {
+    if (!process.env.GITHUB_ACTIONS && process.env.APIFY_COST_LEDGER) {
+      await require('./postcard-cost-report.cjs').reportCosts({ files: [process.env.APIFY_COST_LEDGER] })
+        .catch(error => console.warn('Cost reporting failed:', error.message));
+    }
+  }).catch(err => {
     console.error('\nPipeline failed:', err.message);
     console.error(err.stack);
     process.exit(1);

@@ -17,22 +17,26 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
-      - name: Check monthly Apify budget before acquisition
-        env:
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-        run: node scripts/check-apify-budget.cjs --regions windsor,chatham,sarnia,london,woodstock,wkg,ottawa
       - name: Scrape all seven regions and update listing lifecycle
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: node scripts/postcard-scrape-all.cjs
+      - name: Report actual scrape costs to owner
+        if: always()
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/postcard-cost-report.cjs --email
+
       - name: Save regional scrape results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: postcard-inventory-scrape-${{ github.run_id }}
           path: |
+            reports/apify-costs/
             reports/local-scrape-*/
             scripts/.pipeline-*/batches/*/step0-current.json
           retention-days: 30

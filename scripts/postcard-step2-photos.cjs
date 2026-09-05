@@ -298,6 +298,7 @@ async function fetchDetailsViaApify(listings, token) {
     throw new Error(`Apify run start failed: ${JSON.stringify(startResp.data).slice(0, 300)}`);
   }
 
+  require('./postcard-cost-report.cjs').recordRun(startResp.data.data, 'details');
   const runId = startResp.data.data.id;
   const datasetId = startResp.data.data.defaultDatasetId;
   let status = 'RUNNING';

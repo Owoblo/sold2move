@@ -140,6 +140,7 @@ async function runSearchScraper(token, searchUrls) {
     throw new Error(`Apify start failed (${startResp.status}): ${JSON.stringify(startResp.data).slice(0, 300)}`);
   }
 
+  require('./postcard-cost-report.cjs').recordRun(startResp.data.data, 'inventory');
   const runId = startResp.data.data.id;
   const datasetId = startResp.data.data.defaultDatasetId;
   console.log(`  Run ID: ${runId}`);

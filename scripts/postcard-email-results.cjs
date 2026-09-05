@@ -560,7 +560,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { sendPostcardEmail, sendFreshnessAuditFromPipeline, sendPostcardCorrection };
+module.exports = { sendEmail, sendPostcardEmail, sendFreshnessAuditFromPipeline, sendPostcardCorrection };
 function resolvePipelineDir(region) {
   const base = path.join(__dirname, `.pipeline-${region}`);
   const pointer = path.join(base, 'latest-run.txt');

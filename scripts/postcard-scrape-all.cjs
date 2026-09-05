@@ -15,6 +15,7 @@ process.stdout.write = (chunk, ...args) => {
 };
 (async () => {
   const results = [];
+  const costFiles = [];
   console.log('Run output: ' + output);
   for (const region of Object.keys(REGION_CONFIG)) {
     logFile = path.join(output, region + '.log');
@@ -22,6 +23,7 @@ process.stdout.write = (chunk, ...args) => {
     try {
       const options = lib.parseCliArgs(['--region', region]);
       options.batchId = 'local-scrape-' + region + '-' + stamp;
+      costFiles.push(require('./postcard-cost-report.cjs').startTracking(region, options.batchId));
       lib.setPipelineRegion(region, options.batchId);
       const rows = await run(options);
       const counts = rows.reduce((acc, row) => { acc[row.status] = (acc[row.status] || 0) + 1; return acc; }, {});
@@ -33,6 +35,7 @@ process.stdout.write = (chunk, ...args) => {
     fs.writeFileSync(path.join(output, 'summary.json'), JSON.stringify(results, null, 2));
   }
   logFile = null;
+  if (!process.env.GITHUB_ACTIONS) await require('./postcard-cost-report.cjs').reportCosts({ files: costFiles });
   console.log(JSON.stringify(results, null, 2));
   process.exitCode = results.some(r => !r.success) ? 1 : 0;
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

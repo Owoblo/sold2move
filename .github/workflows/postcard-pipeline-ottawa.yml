@@ -51,12 +51,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check monthly Apify budget before acquisition
-        if: inputs.skip_scrape != true || inputs.skip_photos != true
-        env:
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-        run: node scripts/check-apify-budget.cjs --regions ottawa
-
       - name: Calculate date range
         id: dates
         run: |
@@ -141,12 +135,20 @@ jobs:
         run: |
           node scripts/postcard-email-results.cjs --region ottawa --freshness-audit-only
 
+      - name: Report actual scrape costs to owner
+        if: always()
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/postcard-cost-report.cjs --email
+
       - name: Upload Ottawa artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ottawa-postcards-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
           path: |
+            reports/apify-costs/
             Ottawa_Postcards_*.csv
             Ottawa_Postcards_*.pdf
             scripts/.pipeline-ottawa/step2-detail-summary.json

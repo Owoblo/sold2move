@@ -11,15 +11,15 @@ The owner’s priority is residential postcards with an economical once-weekly a
 - Artwork-only changes use `postcard-reprint.yml` and an existing run’s CSV. This makes no Apify or OpenAI calls and does not update listing/mail lifecycle state.
 - When acquisition/classification already succeeded but output failed, reuse the saved database data with `skip_scrape`, `skip_photos`, and `skip_furniture` enabled. Address and mailing-history validation still run.
 
-## Budget control
+## Cost reporting
 
-The Apify account’s hard monthly usage limit was reduced from $400 to $200 and verified on September 5, 2026. The current billing cycle is August 31–September 29 UTC. At verification, usage was $199.53, leaving approximately $0.47. No new acquisition should run in that cycle.
+The owner's $200 monthly target is an operating goal, not an application-enforced cap. At the owner's request on September 5, 2026, the newly added $200 Apify account limit was undone and the pre-existing $400 account setting restored and verified. Workflow budget preflights were removed. Weekly residential schedules and manual-only rental/commercial schedules remain.
 
-`check-apify-budget.cjs` reads current account usage before paid workflow acquisition. It uses the lower of $200 and the account’s configured limit. Missing credentials, malformed usage, API failures, or insufficient headroom block acquisition. Artwork reprints and pipeline retries with both scraping and details disabled remain available.
+Every inventory and detail actor run is recorded by its exact ID before polling, including failed attempts. After each residential workflow job, `postcard-cost-report.cjs` reads those runs' `usageTotalUsd` values and produces an area/stage breakdown, total, failed-run count, and account billing-cycle usage. Reports go to business@starmovers.ca, the GitHub job summary, and downloadable JSON/Markdown artifacts. Printer emails do not contain financial reports. The all-area inventory workflow sends a combined seven-area report; the full pipeline sends one report per regional job, including Ottawa.
 
-The preflight requires conservative regional headroom: Windsor $14, Chatham $3, Sarnia $3, London $7, Woodstock $3, WKG $8, Ottawa $9. These are start thresholds based on observed runs with a buffer, not guaranteed per-run prices or reserved account funds. Apify’s account-side limit remains the shared enforcement mechanism for concurrent jobs and other callers.
+Missing or still-running charges are labeled incomplete, never silently treated as a final zero. Account usage includes other account activity; it is not used to estimate this scrape's cost. Local full-pipeline and all-area runs print and save the report without emailing automatically. The reporter only reads billing data and never starts actors. Reprinting artwork has no acquisition calls.
 
-This control covers Apify platform usage. OpenAI charges, subscriptions, taxes, printing, and postage are separate and are not proven to fit inside the same $200 total by this audit. Actual OpenAI billing was not available. Do not describe the Apify cap as a combined provider billing cap.
+Reported costs are Apify actor usage at report time, not the entire invoice. OpenAI, printing, postage, subscriptions, taxes, and separate storage/data-transfer charges are excluded. Apify API reference: https://docs.apify.com/api/v2/actor-run-get .
 
 ## Observed cost and waste
 
@@ -33,4 +33,4 @@ Border spillover is a remaining cost issue: Windsor returned 4,221 Michigan rows
 
 The mailing-history query now uses 250-row pages and at most three attempts per page. Exhausted retries still hold the batch. Regression tests verify that retry recovery continues rejecting already-mailed addresses and that persistent failures never authorize a mailing.
 
-Checks: `node scripts/test-apify-budget.cjs` and `npm run test:postcard`.
+Checks: `node scripts/test-postcard-cost-report.cjs` and `npm run test:postcard`.

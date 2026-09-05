@@ -84,13 +84,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check monthly Apify budget before acquisition
-        if: inputs.skip_scrape != true || inputs.skip_photos != true
-        env:
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
-          BUDGET_REGION: ${{ matrix.region }}
-        run: node scripts/check-apify-budget.cjs --regions "$BUDGET_REGION"
-
       - name: Calculate date range
         id: dates
         run: |
@@ -475,12 +468,20 @@ jobs:
 
       # ─── ARTIFACTS ────────────────────────────────────────────────────────────
 
+      - name: Report actual scrape costs to owner
+        if: always()
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/postcard-cost-report.cjs --email
+
       - name: Upload all postcard artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: postcards-${{ matrix.region }}-${{ steps.dates.outputs.from }}-to-${{ steps.dates.outputs.to }}
           path: |
+            reports/apify-costs/
             Windsor_Postcards_*.csv
             Windsor_Postcards_*.pdf
             Chatham_Postcards_*.csv
