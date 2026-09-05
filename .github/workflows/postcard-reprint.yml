@@ -1,0 +1,51 @@
+name: Regenerate existing postcard artwork
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Completed workflow run containing the original CSV
+        required: true
+      region:
+        description: Region to regenerate
+        type: choice
+        options: [ottawa, windsor, chatham, sarnia, london, woodstock, wkg]
+        default: ottawa
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Download original batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          REPRINT_REGION: ${{ inputs.region }}
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          if [ "$REPRINT_REGION" = ottawa ]; then
+            PATTERN='ottawa-postcards-*'
+          else
+            PATTERN="postcards-${REPRINT_REGION}-*"
+          fi
+          gh run download "$SOURCE_RUN_ID" --pattern "$PATTERN" --dir reprint-source
+      - name: Generate corrected artwork and email replacement
+        env:
+          REPRINT_REGION: ${{ inputs.region }}
+          REPRINT_SEND_EMAIL: 'true'
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/postcard-reprint.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: corrected-postcards-${{ inputs.region }}-${{ github.run_id }}
+          path: reprint-output/
+          retention-days: 30

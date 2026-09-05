@@ -35,7 +35,7 @@ function reportRecipients(region, primaryEmail) {
   return [...new Set([primaryEmail, ...(REGION_REPORT_EMAILS[region] || [])])];
 }
 
-function sendEmail(to, subject, html, attachments) {
+function sendEmail(to, subject, html, attachments, region = 'windsor') {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -44,9 +44,9 @@ function sendEmail(to, subject, html, attachments) {
     }
 
     const body = JSON.stringify({
-      from: FROM,
+      from: region === 'ottawa' ? `Dexa Movers <${FROM.match(/<([^>]+)>/)?.[1] || FROM}>` : FROM,
       to: Array.isArray(to) ? to : [to],
-      reply_to: REPLY_TO,
+      reply_to: region === 'ottawa' ? 'hello@dexamovers.ca' : REPLY_TO,
       subject,
       html,
       text: html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
@@ -209,7 +209,8 @@ async function sendSoldOnlyEmail(region, regionLabel, soldListings, today) {
     [
       { filename: csvName, content: csvContent },
       { filename: pdfName, content: pdfContent },
-    ]
+    ],
+    region
   );
   console.log(`  Sold-ready delivery report sent! ID: ${result.id}`);
 }
@@ -280,7 +281,8 @@ async function sendFreshnessAuditEmail(region, regionLabel, auditRows, today) {
     recipients,
     `Just-Listed Freshness Audit — ${regionLabel} — ${today} (${auditRows.length})`,
     html,
-    [{ filename: csvName, content: csvContent }]
+    [{ filename: csvName, content: csvContent }],
+    region
   );
   console.log(`  Freshness audit sent! ID: ${result.id}`);
 }
@@ -434,7 +436,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
       </table>
       ` : ''}
 
-      <p>Both files attached. The PDF is print-ready at 9.5" × 4.125".</p>
+      <p>Both files attached. The PDF is print-ready at 7.25" × 5.25". Print at actual size (100%).</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
       <p style="color: #888; font-size: 12px;">Automated by Sold2Move Postcard Pipeline — ${regionLabel}</p>
     </div>
@@ -449,7 +451,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   // --- Owner email: full breakdown ---
   const ownerRecipients = reportRecipients(region, OWNER_EMAIL);
   console.log(`Sending full report to ${ownerRecipients.join(', ')}...`);
-  const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments);
+  const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments, region);
   console.log(`  Owner email sent! ID: ${ownerResult.id}`);
 
   // --- Print shop email: simple instruction, PDF only ---
@@ -457,17 +459,17 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     <div style="font-family: Arial, sans-serif; max-width: 500px;">
       <p>Hi,</p>
       <p>Please print the attached PDF for the <strong>${regionLabel}</strong> batch — <strong>${recordCount} postcards</strong>, dated ${today}.</p>
-      <p>The PDF is print-ready at 9.5" × 4.125".</p>
+      <p>The PDF is print-ready at 7.25" × 5.25". Print at actual size (100%).</p>
       <p>Thanks!</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-      <p style="color: #aaa; font-size: 11px;">Saturn Star Services — Sold2Move Postcard Pipeline</p>
+      <p style="color: #aaa; font-size: 11px;">${region === 'ottawa' ? 'Dexa Movers' : 'Saturn Star Services'} — Sold2Move Postcard Pipeline</p>
     </div>
   `;
   const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
   console.log(`Sending print instruction to ${printEmail}...`);
   const printResult = await sendEmail(printEmail, `Print Request: ${regionLabel} Postcards — ${today} (${recordCount})`, printHtml, [
     { filename: pdfName, content: pdfContent },
-  ]);
+  ], region);
   console.log(`  Print shop email sent! ID: ${printResult.id}`);
 
   // --- Sold-ready report: final sold rows only, separate owner/internal email ---
@@ -498,6 +500,24 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   }
 
   return ownerResult;
+}
+
+async function sendPostcardCorrection(region, csvPath, pdfPath) {
+  region = region.toLowerCase();
+  const Papa = require('papaparse');
+  const { data, errors } = Papa.parse(fs.readFileSync(csvPath, 'utf8'), { header: true, skipEmptyLines: true });
+  if (errors.length || !data.length) throw new Error('Invalid reprint CSV');
+  const brand = region === 'ottawa' ? 'Dexa Movers' : 'Saturn Star Services';
+  const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
+  const recipients = [...new Set([printEmail, OWNER_EMAIL])];
+  const html = `<p>Hi,</p><p>Please use this corrected ${brand} artwork in place of the earlier ${getRegionConfig(region).label} PDF.</p>
+    <p>This replaces the artwork for the same <strong>${data.length} recipients</strong>. It is not an additional batch or an instruction to print duplicate copies.</p>
+    <p>Print size: 7.25&quot; × 5.25&quot;, at actual size (100%). The address CSV is attached for reference.</p><p>${brand}</p>`;
+  const result = await sendEmail(recipients,
+    `REPLACEMENT PDF: ${brand} — ${getRegionConfig(region).label} (${data.length} existing recipients)`, html,
+    [csvPath, pdfPath].map(file => ({ filename: path.basename(file), content: fs.readFileSync(file).toString('base64') })), region);
+  console.log(`Replacement artwork sent to ${recipients.join(', ')}. Email ID: ${result.id}`);
+  return result;
 }
 
 // Standalone usage
@@ -540,7 +560,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { sendPostcardEmail, sendFreshnessAuditFromPipeline };
+module.exports = { sendPostcardEmail, sendFreshnessAuditFromPipeline, sendPostcardCorrection };
 function resolvePipelineDir(region) {
   const base = path.join(__dirname, `.pipeline-${region}`);
   const pointer = path.join(base, 'latest-run.txt');

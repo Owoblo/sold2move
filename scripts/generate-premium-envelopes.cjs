@@ -214,7 +214,7 @@ function drawEnvelopeBack(pdfDoc, iconImage, addressFont, emphasisFont, options)
 
   const regionConfig = getRegionConfig(options.region);
   const returnLines = [
-    'SATURN STAR',
+    options.region === 'ottawa' ? 'DEXA MOVERS' : 'SATURN STAR',
     ...regionConfig.returnAddressLines.slice(1).map(line => line.toUpperCase()),
   ];
   const returnSizes = [7.5, 7, 7];
@@ -260,18 +260,22 @@ async function generatePremiumEnvelopes(options) {
   pdfDoc.registerFontkit(fontkit);
   const addressFont = await pdfDoc.embedFont(fs.readFileSync(INTER_REGULAR_FONT_PATH));
   const emphasisFont = await pdfDoc.embedFont(fs.readFileSync(INTER_SEMIBOLD_FONT_PATH));
+  const isDexa = options.region === 'ottawa';
+  const dexaLogo = isDexa
+    ? await pdfDoc.embedPng(fs.readFileSync(path.join(__dirname, 'assets', 'brand-svg', 'Dexa_Movers_Primary.png')))
+    : null;
   let wordmarkImage = null;
   let iconImage = null;
   let stampImage = null;
 
-  if (options.logoPath && fs.existsSync(options.logoPath)) {
+  if (!isDexa && options.logoPath && fs.existsSync(options.logoPath)) {
     wordmarkImage = await pdfDoc.embedPng(fs.readFileSync(options.logoPath));
-  } else {
+  } else if (!isDexa) {
     console.warn('Saturn Star wordmark not found; continuing without it.');
   }
-  if (fs.existsSync(DEFAULT_ICON_PATH)) {
+  if (!isDexa && fs.existsSync(DEFAULT_ICON_PATH)) {
     iconImage = await pdfDoc.embedPng(fs.readFileSync(DEFAULT_ICON_PATH));
-  } else {
+  } else if (!isDexa) {
     console.warn('Saturn Star icon not found; continuing without it.');
   }
   const stampBytes = getStampImage();
@@ -328,15 +332,25 @@ async function generatePremiumEnvelopes(options) {
         });
       }
     }
+    if (dexaLogo) {
+      const width = 1.52 * 72;
+      const height = width * dexaLogo.height / dexaLogo.width;
+      page.drawImage(dexaLogo, {
+        x: LAYOUT.outerMargin - 10,
+        y: LAYOUT.pageHeight - LAYOUT.outerMargin - height + 8,
+        width, height,
+      });
+    }
     if (options.includeFrontReturn) {
       const regionConfig = getRegionConfig(options.region);
       const returnLines = regionConfig.returnAddressLines.slice(1).map(line => line.toUpperCase());
       // Compact stacked lockup: monogram at left; SATURN STAR above the local
       // return address at right. The wordmark's MOVERS descriptor is masked by
       // the stock-colour rectangle immediately above.
-      const returnX = LAYOUT.outerMargin + LAYOUT.iconSize + LAYOUT.logoGap + 9;
-      const returnY = LAYOUT.pageHeight - LAYOUT.outerMargin
-        - ((LAYOUT.iconSize + LAYOUT.wordmarkHeight) / 2) + 10.5;
+      const returnX = isDexa ? LAYOUT.outerMargin : LAYOUT.outerMargin + LAYOUT.iconSize + LAYOUT.logoGap + 9;
+      const returnY = isDexa
+        ? LAYOUT.pageHeight - LAYOUT.outerMargin - (1.52 * 72 * dexaLogo.height / dexaLogo.width) - 1
+        : LAYOUT.pageHeight - LAYOUT.outerMargin - ((LAYOUT.iconSize + LAYOUT.wordmarkHeight) / 2) + 10.5;
       returnLines.forEach((line, index) => {
         drawTrackedText(page, line, {
           x: returnX,
