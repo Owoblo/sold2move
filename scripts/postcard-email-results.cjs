@@ -23,7 +23,8 @@ const { getRegionConfig } = require('./postcard-lib.cjs');
 
 const OWNER_EMAIL = 'business@starmovers.ca';
 const SOLD_REPORT_EMAIL = 'business@starmovers.ca';
-const PRINT_EMAIL  = 'loonieprints@gmail.com';
+const PRINT_EMAIL = 'loonieprints@gmail.com';
+const REGION_PRINT_EMAILS = { ottawa: 'hello@dexamovers.ca' };
 const REGION_REPORT_EMAILS = {
   ottawa: ['hello@dexamovers.ca'],
 };
@@ -462,8 +463,9 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
       <p style="color: #aaa; font-size: 11px;">Saturn Star Services — Sold2Move Postcard Pipeline</p>
     </div>
   `;
-  console.log(`Sending print instruction to ${PRINT_EMAIL}...`);
-  const printResult = await sendEmail(PRINT_EMAIL, `Print Request: ${regionLabel} Postcards — ${today} (${recordCount})`, printHtml, [
+  const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
+  console.log(`Sending print instruction to ${printEmail}...`);
+  const printResult = await sendEmail(printEmail, `Print Request: ${regionLabel} Postcards — ${today} (${recordCount})`, printHtml, [
     { filename: pdfName, content: pdfContent },
   ]);
   console.log(`  Print shop email sent! ID: ${printResult.id}`);
