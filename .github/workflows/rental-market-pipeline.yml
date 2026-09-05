@@ -63,9 +63,7 @@ jobs:
         run: |
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
           gh run download "$SOURCE_RUN_ID" --pattern 'rental-market-*' --dir rental-resume-source
-          cp -R rental-resume-source/scripts/.pipeline-rentals scripts/.pipeline-rentals
-          mkdir -p reports/apify-costs
-          cp rental-resume-source/reports/apify-costs/*.jsonl reports/apify-costs/
+          node scripts/rental-resume.cjs
       - name: Scrape and categorize rental inventory
         if: inputs.validate_only != true && inputs.source_run_id == ''
         env:
