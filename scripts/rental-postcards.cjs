@@ -16,7 +16,13 @@ async function build(runDir, { db = query, render = renderRental } = {}) {
   const lifecycle = JSON.parse(fs.readFileSync(path.join(runDir, 'lifecycle-summary.json')));
   // If mailing history cannot be read, this throws before a batch is generated.
   const history = await db("SELECT mailing_key, recipient, created_at, batch_id FROM rental_postcard_recipients WHERE created_at > now() - interval '180 days'");
-  const followup = require('./rental-followup-lib.cjs').followups(lifecycle.events, history);
+  const savedDisappearances = await db(`SELECT DISTINCT ON (e->>'source', e->>'source_listing_id')
+    e || jsonb_build_object('observed_at', p.completed_at) AS event
+    FROM rental_pipeline_runs p CROSS JOIN LATERAL jsonb_array_elements(p.lifecycle->'events') e
+    JOIN rental_source_records r ON r.source=e->>'source' AND r.source_listing_id=e->>'source_listing_id'
+    WHERE e->>'event_type'='leased_or_withdrawn' AND r.active=false AND p.completed_at > now() - interval '180 days'
+    ORDER BY e->>'source', e->>'source_listing_id', p.completed_at DESC`);
+  const followup = require('./rental-followup-lib.cjs').followups(savedDisappearances.map(r=>r.event), history);
   fs.writeFileSync(path.join(runDir, 'rental-followup-review.json'), JSON.stringify(followup, null, 2));
   fs.writeFileSync(path.join(runDir, 'rental-followup-review.csv'), Papa.unparse(followup, { newline: '\n' }));
   const queue = buildRentalQueue(records, lifecycle.events, history);

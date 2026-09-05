@@ -2,6 +2,10 @@ name: Regenerate saved rental artwork
 on:
   workflow_dispatch:
     inputs:
+      correct_unit_addresses:
+        description: Correct unit identifiers from saved listing evidence for the same existing recipients
+        type: boolean
+        default: false
       source_run_id:
         description: Rental workflow run containing the saved recipient manifest
         required: true
@@ -27,7 +31,11 @@ jobs:
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
           gh run download "$SOURCE_RUN_ID" --pattern "rental-market-*" --dir rental-reprint-source
       - name: Rebuild artwork from exact saved recipients
+        if: inputs.correct_unit_addresses != true
         run: node scripts/rental-reprint.cjs
+      - name: Correct unit addresses from saved evidence
+        if: inputs.correct_unit_addresses == true
+        run: node scripts/rental-correct-artwork.cjs rental-reprint-source rental-reprint-output
       - name: Email replacement to owner
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

@@ -20,8 +20,8 @@ async function run() {
     validateManifest(manifest);
     const { sendEmail } = require('./postcard-email-results.cjs');
     await sendEmail('business@starmovers.ca', `REPLACEMENT rental artwork — ${manifest.recipients.length} existing recipients`,
-      '<p>Replacement artwork for the same saved rental batch. This is not an additional print order. Recipient addresses are unchanged.</p>',
-      walk(output).map(file => ({ filename: path.basename(file), content: fs.readFileSync(file).toString('base64') })));
+      manifest.correction_of ? `<p>Replacement artwork for the same ${manifest.recipients.length} existing rental recipients. ${manifest.address_corrections.length} unit identifiers were corrected from saved listing evidence.</p><p>Replace the earlier PDFs for these recipients with this complete replacement set. This is not an additional print order.</p>` : '<p>Replacement artwork for the same saved rental batch. This is not an additional print order. Recipient addresses are unchanged.</p>',
+      walk(output).filter(file => /\.(pdf|csv)$/.test(file) && fs.statSync(file).size > 0).map(file => ({ filename: path.basename(file), content: fs.readFileSync(file).toString('base64') })));
   }
 }
 if (require.main === module) run().catch(e => { console.error(e.message); process.exitCode = 1; });

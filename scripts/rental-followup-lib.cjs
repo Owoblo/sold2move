@@ -7,6 +7,7 @@ function followups(events, history, now = new Date()) {
     const prior=history.find(h=>h.mailing_key===mailingKey(row)||(h.recipient?.source===event.source&&h.recipient?.source_listing_id===event.source_listing_id));
     if(!prior) continue;
     const date=prior.mailed_at||prior.created_at;
+    if(event.observed_at && Date.parse(event.observed_at)<Date.parse(date)) continue;
     const gap=Math.floor((+now-Date.parse(date))/DAY);
     if(!Number.isFinite(gap)||gap<21) continue;
     const anchors=[];

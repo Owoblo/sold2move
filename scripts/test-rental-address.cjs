@@ -19,3 +19,12 @@ const terminal=[{...row,event_type:'leased_or_withdrawn',record:row}];const now=
 assert.equal(followups(terminal,[{created_at:'2026-08-16',recipient:row}],now).length,0);
 const followup=followups(terminal,[{created_at:'2026-08-08',recipient:row}],now)[0];assert.equal(followup.gap_days,28);assert.equal(followup.postcard_eligible,false);assert.match(followup.date_basis,/unconfirmed/);assert.equal(followup.planning_move_date,'2026-09-15');
 console.log('Rental unit recovery, pre-detail eligibility and follow-up review tests passed.');
+
+const {correct}=require('./rental-correct-artwork.cjs'),{digest}=require('./rental-artwork.cjs');
+const recipient={...row,region:'windsor',addressstreet:row.street_address,addresszipcode:'N9A1A1',mailing_key:'old-key'};
+const manifest={campaign:'rental-current-occupant-v1',batch_id:'saved-test',recipients:[recipient],recipient_sha256:digest([recipient])};
+const corrected=correct([manifest],[{...row,postal_code:'N9A1A1',description:'MAIN FLOOR UNIT available'}]);
+assert.equal(corrected.recipients.length,1);assert.equal(corrected.recipients[0].source_listing_id,recipient.source_listing_id);assert.equal(corrected.recipients[0].addressstreet,'123 Main St Unit MAIN');
+assert.equal(manifest.recipients[0].addressstreet,'123 Main St');
+assert.throws(()=>correct([manifest],[{...row,street_address:'999 Different Rd',postal_code:'N9A1A1'}]),/property identity/);
+assert.throws(()=>correct([manifest,manifest],[{...row,postal_code:'N9A1A1'}]),/Duplicate/);
