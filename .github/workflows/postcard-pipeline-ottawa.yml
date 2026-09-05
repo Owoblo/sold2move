@@ -2,10 +2,8 @@ name: Postcard Pipeline — Ottawa Only
 
 on:
   schedule:
-    # Paired weekly cycle: Monday discovers first misses; Tuesday confirms the
-    # second consecutive miss. Ottawa runs after core for its own time budget.
+    # Once weekly to keep full-inventory acquisition within the monthly budget.
     - cron: '30 16 * * 1'
-    - cron: '30 16 * * 2'
   workflow_dispatch:
     inputs:
       from_date:
@@ -52,6 +50,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Check monthly Apify budget before acquisition
+        if: inputs.skip_scrape != true || inputs.skip_photos != true
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: node scripts/check-apify-budget.cjs --regions ottawa
 
       - name: Calculate date range
         id: dates

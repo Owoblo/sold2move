@@ -17,6 +17,10 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - name: Check monthly Apify budget before acquisition
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: node scripts/check-apify-budget.cjs --regions windsor,chatham,sarnia,london,woodstock,wkg,ottawa
       - name: Scrape all seven regions and update listing lifecycle
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}

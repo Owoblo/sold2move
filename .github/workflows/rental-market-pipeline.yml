@@ -1,8 +1,7 @@
 name: Rental Market Pipeline
 
 on:
-  schedule:
-    - cron: '30 16 * * *'
+  # Manual-only while residential is prioritized and these campaigns are refined.
   workflow_dispatch:
 
 concurrency:
@@ -31,6 +30,11 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_inventory_lifecycle.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_ai_classification.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
+      - name: Check shared monthly Apify budget
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: node scripts/check-apify-budget.cjs --reserve 20
+
       - name: Scrape and categorize rental inventory
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}

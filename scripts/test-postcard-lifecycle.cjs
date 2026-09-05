@@ -372,6 +372,36 @@ async function testSameBatchAddressDuplicateIsHeld() {
   assert.equal(result.rejected[0].reason, 'address_already_sent_just_listed (relist)');
 }
 
+async function testAddressHistoryRetriesStillRejectPriorMail() {
+  let calls = 0;
+  const supabase = { from() { return {
+    select() { return this; }, eq() { return this; }, or() { return this; }, order() { return this; },
+    range(from, to) {
+      assert.equal(to - from + 1, 250);
+      calls++;
+      return Promise.resolve(calls === 1
+        ? { error: { message: 'statement timeout' }, data: null }
+        : { error: null, data: [{ zpid: 'old', addressstreet: '123 Main St', addresszipcode: 'N8X 1A1', sold_postcard_sent_at: now }] });
+    },
+  }; } };
+  const result = await filterAddressDuplicates(supabase, 'windsor', [listing({ zpid: 'new', status: 'sold', addressstreet: '123 Main St', addresszipcode: 'N8X 1A1' })]);
+  assert.equal(calls, 2);
+  assert.equal(result.kept.length, 0);
+  assert.equal(result.rejected[0].reason, 'address_already_sent_sold (relist)');
+}
+
+async function testAddressHistoryRepeatedFailureHoldsBatch() {
+  let calls = 0;
+  const supabase = { from() { return {
+    select() { return this; }, eq() { return this; }, or() { return this; }, order() { return this; },
+    range() { calls++; return Promise.resolve({ data: null, error: { message: 'statement timeout' } }); },
+  }; } };
+  const result = await filterAddressDuplicates(supabase, 'windsor', [listing({ zpid: 'new', status: 'sold' })]);
+  assert.equal(calls, 3);
+  assert.equal(result.kept.length, 0);
+  assert.equal(result.rejected[0].reason, 'address_duplicate_guard_unavailable_hold');
+}
+
 function testDetailFreshnessBlocksStaleJustListed() {
   const rows = [listing({
     zpid: '100',
@@ -608,6 +638,8 @@ const tests = [
   testSoldVerificationHoldsUnknownStatus,
   testCurrentApifyDetailStatusesNormalize,
   testSameBatchAddressDuplicateIsHeld,
+  testAddressHistoryRetriesStillRejectPriorMail,
+  testAddressHistoryRepeatedFailureHoldsBatch,
   testDetailFreshnessBlocksStaleJustListed,
   testCachedDetailFreshnessAgesForward,
   testDetailFreshnessAuditsButKeepsFiveToThirtyDays,

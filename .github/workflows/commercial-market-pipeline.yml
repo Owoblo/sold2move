@@ -1,8 +1,7 @@
 name: Commercial Market Pipeline
 
 on:
-  schedule:
-    - cron: '30 18 * * *'
+  # Manual-only while residential is prioritized and these campaigns are refined.
   workflow_dispatch:
 
 concurrency:
@@ -33,6 +32,11 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260730_market_acquisition_scope.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_relocation_engine.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_transition_ai_v2.sql
+      - name: Check shared monthly Apify budget
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: node scripts/check-apify-budget.cjs --reserve 20
+
       - name: Scrape and categorize commercial inventory
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}

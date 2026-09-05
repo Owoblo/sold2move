@@ -2,11 +2,8 @@ name: Postcard Pipeline — Core Regions (Windsor · Chatham · Sarnia · London
 
 on:
   schedule:
-    # Paired weekly cycle: Monday discovers first misses; Tuesday confirms the
-    # second consecutive miss so sold candidates do not wait another 7 days.
-    # Both run at 10 AM EDT (2 PM UTC). Manual dispatch remains available.
+    # Once weekly to keep full-inventory acquisition within the monthly budget.
     - cron: '0 14 * * 1'
-    - cron: '0 14 * * 2'
   workflow_dispatch:
     inputs:
       from_date:
@@ -86,6 +83,13 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Check monthly Apify budget before acquisition
+        if: inputs.skip_scrape != true || inputs.skip_photos != true
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          BUDGET_REGION: ${{ matrix.region }}
+        run: node scripts/check-apify-budget.cjs --regions "$BUDGET_REGION"
 
       - name: Calculate date range
         id: dates

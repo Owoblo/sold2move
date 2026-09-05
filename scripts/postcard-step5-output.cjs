@@ -273,15 +273,25 @@ async function filterAddressDuplicates(supabase, region, finalListings) {
   // Scoping the SQL lookup by the current raw street string prevented variants
   // such as "Main St." and "Main Street" from ever reaching normalization.
   const sentByAddress = new Map(); // normKey -> { jl: bool, sold: bool, zpids: Set }
-  const PAGE_SIZE = 1000;
+  const PAGE_SIZE = 250;
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('listings')
-      .select('zpid, addressstreet, addresszipcode, just_listed_postcard_sent_at, sold_postcard_sent_at')
-      .eq('region', region)
-      .or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null')
-      .order('zpid', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
+    let data;
+    let error;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        ({ data, error } = await supabase
+          .from('listings')
+          .select('zpid, addressstreet, addresszipcode, just_listed_postcard_sent_at, sold_postcard_sent_at')
+          .eq('region', region)
+          .or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null')
+          .order('zpid', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1));
+      } catch (lookupError) {
+        error = lookupError;
+      }
+      if (!error) break;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+    }
 
     if (error) {
       console.warn(`  Address-dup lookup failed: ${error.message} — holding batch`);
