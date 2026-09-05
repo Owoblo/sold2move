@@ -12,10 +12,10 @@ function startTracking(region, batchId) {
   fs.appendFileSync(file, JSON.stringify({ region, batchId, kind: 'scope' }) + '\n');
   return file;
 }
-function recordRun(run, stage) {
-  if (!process.env.APIFY_COST_LEDGER) startTracking('unknown', `standalone-${Date.now()}`);
-  fs.appendFileSync(process.env.APIFY_COST_LEDGER, JSON.stringify({
-    region: process.env.APIFY_COST_REGION, stage, id: run.id,
+function recordRun(run, stage, context = {}) {
+  if (!context.file && !process.env.APIFY_COST_LEDGER) startTracking('unknown', `standalone-${Date.now()}`);
+  fs.appendFileSync(context.file || process.env.APIFY_COST_LEDGER, JSON.stringify({
+    region: context.region || process.env.APIFY_COST_REGION, stage, id: run.id,
     actorId: run.actId, startedAt: run.startedAt,
   }) + '\n');
 }

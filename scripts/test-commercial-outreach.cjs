@@ -1,0 +1,13 @@
+const assert=require('assert/strict'),fs=require('fs'),os=require('os'),path=require('path');
+const {VERSION,evaluate}=require('./commercial-outreach-lib.cjs');
+const {splitCommercialAddress}=require('./commercial-market-lib.cjs');
+const {build}=require('./commercial-postcards.cjs');
+const {digest,validateManifest}=require('./commercial-artwork.cjs');
+const row={source:'realtor_ca_commercial',source_listing_id:'fixture',acquisition_scope:'windsor',acquisition_fresh:true,transaction_type:'lease',asset_type:'office',listing_scope:'unit',unit_label:'MAIN',street_address:'123 Test Street',city:'Windsor',province:'ON',postal_code:'N9A1A1',classification_method:VERSION,current_business_occupancy:'occupied',classification_confidence:.95,advertised_unit_visible:true,transition_direction:'move_out_likely',transition_confidence:.9,observed_at:new Date().toISOString()};
+assert(evaluate(row,'just_listed').postcard_eligible);
+for(const patch of [{current_business_occupancy:'vacant'},{classification_confidence:undefined},{transition_confidence:undefined},{advertised_unit_visible:false},{listing_scope:'multiple_units'},{transaction_type:'sale'},{postal_code:null},{acquisition_fresh:false},{classification_stale:true},{observed_at:'2020-01-01'}]) assert(!evaluate({...row,...patch},'just_listed').postcard_eligible,JSON.stringify(patch));
+assert(!evaluate(row,'leased_or_withdrawn').postcard_eligible);
+assert(!evaluate(row,'still_active').postcard_eligible);
+assert(evaluate(row,'still_active',[],true).postcard_eligible);
+assert.deepEqual(splitCommercialAddress('1501 TECUMSEH ROAD WEST Unit# 2'),{street_address:'1501 TECUMSEH ROAD WEST',unit_label:'2'});
+(async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'commercial-batch-test-'));fs.writeFileSync(path.join(dir,'source-records.json'),JSON.stringify([row,{...row,source_listing_id:'other-source'}]));fs.writeFileSync(path.join(dir,'lifecycle-summary.json'),JSON.stringify({events:[{...row,event_type:'just_listed'},{...row,source_listing_id:'other-source',event_type:'just_listed'}]}));let saved;const db=async sql=>{if(sql.startsWith('BEGIN;'))saved=sql;return [];};const m=await build(dir,{db,render:async()=>{}});assert.equal(m.recipients.length,1);assert(saved.includes('reservation conflict'));validateManifest(m);assert.throws(()=>validateManifest({...m,recipients:[]}));assert(!evaluate(row,'just_listed',[{mailing_key:m.recipients[0].mailing_key}]).postcard_eligible);let rendered;await build(dir,{db:async()=>[{manifest:m}],render:async v=>{rendered=v;}});assert.equal(digest(rendered.recipients),m.recipient_sha256);console.log('Commercial eligibility, deduplication, history, manifest and replay tests passed.');})().catch(e=>{console.error(e);process.exitCode=1;});

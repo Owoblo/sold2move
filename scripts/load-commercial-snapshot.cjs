@@ -8,7 +8,7 @@ const token = process.env.SUPABASE_ACCESS_TOKEN;
 if (!project || !token) throw new Error('SUPABASE_PROJECT_REF and SUPABASE_ACCESS_TOKEN are required');
 const root = path.join(__dirname, '.pipeline-commercial');
 const runId = process.argv[2] || fs.readFileSync(path.join(root, 'latest-run.txt'), 'utf8').trim();
-const runDir = path.join(root, runId);
+const runDir = process.env.COMMERCIAL_RUN_DIR || path.join(root, runId);
 const properties = [...new Map(JSON.parse(
   fs.readFileSync(path.join(runDir, 'canonical-properties.json'), 'utf8')
 ).map(item => [`${item.address_key}|${item.city}|${item.province}`, item])).values()];
@@ -16,33 +16,13 @@ const records = [...new Map(JSON.parse(
   fs.readFileSync(path.join(runDir, 'source-records.json'), 'utf8')
 ).map(item => [`${item.source}|${item.source_listing_id}`, item])).values()];
 const summary = JSON.parse(fs.readFileSync(path.join(runDir, 'summary.json'), 'utf8'));
+if ((summary.realtor_runs || []).some(r => r.status !== 'ok')) throw new Error('Recover failed commercial searches before inventory import');
 const { diffInventory } = require('./market-lifecycle-lib.cjs');
 
-function query(sql) {
-  const body = JSON.stringify({ query: sql });
-  return new Promise((resolve, reject) => {
-    const request = https.request({
-      hostname: 'api.supabase.com',
-      path: `/v1/projects/${project}/database/query`,
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, response => {
-      let result = '';
-      response.on('data', chunk => { result += chunk; });
-      response.on('end', () => {
-        if (response.statusCode < 200 || response.statusCode >= 300) {
-          reject(new Error(`HTTP ${response.statusCode}: ${result.slice(0, 1000)}`));
-        } else resolve(result ? JSON.parse(result) : null);
-      });
-    });
-    request.on('error', reject);
-    request.end(body);
-  });
-}
+const {query:databaseQuery}=require('./market-db.cjs');
+let collecting=false;const statements=[];let lifecycleResult;
+async function query(sql){if(collecting){statements.push(sql);return [];}return databaseQuery(sql);}
+
 const literal = value => `'${JSON.stringify(value).replace(/'/g, "''")}'::jsonb`;
 const chunks = (values, size = 75) =>
   Array.from({ length: Math.ceil(values.length / size) }, (_, i) => values.slice(i * size, (i + 1) * size));
@@ -176,18 +156,18 @@ async function loadRecordsAndSpaces() {
 async function applyLifecycle(previous) {
   const successfulScopes = [];
   for (const region of summary.regions || []) {
-    const cityChecks = summary.cities.filter(item => item.region === region.region);
+    const cityChecks = summary.cities.filter(item => item.region === region.region && item.spacelist_attempted);
     if (cityChecks.length && cityChecks.every(item => item.status === 'ok')) {
       successfulScopes.push({ source: 'spacelist', city: region.region });
     }
     const realtorChecks = (summary.realtor_runs || []).filter(item => item.region === region.region
-      && item.scope_level === 'broad_region' && ['sale', 'lease'].includes(item.deal_type));
-    if (realtorChecks.length === 2 && realtorChecks.every(item => item.status === 'ok')) {
+      && item.deal_type === 'lease');
+    if (realtorChecks.length === region.realtor_searches_planned && realtorChecks.length > 0 && realtorChecks.every(item => item.status === 'ok')) {
       successfulScopes.push({ source: 'realtor_ca_commercial', city: region.region });
     }
   }
   const lifecycle = diffInventory({
-    lane: 'commercial', current: records, previous, successfulScopes,
+    lane: 'commercial', current: records, previous: previous.filter(r=>(r.transaction_types||[]).includes('lease')), successfulScopes,
   });
   for (const batch of chunks(lifecycle.missingUpdates, 75)) {
     const updates = batch.map(item => ({
@@ -209,11 +189,12 @@ async function applyLifecycle(previous) {
     `);
   }
   const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active');
-  fs.writeFileSync(path.join(runDir, 'lifecycle-summary.json'),
-    `${JSON.stringify({ summary: lifecycle.summary, events: reportable }, null, 2)}\n`);
+  lifecycleResult = {summary:lifecycle.summary,events:reportable};
 }
 
 (async () => {
+  const replay=await query(`SELECT lifecycle FROM commercial_pipeline_runs WHERE run_id='${runId.replaceAll("'","''")}'`);
+  if(replay.length){fs.writeFileSync(path.join(runDir,'lifecycle-summary.json'),JSON.stringify(replay[0].lifecycle,null,2));console.log('Saved commercial lifecycle reused');return;}
   const previous = await query(`
     SELECT r.source, r.source_listing_id, r.source_url, r.title,
       r.transaction_types, r.asset_types[1] AS asset_type, r.asking_price, r.lease_rate,
@@ -221,15 +202,20 @@ async function applyLifecycle(previous) {
       r.agent_name, r.agent_phone, r.brokerage_name, r.photo_urls,
       r.occupancy_state, r.classification_confidence,
       r.classification_evidence, r.classification_method, r.classified_at,
-      r.acquisition_scope,
+      r.acquisition_scope, r.unit_label, r.listing_scope,
       p.street_address, p.city, p.province, p.postal_code,
       r.active, r.missing_run_count
     FROM commercial_source_records r
     LEFT JOIN commercial_properties p ON p.id = r.commercial_property_id;
   `);
+  collecting=true;
   await loadProperties();
   await loadRecordsAndSpaces();
   await applyLifecycle(previous || []);
+  statements.push(`INSERT INTO commercial_pipeline_runs(run_id,lifecycle) VALUES ('${runId.replaceAll("'","''")}',${literal(lifecycleResult)})`);
+  collecting=false;
+  await require('./rental-import.cjs').executeTransaction(statements,{table:'commercial_import_chunks'});
+  fs.writeFileSync(path.join(runDir,'lifecycle-summary.json'),JSON.stringify(lifecycleResult,null,2));
   const counts = await query(`
     SELECT
       (SELECT count(*) FROM commercial_properties WHERE active) AS properties,

@@ -23,17 +23,14 @@ function cleanUnitLabel(value) {
 
 function splitCommercialAddress(value) {
   const raw = String(value || '').trim();
-  const patterns = [
-    /^(?:units?|suites?|spaces?)\s*#?\s*([^–—-]+?)\s*[–—-]\s*(\d+\s+.+)$/i,
-    /^#\s*([\w][\w\s,&/-]*?)\s*[–—-]\s*(\d+\s+.+)$/i,
-    /^([A-Z]?\d+[A-Z]?(?:\s*[,/&]\s*[A-Z]?\d+[A-Z]?)*?)\s*[–—-]\s*(\d+\s+.+)$/i,
-  ];
-  for (const pattern of patterns) {
-    const match = raw.match(pattern);
-    if (match) return { unit_label: cleanUnitLabel(match[1]), street_address: match[2].trim() };
-  }
-  const trailing = raw.match(/^(.*?)\s*,\s*(?:units?|suites?|spaces?)\s*#?\s*([\w][\w\s,&/-]*)$/i);
+  const trailing = raw.match(/^(.*?)\s*(?:,?\s+)(?:units?|suites?|spaces?|apt)\s*#?\s*([\w][\w\s,&/-]*)$/i);
   if (trailing) return { unit_label: cleanUnitLabel(trailing[2]), street_address: trailing[1].trim() };
+  const prefix = raw.match(/^(.*)\s*[–—-]\s*(\d+\s+[^–—]+)$/);
+  if (prefix) {
+    const label = prefix[1].replace(/^(?:units?|suites?|spaces?)\s*#?\s*/i,'').replace(/^#\s*/,'').trim();
+    const valid = /^[A-Z0-9]+(?:[\s,&/-]+[A-Z0-9]+)*$/i.test(label) && !/\b(?:SF|SQFT|OPTION|PAD|PORTABLES)\b/i.test(label);
+    return { unit_label: valid ? cleanUnitLabel(label) : null, street_address: prefix[2].trim() };
+  }
   return { unit_label: null, street_address: raw };
 }
 
@@ -90,10 +87,10 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
   const unit = record.unit_label || splitCommercialAddress(record.street_address).unit_label;
   const scope = record.asset_type === 'land' ? 'land'
     : /\bbusiness\s+(?:for\s+)?sale\b|\bsale of business\b/i.test(text) ? 'business_sale'
-      : unit && /[,/&]|\band\b/i.test(String(unit)) ? 'multiple_units'
+      : unit && /[,/&]|\band\b|^\d+\s*-\s*\d+$/i.test(String(unit)) ? 'multiple_units'
         : unit ? 'unit'
           : /\bmultiple\s+(?:units?|suites?|spaces?)\b/i.test(text) ? 'multiple_units'
-            : /\b(?:entire|whole)\s+(?:building|property)\b/i.test(text) ? 'whole_building'
+            : /\b(?:entire|whole|freestanding|standalone|stand-alone)\s+(?:building|property|premises)\b/i.test(text) ? 'whole_building'
               : 'unknown';
   const occupant = extractOccupant(text);
   const availabilityDate = extractAvailabilityDate(text, referenceDate);
@@ -114,7 +111,7 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
   const occupiedVisual = ['occupied', 'occupied_furnished'].includes(record.occupancy_state) && aiConfidence >= 0.65;
   const furnishedVisual = record.occupancy_state === 'occupied_furnished' && aiConfidence >= 0.65;
   const incomingVisual = ['vacant', 'shell', 'construction'].includes(record.occupancy_state) && aiConfidence >= 0.7;
-  const unitVisualConfirmed = record.advertised_unit_visible === true || furnishedVisual;
+  const unitVisualConfirmed = record.advertised_unit_visible === true;
   const aiMoveOut = record.transition_direction === 'move_out_likely' && transitionConfidence >= 0.65;
   const aiMoveIn = record.transition_direction === 'move_in_opportunity' && transitionConfidence >= 0.65;
 
@@ -149,7 +146,7 @@ function classifyCommercialRelocation(record, referenceDate = new Date()) {
     : scope === 'unit' && record.transaction_type === 'lease' && incomingEvidence
       ? 'incoming_tenant_opportunity'
       : 'market_intelligence';
-  const hardGate = candidateType !== 'market_intelligence';
+  const hardGate = candidateType === 'outgoing_tenant';
   return {
     listing_scope: scope,
     unit_label: unit || null,
@@ -207,7 +204,8 @@ function parseSpacelistPage(html, requestedCity) {
     const id = url?.match(/\/listings\/(\d+)\//)?.[1];
     if (!url || !id) continue;
     const fullName = card.querySelector('meta[itemprop="name"]')?.getAttribute('value') || '';
-    const listedAddress = fullName.replace(new RegExp(`,\\s*${requestedCity},\\s*ON.*$`, 'i'), '').trim();
+    const locality = fullName.match(/^(.*),\s*([^,]+),\s*(ON|Ontario)\b(?:\s+([A-Z]\d[A-Z]\s?\d[A-Z]\d))?/i);
+    const listedAddress = locality ? locality[1].trim() : fullName.trim();
     const identity = splitCommercialAddress(listedAddress);
     const transaction = parseTransaction(card, url);
     const assetType = parseAssetType(url, card);
@@ -233,8 +231,9 @@ function parseSpacelistPage(html, requestedCity) {
       street_address: identity.street_address,
       unit_label: identity.unit_label,
       address_key: addressKey(identity.street_address),
-      city: requestedCity,
-      province: 'ON',
+      city: locality ? locality[2].trim() : null,
+      province: locality ? 'ON' : null,
+      postal_code: locality?.[4] || null,
       latitude: coordinates[1] ?? null,
       longitude: coordinates[0] ?? null,
       asking_price: askingPrice,
@@ -321,12 +320,14 @@ function normalizeRealtorCommercial(row, requestedRegion) {
     asset_type: assetType,
     title: row.entity?.title,
     description: extractDescription(row),
+    listed_at: row.source_context?.raw?.timestamps?.inserted || null,
+    photo_changed_at: row.source_context?.raw?.timestamps?.photo_changed || null,
     street_address: identity.street_address,
     unit_label: identity.unit_label,
     address_key: addressKey(identity.street_address),
     city: actualCity,
     requested_region: requestedRegion,
-    province: 'ON',
+    province: String(row.location?.province || (addressMatch ? 'ON' : '')).replace(/^Ontario$/i,'ON').toUpperCase(),
     postal_code: row.location?.postal_code || null,
     latitude: row.location?.coordinates?.latitude ?? null,
     longitude: row.location?.coordinates?.longitude ?? null,

@@ -10,10 +10,10 @@ const {
 } = require('./commercial-market-lib.cjs');
 const { REALTOR_SEARCH_PLAN, SERVICE_CITIES, SPACELIST_INPUTS } = require('./commercial-pipeline.cjs');
 
-assert.equal(SERVICE_CITIES.length, 211);
-assert.equal(SPACELIST_INPUTS.length, 10);
-assert.equal(REALTOR_SEARCH_PLAN.length, 64);
-assert.equal(REALTOR_SEARCH_PLAN.filter(run => run.scope_level === 'broad_region' && run.deal_type === 'sold').length, 6);
+assert.equal(SERVICE_CITIES.length, 191);
+assert.equal(SPACELIST_INPUTS.length, 15);
+assert.equal(REALTOR_SEARCH_PLAN.length, 52);
+assert.equal(REALTOR_SEARCH_PLAN.filter(run => run.scope_level === 'broad_region' && run.deal_type === 'sold').length, 0);
 assert.ok(REALTOR_SEARCH_PLAN.some(run => run.location === 'Waterloo' && run.deal_type === 'lease'));
 assert.ok(REALTOR_SEARCH_PLAN.some(run => run.location === 'Cambridge' && run.deal_type === 'lease'));
 
@@ -127,7 +127,7 @@ const vacantUnit = classifyCommercialRelocation({
   occupancy_state: 'vacant', classification_confidence: 0.9,
   advertised_unit_visible: true, transition_direction: 'move_in_opportunity', transition_confidence: 0.9,
 });
-assert.equal(vacantUnit.direct_relocation_candidate, true);
+assert.equal(vacantUnit.direct_relocation_candidate, false);
 assert.equal(vacantUnit.relocation_candidate_type, 'incoming_tenant_opportunity');
 
 const exteriorOnly = classifyCommercialRelocation({
