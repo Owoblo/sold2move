@@ -10,6 +10,10 @@ on:
       source_run_id:
         description: Restore a saved acquisition (no new inventory scrape)
         type: string
+      recover_inventory:
+        description: Retry failed inventory searches in the restored snapshot, reusing completed searches
+        type: boolean
+        default: false
       initial_campaign:
         description: Review all currently occupied qualifying premises for first campaign
         type: boolean
@@ -63,9 +67,10 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --pattern 'commercial-market-*' --dir commercial-resume-source
           node scripts/commercial-resume.cjs
       - name: Scrape and categorize commercial inventory
-        if: inputs.validate_only != true && inputs.source_run_id == ''
+        if: inputs.validate_only != true && (inputs.source_run_id == '' || inputs.recover_inventory == true)
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          COMMERCIAL_RECOVER_INVENTORY: ${{ inputs.recover_inventory }}
           COMMERCIAL_PILOT_RUN_ID: ${{ inputs.pilot_run_id }}
         run: node scripts/commercial-pipeline.cjs
       - name: Persist and diff commercial inventory

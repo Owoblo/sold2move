@@ -188,18 +188,27 @@ function percent(records, predicate) {
 
 async function run() {
   const outputRoot = path.join(__dirname, '.pipeline-commercial');
-  const runId = new Date().toISOString().replace(/[:.]/g, '-');
+  const recovering = process.env.COMMERCIAL_RECOVER_INVENTORY === 'true';
+  const runId = recovering ? fs.readFileSync(path.join(outputRoot, 'latest-run.txt'), 'utf8').trim() : new Date().toISOString().replace(/[:.]/g, '-');
+  if (!/^[a-zA-Z0-9_-]+$/.test(runId)) throw new Error('Invalid commercial snapshot ID');
   const outputDir = path.join(outputRoot, runId);
+  if (recovering && fs.existsSync(path.join(outputDir, 'lifecycle-summary.json'))) throw new Error('Inventory already imported; resume screening instead of changing the saved acquisition');
+  const observedAt = new Date(runId.replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, 'T$1:$2:$3.$4Z')).toISOString();
+  if (Date.now() - Date.parse(observedAt) > 8 * 86400000) throw new Error('Saved inventory is too old for recovery');
   fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(outputRoot, 'latest-run.txt'), `${runId}\n`);
   const cityResults = [];
   for (const input of SPACELIST_INPUTS) {
     try {
-      const result = await scrapeCity(input.city, input.slug);
+      const checkpointFile = path.join(outputDir, `spacelist-${input.slug}.json`);
+      const result = recovering && fs.existsSync(checkpointFile) ? JSON.parse(fs.readFileSync(checkpointFile)) : await scrapeCity(input.city, input.slug);
+      if (!result.truncated) fs.writeFileSync(checkpointFile, JSON.stringify(result));
       result.records.forEach(record => {
         record.acquisition_scope = input.region;
         record.requested_region = input.region;
       });
       cityResults.push({ ...result, region: input.region, status: result.truncated ? 'partial' : 'ok' });
+      console.log(`Commercial Spacelist ${input.city}: ${result.records.length} records${result.truncated ? ' (partial)' : ''}`);
     } catch (error) {
       cityResults.push({ city: input.city, region: input.region, pages: 0, records: [], status: 'error', error: error.message });
     }
@@ -215,9 +224,12 @@ async function run() {
   if (process.env.APIFY_TOKEN) {
     const results = await mapWithConcurrency(REALTOR_SEARCH_PLAN, 3, async search => {
       try {
+        const savedFile = path.join(outputDir, `search-${slugify(search.location)}-${search.deal_type}.json`);
+        if (recovering && fs.existsSync(savedFile)) { const saved = JSON.parse(fs.readFileSync(savedFile)); if (saved.status === 'ok' && Array.isArray(saved.rows)) return saved; }
         const result = await runRealtorCommercial(process.env.APIFY_TOKEN, search.location, search.deal_type, search.region, runId);
         const checkpoint = { ...search, status: 'ok', run_id: result.run_id, dataset_id: result.dataset_id, records: result.rows.length, rows: result.rows };
         fs.writeFileSync(path.join(outputDir, `search-${slugify(search.location)}-${search.deal_type}.json`), JSON.stringify(checkpoint));
+        console.log(`Commercial REALTOR ${search.location}: ${result.rows.length} records`);
         return checkpoint;
       } catch (error) {
         return { ...search, status: 'error', error: error.message, records: 0, rows: [] };
@@ -247,7 +259,7 @@ async function run() {
       ...previous, ...record,
       discovered_by: [...new Set([...(previous.discovered_by || []), ...(record.discovered_by || [])])],
     } : record;
-    recordMap.set(id, { ...merged, acquisition_fresh: true, observed_at: new Date().toISOString(), ...classifyCommercialRelocation(merged) });
+    recordMap.set(id, { ...merged, acquisition_fresh: true, observed_at: observedAt, ...classifyCommercialRelocation(merged) });
   }
   const records = [...recordMap.values()];
   const properties = canonicalizeCommercial(records);
