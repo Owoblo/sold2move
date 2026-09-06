@@ -212,7 +212,7 @@ async function applyLifecycle(previous) {
   await loadProperties();
   await loadRecordsAndSpaces();
   await applyLifecycle(previous || []);
-  statements.push(`INSERT INTO commercial_pipeline_runs(run_id,lifecycle) VALUES ('${runId.replaceAll("'","''")}',${literal(lifecycleResult)})`);
+  statements.push(`INSERT INTO commercial_pipeline_runs(run_id,lifecycle) VALUES ('${runId.replaceAll("'","''")}',${literal(lifecycleResult)});`);
   collecting=false;
   await require('./rental-import.cjs').executeTransaction(statements,{table:'commercial_import_chunks'});
   fs.writeFileSync(path.join(runDir,'lifecycle-summary.json'),JSON.stringify(lifecycleResult,null,2));
