@@ -53,7 +53,7 @@ const REALTOR_ACTOR = 'fatihtahta~realtor-canada-scraper-commercial';
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'Sold2Move market research contact@sold2move.ca' } }, response => {
+    const request = https.get(url, { headers: { 'User-Agent': 'Sold2Move market research contact@sold2move.ca' } }, response => {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         response.resume();
         reject(new Error(`HTTP ${response.statusCode}: ${url}`));
@@ -63,6 +63,7 @@ function fetchText(url) {
       response.on('data', chunk => { body += chunk; });
       response.on('end', () => resolve(body));
     }).on('error', reject);
+    request.setTimeout(30000, () => request.destroy(new Error('Commercial source page timed out')));
   });
 }
 
@@ -173,7 +174,7 @@ async function enrichSpacelistUnitDetails(records) {
     }
     try {
       const detail = parseSpacelistDetail(await fetchText(record.source_url));
-      results.push({ ...record, description: detail.description, detail_enrichment_status: detail.description ? 'enriched' : 'no_evidence_text' });
+      results.push({ ...record, description: detail.description, photo_urls: detail.photo_urls.length ? detail.photo_urls : record.photo_urls, postal_code: detail.postal_code || record.postal_code, detail_enrichment_status: detail.description ? 'enriched' : 'no_evidence_text' });
     } catch (error) {
       results.push({ ...record, detail_enrichment_status: 'error', detail_enrichment_error: error.message });
     }

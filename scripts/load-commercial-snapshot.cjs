@@ -188,6 +188,8 @@ async function applyLifecycle(previous) {
       WHERE r.source = x.source AND r.source_listing_id = x.source_listing_id;
     `);
   }
+  await query(`UPDATE commercial_spaces s SET availability_status='unknown' FROM commercial_source_records r WHERE s.source_record_id=r.id AND r.active=false;`);
+  await query(`UPDATE commercial_properties p SET active=EXISTS(SELECT 1 FROM commercial_source_records r WHERE r.commercial_property_id=p.id AND r.active), updated_at=now();`);
   const reportable = lifecycle.events.filter(event => event.event_type !== 'still_active');
   lifecycleResult = {summary:lifecycle.summary,events:reportable};
 }

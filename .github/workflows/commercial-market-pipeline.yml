@@ -34,7 +34,7 @@ concurrency:
 jobs:
   scrape-diff-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +43,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate lifecycle logic
-        run: node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
+        run: node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-enrich.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
       - name: Apply commercial lifecycle schema
         env:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}

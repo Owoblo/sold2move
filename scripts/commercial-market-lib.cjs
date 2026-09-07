@@ -182,7 +182,10 @@ function parseSpacelistDetail(html) {
   const description = candidates.find(value =>
     value.length >= 40 && !/^.+?\. (?:Office|Industrial|Retail|Medical|Land|Other) space for (?:lease|sale).+? on Spacelist\.?$/i.test(value)
   ) || null;
-  return { description };
+  const photo_urls = [...new Set([...document.querySelectorAll('a.listing-image[itemprop="image"]')].map(e=>e.getAttribute('href')).filter(u=>/^https:\/\//.test(u)))];
+  const postalNode=document.querySelector('[itemprop="address"] [itemprop="postalCode"]');
+  const postal_code=postalNode?.getAttribute('content') || postalNode?.getAttribute('value') || postalNode?.textContent?.trim() || null;
+  return { description, photo_urls, postal_code };
 }
 
 function parseSpacelistPage(html, requestedCity) {
