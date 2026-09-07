@@ -26,7 +26,9 @@ async function buildCommercialReport(runDir) {
   const dir=path.join(runDir,folder), attachments=[];
   if(recipients.length) for(const n of fs.readdirSync(dir).filter(n=>/\.(pdf|csv)$/.test(n))) attachments.push({filename:n,content:fs.readFileSync(path.join(dir,n)).toString('base64')});
   attachments.push({filename:'commercial-review-queue.csv',content:fs.readFileSync(path.join(runDir,'commercial-review-queue.csv')).toString('base64')});
-  const workbook=await buildMarketWorkbook('commercial',records,lifecycle.events||[],summary.cities||[]);
+  const reviewed=new Map(queue.map(r=>[`${r.source}|${r.source_listing_id}`,r]));
+  const workbookRows=records.map(r=>{const q=reviewed.get(`${r.source}|${r.source_listing_id}`);return {...r,current_occupant_name:r.current_business_name||r.current_occupant_name,direct_relocation_candidate:q?.postcard_eligible===true,outreach_status:q?.postcard_eligible?'eligible_for_human_review':'market_intelligence_only',relocation_reasons:q?.hold_reasons||[]};});
+  const workbook=await buildMarketWorkbook('commercial',workbookRows,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`commercial-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});
   return {from:process.env.MARKET_EMAIL_FROM||'Saturn Star Services <postcards@sold2move.com>',to:[process.env.MARKET_REPORT_EMAIL||'business@starmovers.ca'],reply_to:'business@starmovers.ca',subject:`Commercial ${pending?'Screening Update':'Postcard Review'} — ${date} (${recipients.length} postcards)`,html,attachments};
 }
