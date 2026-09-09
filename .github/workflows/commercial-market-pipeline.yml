@@ -1,7 +1,8 @@
 name: Commercial Market Pipeline
 
 on:
-  # Manual-only while residential is prioritized and these campaigns are refined.
+  schedule:
+    - cron: '30 16 * * 3'
   workflow_dispatch:
     inputs:
       validate_only:
@@ -50,7 +51,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate lifecycle logic
-        run: node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-enrich.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
+        run: node scripts/test-pipeline-review.cjs && node scripts/test-market-report-assessments.cjs && node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-enrich.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
       - name: Apply commercial lifecycle schema
         if: inputs.report_only != true
         env:
@@ -150,4 +151,4 @@ jobs:
             reports/apify-costs/
           include-hidden-files: true
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90

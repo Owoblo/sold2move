@@ -68,6 +68,10 @@ async function buildRentalReport(runDir) {
   if (followup.length) attachments.push({filename:'rental-followup-review.csv',content:fs.readFileSync(path.join(runDir,'rental-followup-review.csv')).toString('base64')});
   const workbook = await buildMarketWorkbook('rental',inventory,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`rental-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});
+  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json']) {
+    const file = path.join(runDir, name);
+    if (fs.existsSync(file)) attachments.push({filename: name, content: fs.readFileSync(file).toString('base64')});
+  }
   return {from:process.env.MARKET_EMAIL_FROM||'Saturn Star Services <postcards@sold2move.com>',to:[process.env.MARKET_REPORT_EMAIL||'business@starmovers.ca'],reply_to:'business@starmovers.ca',subject,html,text:html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),attachments};
 }
 module.exports = { buildRentalReport };

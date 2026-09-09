@@ -30,6 +30,10 @@ async function buildCommercialReport(runDir) {
   const workbookRows=records.map(r=>{const q=reviewed.get(`${r.source}|${r.source_listing_id}`);return {...r,current_occupant_name:r.current_business_name||r.current_occupant_name,direct_relocation_candidate:q?.postcard_eligible===true,outreach_status:q?.postcard_eligible?'eligible_for_human_review':'market_intelligence_only',relocation_reasons:q?.hold_reasons||[]};});
   const workbook=await buildMarketWorkbook('commercial',workbookRows,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`commercial-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});
+  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json']) {
+    const file = path.join(runDir, name);
+    if (fs.existsSync(file)) attachments.push({filename: name, content: fs.readFileSync(file).toString('base64')});
+  }
   return {from:process.env.MARKET_EMAIL_FROM||'Saturn Star Services <postcards@sold2move.com>',to:[process.env.MARKET_REPORT_EMAIL||'business@starmovers.ca'],reply_to:'business@starmovers.ca',subject:`Commercial ${pending?'Screening Update':'Postcard Review'} — ${date} (${recipients.length} postcards)`,html,attachments};
 }
 async function main(){const runDir=process.argv[2],body=await buildCommercialReport(runDir);fs.writeFileSync(path.join(runDir,'commercial-report.html'),body.html);if(process.argv.includes('--preview'))return;const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});if(!response.ok)throw new Error(`Commercial report email HTTP ${response.status}`);console.log('Commercial owner report delivered',await response.json());}

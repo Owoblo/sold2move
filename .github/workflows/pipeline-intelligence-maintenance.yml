@@ -7,7 +7,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '30 21 * * 1'
+    - cron: '30 21 * * 4'
 concurrency:
   group: pipeline-intelligence-maintenance
   cancel-in-progress: false
