@@ -16,13 +16,23 @@ async function run() {
   const db=serviceClient();if(!db) throw new Error('Database credentials required');
   if(!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY required');
   const limit=Math.max(0,Math.min(25,Number(process.env.PARTNERSHIP_RESEARCH_LIMIT||10)));
-  const {data,error}=await db.from('partner_listing_research').select('*').eq('status','pending').order('created_at').limit(limit);
-  if(error) throw new Error(error.message);
+  const stale = await db.from('partner_listing_research').update({status:'error',last_error:'Previous research attempt was interrupted'}).eq('status','researching').lt('checked_at',new Date(Date.now()-86400000).toISOString());
+  if(stale.error) throw new Error(stale.error.message);
+  const lanes = process.env.PARTNERSHIP_RESEARCH_LANE ? [process.env.PARTNERSHIP_RESEARCH_LANE] : ['residential','rental','commercial'];
+  const pools=[];
+  for(const lane of lanes) {
+    const result=await db.from('partner_listing_research').select('*').in('status',['pending','error']).lt('attempts',3)
+      .eq('listing->>_lane',lane).or(`checked_at.is.null,checked_at.lt.${new Date(Date.now()-7*86400000).toISOString()}`)
+      .order('created_at').limit(Math.ceil(limit/lanes.length));
+    if(result.error) throw new Error(result.error.message);pools.push(result.data);
+  }
+  const data=[];
+  for(let i=0;data.length<limit && pools.some(p=>p[i]);i++)for(const pool of pools)if(pool[i]&&data.length<limit)data.push(pool[i]);
   const OpenAI=require('openai');const client=new OpenAI({maxRetries:0,timeout:120000});
   const totals={attempted:0,people_found:0,errors:0,input_tokens:0,output_tokens:0};
   for(const job of data||[]) {
     // Durable claim prevents paying twice if the worker restarts after a request.
-    const claim=await db.from('partner_listing_research').update({status:'researching',checked_at:new Date().toISOString(),attempts:job.attempts+1}).eq('property_key',job.property_key).eq('status','pending').select('property_key');
+    const claim=await db.from('partner_listing_research').update({status:'researching',checked_at:new Date().toISOString(),attempts:job.attempts+1}).eq('property_key',job.property_key).eq('status',job.status).select('property_key');
     if(claim.error) throw new Error(claim.error.message);if(!claim.data.length) continue;
     totals.attempted++;
     try {
@@ -45,6 +55,7 @@ async function run() {
     }
   }
   console.log(JSON.stringify(totals));
+  if(totals.errors) process.exitCode=1;
 }
 if(require.main===module) run().catch(e=>{console.error(e.message);process.exitCode=1;});
 module.exports={parseEvidence};
