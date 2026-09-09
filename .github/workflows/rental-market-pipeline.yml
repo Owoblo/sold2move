@@ -29,6 +29,9 @@ jobs:
   scrape-diff-report:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    env:
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -112,6 +115,11 @@ jobs:
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-rentals/latest-run.txt)
           node scripts/rental-postcards.cjs "scripts/.pipeline-rentals/$RUN_ID"
+      - name: Sync listing activity to partnership CRM
+        if: inputs.validate_only != true
+        continue-on-error: true
+        run: node scripts/sync-partnership-artifacts.cjs rental
+
       - name: Email rental report
         if: inputs.validate_only != true
         env:

@@ -391,6 +391,8 @@ async function run() {
     { newline: '\n' },
   ));
   fs.writeFileSync(path.join(outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+  try { await require('./pipeline-assessment.cjs').run('commercial', outputDir); }
+  catch (error) { fs.writeFileSync(path.join(outputDir, 'assessment-error.json'), JSON.stringify({ error: error.message })); console.error(error.message); }
   fs.writeFileSync(path.join(outputRoot, 'latest-run.txt'), `${runId}\n`);
   const failures = realtorRuns.filter(r=>r.status!=='ok').length;
   console.log(JSON.stringify({output_dir:outputDir,totals:summary.totals,failed_realtor_searches:failures}));

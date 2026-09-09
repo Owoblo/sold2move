@@ -1,0 +1,31 @@
+name: Pipeline Intelligence Maintenance
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 21 * * 1'
+concurrency:
+  group: pipeline-intelligence-maintenance
+  cancel-in-progress: false
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - name: Apply internal intelligence and print receipt schema
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/apply-supabase-migration.cjs supabase/migrations/20260909_pipeline_assessment_partnership_activity.sql
+      - name: Research listing representatives for manual review
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PARTNERSHIP_RESEARCH_LIMIT: '10'
+        run: node scripts/partnership-listing-research.cjs

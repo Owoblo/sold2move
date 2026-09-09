@@ -533,6 +533,8 @@ async function run(options, dependencies = {}) {
     canonical.filter(property => property.source_record_ids.length > 1));
   writeJson(outputDir, 'rejected-records.json', rejected);
   writeJson(outputDir, 'summary.json', summary);
+  try { await require('./pipeline-assessment.cjs').run('rental', outputDir); }
+  catch (error) { fs.writeFileSync(path.join(outputDir, 'assessment-error.json'), JSON.stringify({ error: error.message })); console.error(error.message); }
   fs.writeFileSync(path.join(options.outputDir, 'latest-run.txt'), `${runId}\n`);
   if (!acquisitions.some(a => a.fresh && a.complete)) throw new Error('No fresh rental source completed; inventory persistence blocked');
   console.log(JSON.stringify({ output_dir: outputDir, ...summary }, null, 2));

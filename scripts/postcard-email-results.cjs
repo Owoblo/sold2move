@@ -35,7 +35,7 @@ function reportRecipients(region, primaryEmail) {
   return [...new Set([primaryEmail, ...(REGION_REPORT_EMAILS[region] || [])])];
 }
 
-function sendEmail(to, subject, html, attachments, region = 'windsor') {
+function sendEmail(to, subject, html, attachments, region = 'windsor', idempotencyKey = null) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -61,6 +61,7 @@ function sendEmail(to, subject, html, attachments, region = 'windsor') {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },
     };
 
@@ -318,6 +319,22 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
     throw new Error(`PDF not found: ${pdfPath}`);
   }
 
+  const manifestPath = path.join(pipelineDir, 'batch-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const db = require('./pipeline-review-lib.cjs').serviceClient();
+  if (!db) throw new Error('Durable database connection required before printing');
+  const parsedCsv = require('papaparse').parse(fs.readFileSync(csvPath, 'utf8'), { header: true, skipEmptyLines: true });
+  if (parsedCsv.errors.length || parsedCsv.data.length !== manifest.record_count) throw new Error('CSV does not match batch manifest');
+  const pdfPages = (await require('pdf-lib').PDFDocument.load(fs.readFileSync(pdfPath))).getPageCount();
+  if (pdfPages !== manifest.record_count) throw new Error('PDF page count does not match batch manifest');
+  const artifacts = JSON.parse(fs.readFileSync(path.join(pipelineDir,'print-artifacts.json'),'utf8'));
+  const hash = file => require('node:crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  if (artifacts.batch_id !== manifest.batch_id || artifacts.csv_sha256 !== hash(csvPath) || artifacts.pdf_sha256 !== hash(pdfPath)) throw new Error('Print files differ from the generated batch');
+  const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
+  const claim = await db.rpc('claim_postcard_print_batch', { p_batch_id: manifest.batch_id, p_recipient: printEmail });
+  if (claim.error) throw new Error(claim.error.message);
+  if (claim.data.already_submitted) { console.log('Batch already submitted; no emails resent.'); return claim.data; }
+
   const csvContent = fs.readFileSync(csvPath).toString('base64');
   const pdfContent = fs.readFileSync(pdfPath).toString('base64');
   const csvName = path.basename(csvPath);
@@ -327,7 +344,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   const csvText = fs.readFileSync(csvPath, 'utf-8');
   const recordCount = csvText.trim().split('\n').length - 1; // minus header
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = manifest.generated_at.slice(0,10);
 
   // Read pipeline data for breakdown stats
   let step1Count = 0, withPhotos = 0, furnished = 0, unfurnished = 0, unknown = 0;
@@ -406,7 +423,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #dc2626;">${unfurnished}</td>
         </tr>
         <tr style="background: #f5f5f5;">
-          <td style="padding: 8px; border: 1px solid #ddd;">No interior photos (included)</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">Unknown furniture (see final qualification)</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${unknown}</td>
         </tr>
         <tr>
@@ -443,6 +460,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   `;
 
   const attachments = [
+    ...['run-assessment.md', 'run-assessment.json', 'assessment-error.json'].filter(name => fs.existsSync(path.join(pipelineDir,name))).map(name => ({ filename: name, content: fs.readFileSync(path.join(pipelineDir,name)).toString('base64') })),
     { filename: csvName, content: csvContent },
     { filename: pdfName, content: pdfContent },
   ];
@@ -451,7 +469,7 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   // --- Owner email: full breakdown ---
   const ownerRecipients = reportRecipients(region, OWNER_EMAIL);
   console.log(`Sending full report to ${ownerRecipients.join(', ')}...`);
-  const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments, region);
+  const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments, region, `postcard-owner-${manifest.batch_id}`);
   console.log(`  Owner email sent! ID: ${ownerResult.id}`);
 
   // --- Print shop email: simple instruction, PDF only ---
@@ -465,11 +483,14 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
       <p style="color: #aaa; font-size: 11px;">${region === 'ottawa' ? 'Dexa Movers' : 'Saturn Star Services'} — Sold2Move Postcard Pipeline</p>
     </div>
   `;
-  const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
   console.log(`Sending print instruction to ${printEmail}...`);
   const printResult = await sendEmail(printEmail, `Print Request: ${regionLabel} Postcards — ${today} (${recordCount})`, printHtml, [
     { filename: pdfName, content: pdfContent },
-  ], region);
+  ], region, `postcard-print-${manifest.batch_id}`);
+  fs.writeFileSync(path.join(pipelineDir,'print-submission-receipt.json'), JSON.stringify({ batch_id: manifest.batch_id, provider_id: printResult.id, recipient: printEmail, accepted_at: new Date().toISOString() }, null, 2));
+  const submitted = await db.rpc('submit_postcard_print_batch', { p_batch_id: manifest.batch_id, p_provider_id: printResult.id });
+  if (submitted.error) throw new Error(`Printer accepted the batch; database receipt needs recovery: ${submitted.error.message}`);
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, status: 'submitted', print_provider_id: printResult.id, print_recipient: printEmail, submitted_at: new Date().toISOString() }, null, 2));
   console.log(`  Print shop email sent! ID: ${printResult.id}`);
 
   // --- Sold-ready report: final sold rows only, separate owner/internal email ---

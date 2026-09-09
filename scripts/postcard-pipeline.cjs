@@ -62,6 +62,8 @@ async function runPipeline(rawArgs) {
       record_count: 0,
       items: [],
     });
+    writePipelineFile('step5-final.json', []);
+    await assessRun(options);
     return [];
   }
 
@@ -95,6 +97,8 @@ async function runPipeline(rawArgs) {
   const step6 = require('./postcard-step6-archive.cjs');
   await step6.run(options, finalListings || []);
 
+  await assessRun(options);
+
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`\n${'='.repeat(60)}`);
   console.log(`  Pipeline complete in ${elapsed}s`);
@@ -102,6 +106,15 @@ async function runPipeline(rawArgs) {
   console.log(`${'='.repeat(60)}`);
 
   return finalListings || [];
+}
+
+async function assessRun(options) {
+  try {
+    await require('./pipeline-assessment.cjs').run('residential', require('./postcard-lib.cjs').PIPELINE_DIR, options);
+  } catch (error) {
+    writePipelineFile('assessment-error.json', { error: error.message, batch_id: options.batchId });
+    console.error(`Internal assessment requires attention: ${error.message}`);
+  }
 }
 
 if (require.main === module) {

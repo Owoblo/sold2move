@@ -682,6 +682,16 @@ async function run(options) {
   const soldPulled = [];
   const soldHeld = [];
 
+  const review = require('./pipeline-review-lib.cjs');
+  const onePiece = review.onePiecePerProperty(finalListings);
+  finalListings = onePiece.kept;
+  rejected.push(...onePiece.rejected);
+  if (!opts.dryRun && finalListings.length) {
+    const claims = await review.filterPrintClaims(finalListings);
+    finalListings = claims.kept;
+    rejected.push(...claims.rejected);
+  }
+  writePipelineFile('step5-rejected.json', rejected);
   writePipelineFile('step5-final.json', finalListings);
 
   const listingByZpid = new Map(listings.map(l => [String(l.zpid), l]));
@@ -781,6 +791,8 @@ async function run(options) {
 
   generateCSV(finalListings, csvPath);
   await generatePDF(finalListings, pdfPath, opts);
+  const hash = file => require('node:crypto').createHash('sha256').update(require('node:fs').readFileSync(file)).digest('hex');
+  writePipelineFile('print-artifacts.json', { batch_id: opts.batchId, csv_sha256: hash(csvPath), pdf_sha256: hash(pdfPath) });
 
   // Summary
   const statusCounts = {};

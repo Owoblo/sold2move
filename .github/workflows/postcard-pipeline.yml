@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       from_date:
-        description: 'Start date (YYYY-MM-DD), default: 2 days ago'
+        description: 'Start date (YYYY-MM-DD), default: 7 days ago'
         required: false
       to_date:
         description: 'End date (YYYY-MM-DD), default: today'
@@ -71,6 +71,9 @@ jobs:
       matrix:
         region: ${{ fromJSON(needs.prepare.outputs.regions) }}
 
+    env:
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -90,7 +93,7 @@ jobs:
           if [ -n "${{ github.event.inputs.from_date }}" ]; then
             echo "from=${{ github.event.inputs.from_date }}" >> $GITHUB_OUTPUT
           else
-            echo "from=$(date -d '2 days ago' +%Y-%m-%d)" >> $GITHUB_OUTPUT
+            echo "from=$(date -d '7 days ago' +%Y-%m-%d)" >> $GITHUB_OUTPUT
           fi
           if [ -n "${{ github.event.inputs.to_date }}" ]; then
             echo "to=${{ github.event.inputs.to_date }}" >> $GITHUB_OUTPUT
@@ -475,6 +478,11 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: node scripts/postcard-cost-report.cjs --email
 
+      - name: Sync listing activity to partnership CRM
+        if: always()
+        continue-on-error: true
+        run: node scripts/sync-partnership-artifacts.cjs
+
       - name: Upload all postcard artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -500,9 +508,11 @@ jobs:
             scripts/.pipeline-*/batches/*/step5-health-summary.json
             scripts/.pipeline-*/batches/*/step5-final.json
             scripts/.pipeline-*/batches/*/batch-manifest.json
+            scripts/.pipeline-*/batches/*/*.json
+            scripts/.pipeline-*/batches/*/run-assessment.md
           if-no-files-found: ignore
           include-hidden-files: true
-          retention-days: 30
+          retention-days: 90
 
       # ─── NOTIFICATIONS ────────────────────────────────────────────────────────
 
