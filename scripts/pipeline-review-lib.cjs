@@ -11,7 +11,8 @@ function serviceClient() {
   return url && key ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
 }
 function propertyKey(row) {
-  const street = row.addressstreet || row.street_address || row.canonical_address || row.address || row.address_key;
+  let street = row.addressstreet || row.mailing_street || row.street_address || row.source_address || row.canonical_address || row.address || row.address_key;
+  if (street && row.unit_label && !/\b(unit|apt|suite)\b|#/i.test(street)) street += ` Unit ${String(row.unit_label).replace(/^(unit|apt|suite|#)\s*/i,'')}`;
   if (!street) return `id:${row.source || 'zillow'}:${row.zpid || row.source_listing_id || row.id}`;
   const { normalizeAddressKey } = require('./postcard-step5-output.cjs');
   return normalizeAddressKey({ addressstreet: street, addresszipcode: row.addresszipcode || row.postal_code || '' })
@@ -56,7 +57,7 @@ function assess({ runId, lane, region, observedAt, scope, candidates, selected, 
   const report = { advisory_only: true, source_count: sourceCount, candidate_count: candidatesKnown ? inputs.length : null,
     selected_count: rows.length, selection_percent: candidatesKnown ? percent(rows.length, inputs.length) : null,
     duplicate_property_count: rows.length - keys.size, selected_by_status: byStatus,
-    rejected_count: rejected.length, rejected_by_reason: reasons,
+    rejected_count: rejected.length || health.rejected_count || 0, rejected_by_reason: Object.keys(reasons).length ? reasons : health.rejected_by_reason || {},
     comparisons, comparable_history_count: history.filter(p=>p.scope_key===scopeKey).length, history_count: history.length, scope, health,
     coverage_note: 'Coverage describes observed inventory. Undiscovered listings and true market share cannot be measured without an independent source.',
     status_note: lane === 'residential' ? 'Sold follows the existing first-disappearance rule; it is inferred, not independently confirmed.' : 'Lease/sale is the advertised transaction, not proof of a completed transaction.',

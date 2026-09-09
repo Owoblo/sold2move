@@ -5,6 +5,7 @@ const {parseEvidence}=require('./partnership-listing-research.cjs');
 const row=(id,status='just_listed',address='123 Main Street')=>({zpid:id,status,addressstreet:address,addresszipcode:'N9A 1A1',city:'Windsor'});
 assert.equal(propertyKey(row(1)),propertyKey(row(2,'sold','123 Main St.')));
 assert.notEqual(propertyKey(row(1,'sold','123 Main St Unit 2')),propertyKey(row(2,'sold','123 Main St Unit 3')));
+assert.notEqual(propertyKey({...row(1),unit_label:'2'}),propertyKey({...row(2),unit_label:'3'}));
 const one=onePiecePerProperty([row(1),row(2,'sold'),row(3,'sold','124 Main St')]);
 assert.deepEqual(one.kept.map(r=>r.zpid),[2,3]);assert.equal(one.rejected.length,1);
 const input={runId:'a',lane:'residential',region:'windsor',observedAt:'2026-08-31T00:00:00Z',scope:{min:300000},candidates:[row(1)],selected:[row(1)]};

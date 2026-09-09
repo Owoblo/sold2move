@@ -38,7 +38,7 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
   contacts = contacts || await allRows(db,'market_contacts','id,name,company,email,phone,city,do_not_contact,sequence_paused,last_touch_at,listing_discovery_key');
   const totals={ properties:payload.listings.length,connections:0,new_contacts:0,ambiguous:0,missing_representatives:0 };
   for(const row of payload.listings) {
-    const key=propertyKey(row), reps=representatives(row), address=row.addressstreet||row.street_address||row.canonical_address||row.address||row.address_key;
+    const key=propertyKey(row), reps=representatives(row), address=row.addressstreet||row.mailing_street||row.street_address||row.source_address||row.canonical_address||row.address||row.address_key;
     if(!address) continue;
     // Every property enters the separate research queue, including partially attributed ones.
     const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:payload.region,_run_id:payload.run_id,_observed_at:payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key',ignoreDuplicates:true});
