@@ -94,7 +94,7 @@ BEGIN
   just_listed_postcard_sent_at=CASE WHEN i.postcard_type='just_listed' THEN coalesce(l.just_listed_postcard_sent_at,at_time) ELSE l.just_listed_postcard_sent_at END,
   sold_postcard_sent_at=CASE WHEN i.postcard_type='sold' THEN coalesce(l.sold_postcard_sent_at,at_time) ELSE l.sold_postcard_sent_at END,
   last_postcard_sent_at=at_time,last_postcard_batch_id=p_batch_id,last_postcard_type_sent=i.postcard_type,
-  postcard_send_count=coalesce(l.postcard_send_count,0)+1,
+  postcard_send_count=coalesce(l.postcard_send_count,0)+CASE WHEN (i.postcard_type='just_listed' AND l.just_listed_postcard_sent_at IS NULL) OR (i.postcard_type='sold' AND l.sold_postcard_sent_at IS NULL) THEN 1 ELSE 0 END,
   status=CASE WHEN i.postcard_type='sold' AND l.status='sold' THEN 'sold_archived' WHEN i.postcard_type='just_listed' AND l.status='just_listed' THEN 'active' ELSE l.status END
  FROM mail_batch_items i WHERE i.batch_id=p_batch_id AND i.zpid=l.zpid;
  UPDATE mail_batches SET status='submitted',submitted_at=at_time,print_provider_id=p_provider_id,updated_at=at_time WHERE batch_id=p_batch_id;
