@@ -16,7 +16,7 @@ async function buildCommercialReport(runDir) {
   const reasons={};queue.filter(r=>!r.postcard_eligible).forEach(r=>r.hold_reasons.forEach(reason=>reasons[reason]=(reasons[reason]||0)+1));
   const date=new Date().toISOString().slice(0,10);
   const html=`<div style="font-family:Arial,sans-serif;max-width:650px;color:#1a1a1a"><h2>Commercial Postcard Pipeline — ${date}</h2>
-  <p>${recipients.length} postcards generated for owner review. The target is the current outgoing business at the advertised premises. Physical mailing has not been confirmed.</p>
+  <p>${recipients.length} postcards ${manifest.delivery_status === 'submitted' ? 'submitted to Loonie Prints' : 'generated; print submission is not recorded'}. The target is the current outgoing business at the advertised premises. Physical mailing has not been confirmed.</p>
   <h3>Pipeline Summary</h3>${table([['Source lease listings',records.length],['Candidates checked',ai.target_count-pending],['Pending checks',pending],['Failed REALTOR searches',failures],['Postcards attached',recipients.length]])}
   <h3>By Region</h3>${table([['Region','Listings','Pending','Postcards'],...Object.entries(labels).map(([k,label])=>[label,records.filter(r=>r.acquisition_scope===k).length,ai.regions[k]?.pending||0,recipients.filter(r=>r.region===k).length])])}
   <h3>Held for Review</h3>${table(Object.entries(reasons))}<p>A listing can have more than one hold reason. Pending checks remain open; they have not been rejected.</p>
@@ -30,7 +30,7 @@ async function buildCommercialReport(runDir) {
   const workbookRows=records.map(r=>{const q=reviewed.get(`${r.source}|${r.source_listing_id}`);return {...r,current_occupant_name:r.current_business_name||r.current_occupant_name,direct_relocation_candidate:q?.postcard_eligible===true,outreach_status:q?.postcard_eligible?'eligible_for_human_review':'market_intelligence_only',relocation_reasons:q?.hold_reasons||[]};});
   const workbook=await buildMarketWorkbook('commercial',workbookRows,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`commercial-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});
-  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json']) {
+  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json', 'market-print-receipt.json']) {
     const file = path.join(runDir, name);
     if (fs.existsSync(file)) attachments.push({filename: name, content: fs.readFileSync(file).toString('base64')});
   }

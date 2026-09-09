@@ -6,7 +6,7 @@ const { evaluate, key } = require('./commercial-outreach-lib.cjs');
 const { digest, renderCommercial } = require('./commercial-artwork.cjs');
 const quote = v => `'${String(v).replaceAll("'", "''")}'`;
 async function build(runDir, { db = query, render = renderCommercial } = {}) {
-  const supplement = process.env.RENTAL_BATCH_SUPPLEMENT || '';
+  const supplement = process.env.COMMERCIAL_BATCH_SUPPLEMENT || '';
   if (supplement && !/^[a-zA-Z0-9_-]+$/.test(supplement)) throw new Error('Invalid commercial supplement ID');
   const batchId = `commercial-${path.basename(runDir)}${supplement ? '-supplement-' + supplement : ''}`;
   const outputDir = path.join(runDir, supplement ? 'postcards-supplement' : 'postcards');

@@ -41,7 +41,7 @@ async function buildRentalReport(runDir) {
     : 'No additional postcards were generated. Previously delivered batches remain unchanged.';
   const subject = `Rental ${recipients.length ? 'Postcards Ready' : pending ? 'Screening Update' : 'Pipeline Complete'} — ${date} (${recipients.length}${manifest.supplemental?' additional':''} postcards)`;
   const html = `<div style="font-family:Arial,sans-serif;max-width:600px;color:#1a1a1a">
-    <h2 style="color:#1a1a1a">Rental Postcard Pipeline — ${date}</h2><p>${intro}</p>
+    <h2 style="color:#1a1a1a">Rental Postcard Pipeline — ${date}</h2><p>${intro}</p><p>${manifest.delivery_status === 'submitted' ? 'This batch was submitted to Loonie Prints.' : 'Print submission is not recorded for this batch.'}</p>
     ${section('Pipeline Summary')}${table([
       ['Total source listings found',inventory.length],
       ['All new or relisted listings',candidates.length+addressReview.length],
@@ -68,7 +68,7 @@ async function buildRentalReport(runDir) {
   if (followup.length) attachments.push({filename:'rental-followup-review.csv',content:fs.readFileSync(path.join(runDir,'rental-followup-review.csv')).toString('base64')});
   const workbook = await buildMarketWorkbook('rental',inventory,lifecycle.events||[],summary.cities||[]);
   attachments.push({filename:`rental-full-market-report-${date}.xlsx`,content:workbook.toString('base64')});
-  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json']) {
+  for (const name of ['run-assessment.md', 'run-assessment.json', 'assessment-error.json', 'partnership-sync-error.json', 'market-print-receipt.json']) {
     const file = path.join(runDir, name);
     if (fs.existsSync(file)) attachments.push({filename: name, content: fs.readFileSync(file).toString('base64')});
   }

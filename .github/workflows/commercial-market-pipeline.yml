@@ -51,7 +51,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Validate lifecycle logic
-        run: node scripts/test-pipeline-review.cjs && node scripts/test-market-report-assessments.cjs && node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-enrich.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
+        run: node scripts/test-market-print-dispatch.cjs && node scripts/test-pipeline-review.cjs && node scripts/test-market-report-assessments.cjs && node scripts/test-market-lifecycle.cjs && node scripts/test-commercial-market-lib.cjs && node scripts/test-commercial-outreach.cjs && node scripts/test-commercial-classify.cjs && node scripts/test-commercial-enrich.cjs && node scripts/test-commercial-loader.cjs && node scripts/test-postcard-cost-report.cjs
       - name: Apply commercial lifecycle schema
         if: inputs.report_only != true
         env:
@@ -66,6 +66,14 @@ jobs:
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260815_commercial_transition_ai_v2.sql
           node scripts/apply-supabase-migration.cjs supabase/migrations/20260905_commercial_campaign.sql
           node scripts/test-commercial-loader.cjs --database
+      - name: Apply durable market print handoff schema
+        if: inputs.report_only != true
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          node scripts/apply-supabase-migration.cjs supabase/migrations/20260909_market_print_dispatch.sql
+          node scripts/test-market-print-database.cjs
       - name: Validate report-only source
         if: inputs.report_only == true
         env:
@@ -122,6 +130,15 @@ jobs:
         run: |
           RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
           node scripts/commercial-postcards.cjs "scripts/.pipeline-commercial/$RUN_ID"
+      - name: Forward qualified batch to Loonie Prints
+        if: inputs.validate_only != true && inputs.report_only != true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          RUN_ID=$(head -1 scripts/.pipeline-commercial/latest-run.txt)
+          node scripts/market-print-dispatch.cjs commercial "scripts/.pipeline-commercial/$RUN_ID"
       - name: Sync listing activity to partnership CRM
         if: inputs.validate_only != true
         continue-on-error: true
