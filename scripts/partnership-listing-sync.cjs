@@ -9,7 +9,8 @@ function representatives(row) {
   let reps = row.listing_representatives || [];
   if (typeof reps === 'string') { try { reps = JSON.parse(reps); } catch { reps = []; } }
   if (!Array.isArray(reps)) reps = [];
-  if (row.agent_name) reps = [...reps,{ name: row.agent_name, phone: row.agent_phone, brokerage: row.brokerage_name, role: 'listing_representative' }];
+  if (row.agent_name) reps = [...reps,{ name: row.agent_name, phone: row.agent_phone, email: row.agent_email, brokerage: row.brokerage_name, role: 'listing_representative' }];
+  if (row.contact_name) reps = [...reps, { name: row.contact_name, role: row.contact_role || 'listing_representative', phone: row.contact_phone, email: row.contact_email, brokerage: row.contact_company }];
   return [...new Map(reps.filter(r => r && r.name).map(r => [nameKey(r.name), {
     ...r, role: r.role || 'unknown', source_url: r.source_url || row.source_url || row.detailurl || null,
     provenance: r.provenance || 'listing_source',
@@ -69,7 +70,7 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
         status_evidence:payload.lane==='residential' && ['sold','sold_archived'].includes(row.status)?'inferred_first_disappearance':'source_reported',
         representative_key:repKey,representative:rep,contact_id:contact?.id||null,
         match_status:status,source_url:rep.source_url,observed_at:payload.observed_at,run_id:payload.run_id,
-        postcard_batch_id:payload.postcard_batch_id||null,postcard_status:payload.postcard_batch_id?'selected':null};
+        postcard_batch_id:payload.postcard_batch_id||null,postcard_status:payload.postcard_status || (payload.postcard_batch_id?'selected':null)};
       const existing=await db.from('partner_listing_activity').select('observed_at,contact_id,match_status,representative').eq('activity_key',record.activity_key).maybeSingle();
       if(existing.error) throw new Error(existing.error.message);
       if(existing.data?.observed_at > record.observed_at) continue;

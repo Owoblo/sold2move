@@ -9,7 +9,7 @@ async function run(){
   const id=fs.readFileSync(pointer,'utf8').trim();if(!/^[a-zA-Z0-9_.:-]+$/.test(id))continue;
   const dirs=[path.join(base,'batches',id.replace(/[^a-zA-Z0-9_-]/g,'_')),path.join(base,id)];
   for(const dir of dirs){const file=path.join(dir,'partnership-input.json');if(!fs.existsSync(file))continue;
-   try{const result=await sync(JSON.parse(fs.readFileSync(file)));fs.writeFileSync(path.join(dir,'partnership-sync-summary.json'),JSON.stringify(result,null,2));console.log(name,result)}
+   try{if(lane) await require('./pipeline-assessment.cjs').run(lane,dir);const result=await sync(JSON.parse(fs.readFileSync(file)));fs.writeFileSync(path.join(dir,'partnership-sync-summary.json'),JSON.stringify(result,null,2));console.log(name,result)}
    catch(e){failed++;fs.writeFileSync(path.join(dir,'partnership-sync-error.json'),JSON.stringify({error:e.message}));console.error(name,e.message)}
   }
  }
