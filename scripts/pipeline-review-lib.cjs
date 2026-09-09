@@ -29,10 +29,10 @@ function onePiecePerProperty(rows) {
 }
 function snapshot(rows) {
   return rows.map(row => ({ key: propertyKey(row), id: String(row.zpid || row.source_listing_id || row.id || ''),
-    status: row.status || row.transaction_type || 'available', city: row.city || row.addresscity || '',
+    status: row.status || row.transaction_type || 'available', price: row.unformattedprice ?? row.monthly_price ?? row.asking_price ?? row.price ?? null, source: row.source || 'zillow', city: row.city || row.addresscity || '',
     address: row.addressstreet || row.canonical_address || row.address || row.address_key || '',
     observed_at: row.lastseenat || row.last_seen_at || null,
-    event_at: row.zillow_date_posted || row.first_seen_at || null }));
+    event_at: row.zillow_date_posted || row.listed_at || null }));
 }
 function assess({ runId, lane, region, observedAt, scope, candidates, selected, rejected = [], health = {}, prior = [], sourceCount = null, candidatesKnown = true }) {
   const rows = snapshot(selected), inputs = snapshot(candidates), keys = new Set(rows.map(r => r.key));
@@ -48,13 +48,15 @@ function assess({ runId, lane, region, observedAt, scope, candidates, selected, 
       count_change_percent: percent(rows.length - previous.length, previous.length),
       overlap_count: overlap.length, overlap_percent: percent(overlap.length, rows.length),
       repeated_same_status: overlap.filter(r => previous.some(x => x.key === r.key && x.status === r.status)),
+      price_changes: overlap.filter(r=>previous.some(x=>x.key===r.key && x.price != null && r.price != null && String(x.price)!==String(r.price))),
       changed_status: overlap.filter(r => previous.some(x => x.key === r.key && x.status !== r.status)),
       no_longer_selected: previous.filter(r => !keys.has(r.key)),
       days_since_run: Math.round((Date.parse(observedAt) - Date.parse(p.observed_at)) / 8640000) / 10 };
   });
   const byStatus = {};
   rows.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });
-  const report = { advisory_only: true, source_count: sourceCount, candidate_count: candidatesKnown ? inputs.length : null,
+  const ages = rows.filter(r=>r.event_at && Number.isFinite(Date.parse(r.event_at))).map(r=>(Date.parse(observedAt)-Date.parse(r.event_at))/86400000).filter(d=>d>=0);
+  const report = { timing: { known_posted_dates: ages.length, missing_posted_dates: rows.length-ages.length, mean_listing_age_days: ages.length ? Math.round(ages.reduce((n,d)=>n+d,0)/ages.length*10)/10 : null, sold_event_time: 'Unknown for inferred disappearance signals' }, advisory_only: true, source_count: sourceCount, candidate_count: candidatesKnown ? inputs.length : null,
     selected_count: rows.length, selection_percent: candidatesKnown ? percent(rows.length, inputs.length) : null,
     duplicate_property_count: rows.length - keys.size, selected_by_status: byStatus,
     rejected_count: rejected.length || health.rejected_count || 0, rejected_by_reason: Object.keys(reasons).length ? reasons : health.rejected_by_reason || {},
