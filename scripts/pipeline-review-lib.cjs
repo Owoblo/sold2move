@@ -33,7 +33,7 @@ function snapshot(rows) {
     observed_at: row.lastseenat || row.last_seen_at || null,
     event_at: row.zillow_date_posted || row.first_seen_at || null }));
 }
-function assess({ runId, lane, region, observedAt, scope, candidates, selected, rejected = [], health = {}, prior = [], sourceCount = null }) {
+function assess({ runId, lane, region, observedAt, scope, candidates, selected, rejected = [], health = {}, prior = [], sourceCount = null, candidatesKnown = true }) {
   const rows = snapshot(selected), inputs = snapshot(candidates), keys = new Set(rows.map(r => r.key));
   const scopeKey = digest(scope);
   const history = prior.filter(p => p.run_id !== runId && p.lane === lane && p.region === region && p.scope_key === scopeKey && p.observed_at < observedAt)
@@ -53,8 +53,8 @@ function assess({ runId, lane, region, observedAt, scope, candidates, selected, 
   });
   const byStatus = {};
   rows.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });
-  const report = { advisory_only: true, source_count: sourceCount, candidate_count: inputs.length,
-    selected_count: rows.length, selection_percent: percent(rows.length, inputs.length),
+  const report = { advisory_only: true, source_count: sourceCount, candidate_count: candidatesKnown ? inputs.length : null,
+    selected_count: rows.length, selection_percent: candidatesKnown ? percent(rows.length, inputs.length) : null,
     duplicate_property_count: rows.length - keys.size, selected_by_status: byStatus,
     rejected_count: rejected.length, rejected_by_reason: reasons,
     comparisons, comparable_history_count: history.length, scope, health,
