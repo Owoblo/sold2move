@@ -36,14 +36,14 @@ function snapshot(rows) {
 function assess({ runId, lane, region, observedAt, scope, candidates, selected, rejected = [], health = {}, prior = [], sourceCount = null, candidatesKnown = true }) {
   const rows = snapshot(selected), inputs = snapshot(candidates), keys = new Set(rows.map(r => r.key));
   const scopeKey = digest(scope);
-  const history = prior.filter(p => p.run_id !== runId && p.lane === lane && p.region === region && p.scope_key === scopeKey && p.observed_at < observedAt)
+  const history = prior.filter(p => p.run_id !== runId && p.lane === lane && p.region === region && p.observed_at < observedAt)
     .sort((a, b) => b.observed_at.localeCompare(a.observed_at)).slice(0, 2);
   const reasons = {};
   rejected.forEach(r => { const reason = r.reason || r.rejection_reason || 'unspecified'; reasons[reason] = (reasons[reason] || 0) + 1; });
   const comparisons = history.map(p => {
     const previous = p.snapshot || [], oldKeys = new Set(previous.map(r => r.key));
     const overlap = rows.filter(r => oldKeys.has(r.key));
-    return { run_id: p.run_id, previous_count: previous.length, current_count: rows.length,
+    return { run_id: p.run_id, comparable_scope: p.scope_key === scopeKey, previous_scope: p.report?.scope || null, previous_count: previous.length, current_count: rows.length,
       count_change_percent: percent(rows.length - previous.length, previous.length),
       overlap_count: overlap.length, overlap_percent: percent(overlap.length, rows.length),
       repeated_same_status: overlap.filter(r => previous.some(x => x.key === r.key && x.status === r.status)),
@@ -57,7 +57,7 @@ function assess({ runId, lane, region, observedAt, scope, candidates, selected, 
     selected_count: rows.length, selection_percent: candidatesKnown ? percent(rows.length, inputs.length) : null,
     duplicate_property_count: rows.length - keys.size, selected_by_status: byStatus,
     rejected_count: rejected.length, rejected_by_reason: reasons,
-    comparisons, comparable_history_count: history.length, scope, health,
+    comparisons, comparable_history_count: history.filter(p=>p.scope_key===scopeKey).length, history_count: history.length, scope, health,
     coverage_note: 'Coverage describes observed inventory. Undiscovered listings and true market share cannot be measured without an independent source.',
     status_note: lane === 'residential' ? 'Sold follows the existing first-disappearance rule; it is inferred, not independently confirmed.' : 'Lease/sale is the advertised transaction, not proof of a completed transaction.',
     missing_history: history.length < 2,
@@ -66,14 +66,14 @@ function assess({ runId, lane, region, observedAt, scope, candidates, selected, 
 }
 function markdown(a) {
   const r = a.report;
-  return `# ${a.lane} assessment — ${a.region}\n\nRun: ${a.run_id}\n\n${r.selected_count} selected from ${r.candidate_count} candidates (${r.selection_percent ?? 'unknown'}%). ${r.duplicate_property_count} duplicate properties in final output.\n\n${r.status_note}\n\nComparable prior runs available: ${r.comparable_history_count}/2.\n\n${r.comparisons.map(c => `- ${c.run_id}: ${c.previous_count} → ${c.current_count}; change ${c.count_change_percent ?? 'N/A'}%; overlap ${c.overlap_count} (${c.overlap_percent ?? 'N/A'}%); same-status repeats ${c.repeated_same_status.length}.`).join('\n')}\n\nExclusions:\n${Object.entries(r.rejected_by_reason).map(([k,v]) => `- ${k}: ${v}`).join('\n') || '- None recorded'}\n\n${r.coverage_note}\n\nThis assessment does not change qualification or reject listings.\n`;
+  return `# ${a.lane} assessment — ${a.region}\n\nRun: ${a.run_id}\n\n${r.selected_count} selected from ${r.candidate_count} candidates (${r.selection_percent ?? 'unknown'}%). ${r.duplicate_property_count} duplicate properties in final output.\n\n${r.status_note}\n\nPrior runs available: ${r.history_count}/2; same settings: ${r.comparable_history_count}.\n\n${r.comparisons.map(c => `- ${c.run_id}${c.comparable_scope ? '' : ' (settings differ; descriptive comparison only)'}: ${c.previous_count} → ${c.current_count}; change ${c.count_change_percent ?? 'N/A'}%; overlap ${c.overlap_count} (${c.overlap_percent ?? 'N/A'}%); same-status repeats ${c.repeated_same_status.length}.`).join('\n')}\n\nExclusions:\n${Object.entries(r.rejected_by_reason).map(([k,v]) => `- ${k}: ${v}`).join('\n') || '- None recorded'}\n\n${r.coverage_note}\n\nThis assessment does not change qualification or reject listings.\n`;
 }
 async function writeAssessment(input, outputDir, { persist = true } = {}) {
   const db = persist ? serviceClient() : null;
   let prior = [], historyError = null;
   if (db) {
     const { data, error } = await db.from('pipeline_assessments').select('*').eq('lane', input.lane).eq('region', input.region)
-      .eq('scope_key', digest(input.scope)).lt('observed_at', input.observedAt).order('observed_at', { ascending: false }).limit(2);
+      .lt('observed_at', input.observedAt).order('observed_at', { ascending: false }).limit(2);
     if (error) historyError = error.message; else prior = data || [];
   }
   const assessment = assess({ ...input, prior });

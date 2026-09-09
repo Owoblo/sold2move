@@ -11,7 +11,8 @@ const input={runId:'a',lane:'residential',region:'windsor',observedAt:'2026-08-3
 const previous=assess(input);
 const current=assess({...input,runId:'b',observedAt:'2026-09-07T00:00:00Z',selected:[row(2,'sold')],prior:[previous]});
 assert.equal(current.report.comparisons[0].overlap_count,1);assert.equal(current.report.comparisons[0].changed_status.length,1);assert.equal(current.report.comparisons[0].repeated_same_status.length,0);
-assert.equal(assess({...input,scope:{min:500000},prior:[previous]}).report.comparable_history_count,0);
+const changed=assess({...input,runId:'c',observedAt:'2026-09-07T00:00:00Z',scope:{min:500000},prior:[previous]});
+assert.equal(changed.report.comparable_history_count,0);assert.equal(changed.report.comparisons.length,1);assert.equal(changed.report.comparisons[0].comparable_scope,false);
 assert.equal(assess({...input,candidates:[],selected:[]}).report.selection_percent,null);
 const contacts=[{id:'a',name:'Alex Smith',company:'Brokerage',phone:'5195550100'},{id:'b',name:'Jamie Jones',company:'Brokerage',phone:'5195550100'}];
 assert.equal(matchContact({name:'Alex Smith',phone:'+1 519-555-0100'},contacts).contact.id,'a');
