@@ -21,6 +21,7 @@ assert.equal(matchContact({name:'Other Person',phone:'5195550100'},contacts).sta
 assert.equal(matchContact({name:'Alex Smith'},contacts).status,'ambiguous');
 assert.equal(matchContact({name:'Alex Smith',brokerage:'Brokerage'},[...contacts,{...contacts[0],id:'c'}]).status,'ambiguous');
 assert.equal(representatives({listing_representatives:[{name:'Alex',role:'listing_agent'},{name:'Jamie',role:'buying_agent'}]}).length,2);
+assert.equal(representatives({listing_representatives:[{name:'Alex',phone:'5195550100',role:'buying_agent'}],agent_name:'Alex'})[0].phone,'5195550100');
 const evidence={name:'Alex',source_url:'https://broker.example/listing',address_evidence:'123 Main',role_evidence:'Listing agent'};
 assert.deepEqual(parseEvidence({output_text:JSON.stringify({representatives:[evidence]}),output:[]}),[]);
 assert.equal(parseEvidence({output_text:JSON.stringify({representatives:[evidence]}),output:[{action:{sources:[{url:evidence.source_url}]}}]}).length,1);

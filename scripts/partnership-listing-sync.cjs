@@ -11,10 +11,17 @@ function representatives(row) {
   if (!Array.isArray(reps)) reps = [];
   if (row.agent_name) reps = [...reps,{ name: row.agent_name, phone: row.agent_phone, email: row.agent_email, brokerage: row.brokerage_name, role: 'listing_representative' }];
   if (row.contact_name) reps = [...reps, { name: row.contact_name, role: row.contact_role || 'listing_representative', phone: row.contact_phone, email: row.contact_email, brokerage: row.contact_company }];
-  return [...new Map(reps.filter(r => r && r.name).map(r => [nameKey(r.name), {
-    ...r, role: r.role || 'unknown', source_url: r.source_url || row.source_url || row.detailurl || null,
-    provenance: r.provenance || 'listing_source',
-  }])).values()];
+  if (row.raw_payload && typeof row.raw_payload === 'object') {
+    reps.push(...(require('./postcard-step2-photos.cjs').extractListingAttribution(row.raw_payload).listing_representatives || []));
+  }
+  const people = new Map();
+  for (const rep of reps.filter(r => r && r.name)) {
+    const key = nameKey(rep.name), person = people.get(key) || {};
+    for (const [field,value] of Object.entries(rep)) if (value != null && value !== '' && !person[field]) person[field] = value;
+    person.role ||= 'unknown'; person.source_url ||= row.source_url || row.detailurl || null;
+    person.provenance ||= 'listing_source'; people.set(key,person);
+  }
+  return [...people.values()];
 }
 function matchContact(rep, contacts) {
   const name = nameKey(rep.name), p = phoneKey(rep.phone), email = String(rep.email || '').trim().toLowerCase();
