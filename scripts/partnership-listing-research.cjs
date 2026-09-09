@@ -23,7 +23,7 @@ async function run() {
   for(const lane of lanes) {
     const result=await db.from('partner_listing_research').select('*').in('status',['pending','error']).lt('attempts',3)
       .eq('listing->>_lane',lane).or(`checked_at.is.null,checked_at.lt.${new Date(Date.now()-7*86400000).toISOString()}`)
-      .order('created_at').limit(Math.ceil(limit/lanes.length));
+      .order('created_at',{ascending:false}).limit(Math.ceil(limit/lanes.length));
     if(result.error) throw new Error(result.error.message);pools.push(result.data);
   }
   const data=[];
