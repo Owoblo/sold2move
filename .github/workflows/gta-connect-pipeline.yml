@@ -2,6 +2,10 @@ name: GTA Existing Pipeline Connection
 on:
   workflow_dispatch:
     inputs:
+      check_only:
+        description: 'Read and verify the connected baseline without writing'
+        type: boolean
+        default: false
       apply:
         description: 'Seed the preserved September baseline after the read-only plan has been checked'
         type: boolean
@@ -38,13 +42,13 @@ jobs:
           name: gta-inventory-35897202958-1
           path: scripts/.gta-bridge-source/
       - name: Check baseline and preview database changes
-        if: ${{ !inputs.apply }}
+        if: ${{ !inputs.apply && !inputs.check_only }}
         run: node scripts/gta-pipeline-bridge.cjs --seed
       - name: Seed the baseline without mail or new-listing events
-        if: ${{ inputs.apply }}
+        if: ${{ inputs.apply && !inputs.check_only }}
         run: node scripts/gta-pipeline-bridge.cjs --seed --apply
       - name: Verify normal pipeline database reads without processing mail
-        if: ${{ inputs.apply }}
+        if: ${{ inputs.apply || inputs.check_only }}
         run: node scripts/gta-connection-readiness.cjs
       - uses: actions/upload-artifact@v4
         if: always()
