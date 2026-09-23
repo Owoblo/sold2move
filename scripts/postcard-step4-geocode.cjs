@@ -77,7 +77,7 @@ function parseStreet(str) {
   let value = normalize(str).replace(/[.,]/g, ' ');
   const number = value.match(/^(\d+[a-z]?)(?:\s|$)/)?.[1] || '';
   value = value.replace(/^\d+[a-z]?(?:\s*-\s*\d+[a-z]?)?\s*/, '');
-  value = value.replace(/\b(?:apt|apartment|unit|suite|ste)\s*#?\s*[a-z0-9-]+\b.*$/i, '');
+  value = value.replace(/\b(?:apt|apartment|unit|suite|ste)\b\s*#?\s*[a-z0-9-]+\b.*$/i, '');
   value = value.replace(/#\s*[a-z0-9-]+\b.*$/i, '');
   const words = value.split(/\s+/).filter(Boolean);
   const suffixKey = words.at(-1)?.replace(/\./g, '') || '';
@@ -88,7 +88,7 @@ function parseStreet(str) {
 
 function extractListingUnit(str) {
   const value = String(str || '');
-  return value.match(/\b(?:apt|apartment|unit|suite|ste)\s*#?\s*([a-z0-9-]+)\b/i)?.[1]?.toLowerCase()
+  return value.match(/\b(?:apt|apartment|unit|suite|ste)\b\s*#?\s*([a-z0-9-]+)\b/i)?.[1]?.toLowerCase()
     || value.match(/#\s*([a-z0-9-]+)\b/i)?.[1]?.toLowerCase()
     || '';
 }

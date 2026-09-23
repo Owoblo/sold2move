@@ -12,3 +12,12 @@ test('two-event lifecycle allows sold after just-listed, blocks repeated sold an
   assert.equal(applyOutputFilters([{...row,sold_postcard_sent_at:'2026-09-01'}],{}).finalListings.length,0);
   assert.equal(applyOutputFilters([{...row,postcard_send_count:2}],{}).finalListings.length,0);
 });
+
+const {verifyLocalAddress,extractListingUnit}=require('./postcard-step4-geocode.cjs');
+test('Stewart and Stephen are street names, while explicit suite markers preserve units',()=>{
+ for(const street of ['17 Stennett Dr','1515 Stewart Cres','83 Stevenson Rd N','185 Stephen Dr #101'])assert.equal(verifyLocalAddress({addressstreet:street,city:'Toronto',addressstate:'ON',addresszipcode:'M5V2T6'}).verified,true);
+ assert.equal(extractListingUnit('38 Stewart St #507'),'507');
+ assert.equal(extractListingUnit('38 Main St Ste 507'),'507');
+});
+
+test('current actor listingStatus uses camel case',()=>{assert.equal(statusDecision({listingStatus:'recentlySold'},observed).decision,'verified_sold');assert.equal(statusDecision({listingStatus:'forSale'},observed).decision,'excluded');assert.equal(statusDecision({listingStatus:'offMarket'},observed).decision,'held');});

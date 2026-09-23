@@ -12,7 +12,7 @@ const out = path.join(__dirname, '..', 'reports', 'gta-candidate-validation');
 const save = (name, value) => fs.writeFileSync(path.join(out, name), JSON.stringify(value, null, 2));
 function statusDecision(detail, observedAt) {
   if (!detail) return { decision: 'held', reason: 'no_current_detail' };
-  const status = String(detail.homeStatus || detail.hdpData?.homeInfo?.homeStatus || detail.status || '').toUpperCase();
+  const status = String(detail.homeStatus || detail.hdpData?.homeInfo?.homeStatus || detail.listingStatus || detail.status || '').trim().replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[\s-]+/g, '_').toUpperCase();
   if (['FOR_SALE','PENDING','COMING_SOON','ACTIVE','FOR_RENT','CONTINGENT'].includes(status)) return { decision: 'excluded', reason: `currently_${status.toLowerCase()}`, status };
   const events = (detail.priceHistory || []).filter(e => /^(sold|sale)$/i.test(String(e.event || '')))
     .map(e => ({ event: e.event, date: e.date, time: Date.parse(e.date) || Number(e.time) })).filter(e => Number.isFinite(e.time));
@@ -90,9 +90,13 @@ async function main() {
   save('preflight.json',{input:input.length,eligible_for_status_check:unique.kept.length,historical_send_rows:history.length,rejected});
   console.log(`Preflight: ${input.length} candidates, ${unique.kept.length} ready for status checks, ${rejected.length} excluded/held`);
   const byId=new Map();const ingest=items=>{for(const d of items){const id=String(d.zpid||d.id||String(d.url||d.detailUrl||'').match(/(\d+)_zpid/)?.[1]||'');if(id)byId.set(id,d);}};
-  const pilot=unique.kept.slice(0,25);
+  const recovery = process.env.GTA_VALIDATION_RECOVERY;
+  if(recovery && fs.existsSync(recovery))for(const file of fs.readdirSync(recovery).filter(f=>/^details-.*\.json$/.test(f)))ingest(JSON.parse(fs.readFileSync(path.join(recovery,file))));
+  const remaining=unique.kept.filter(r=>!byId.has(String(r.zpid)));
+  console.log(`Reused ${byId.size} existing detail results; ${remaining.length} still need checks`);
+  const pilot=remaining.slice(0,25);
   if(pilot.length){ingest(await details(pilot,'pilot'));if(!pilot.some(r=>byId.has(String(r.zpid))))throw new Error('Pilot returned no matching property IDs; holding remaining checks');}
-  const chunks=[];for(let i=25;i<unique.kept.length;i+=250)chunks.push(unique.kept.slice(i,i+250));
+  const chunks=[];for(let i=25;i<remaining.length;i+=250)chunks.push(remaining.slice(i,i+250));
   let next=0;const failures=[];
   await Promise.all(Array.from({length:Math.min(3,chunks.length)},async()=>{while(next<chunks.length){const idx=next++;try{ingest(await details(chunks[idx],String(idx+1)));}catch(e){failures.push({chunk:idx+1,error:e.message});save('failures.json',failures);}}}));
   const decisions=unique.kept.map(r=>({...r,...statusDecision(byId.get(String(r.zpid)),r.observed_at)}));

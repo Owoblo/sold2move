@@ -1,8 +1,14 @@
 name: GTA Candidate Status Validation
 on:
   workflow_dispatch:
+    inputs:
+      recover_run_id:
+        description: 'Reuse completed validation details from a prior run'
+        type: string
+        default: ''
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: gta-candidate-validation
   cancel-in-progress: false
@@ -20,8 +26,16 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - run: node --test scripts/test-gta-candidate-status.cjs
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.recover_run_id != '' }}
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.recover_run_id }}
+          name: gta-candidate-validation-${{ inputs.recover_run_id }}
+          path: scripts/.gta-validation-recovery/
       - run: node scripts/gta-validate-candidates.cjs
         env:
+          GTA_VALIDATION_RECOVERY: scripts/.gta-validation-recovery/
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
