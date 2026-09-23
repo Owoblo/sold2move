@@ -21,3 +21,5 @@ test('Stewart and Stephen are street names, while explicit suite markers preserv
 });
 
 test('current actor listingStatus uses camel case',()=>{assert.equal(statusDecision({listingStatus:'recentlySold'},observed).decision,'verified_sold');assert.equal(statusDecision({listingStatus:'forSale'},observed).decision,'excluded');assert.equal(statusDecision({listingStatus:'offMarket'},observed).decision,'held');});
+
+test('an explicit sold status with a dated old sale is held',()=>assert.equal(statusDecision({listingStatus:'sold',listingPriceHistory:[{event:'Sold',date:'2025-10-27'}]},observed).decision,'held'));

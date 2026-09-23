@@ -19,6 +19,7 @@ function statusDecision(detail, observedAt) {
   const sale = events.sort((a,b) => b.time-a.time)[0];
   const after = Date.parse(observedAt);
   if (sale && sale.time >= after && sale.time <= Date.now() && ['SOLD','RECENTLY_SOLD','OFF_MARKET'].includes(status)) return { decision: 'verified_sold', reason: 'sale_event_after_prior_active_observation', status, sale_date: new Date(sale.time).toISOString() };
+  if (sale && (sale.time < after || sale.time > Date.now())) return { decision: 'held', reason: 'sale_date_outside_comparison_window', status, sale_date: new Date(sale.time).toISOString() };
   if (['SOLD','RECENTLY_SOLD'].includes(status)) return { decision: 'verified_sold', reason: 'current_explicit_sold_status', status };
   if (status === 'OFF_MARKET') return { decision: 'held', reason: 'off_market_without_recent_sale_evidence', status };
   return { decision: 'held', reason: `unconfirmed_status:${status || 'missing'}`, status };
