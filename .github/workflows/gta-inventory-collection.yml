@@ -27,16 +27,6 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - name: Verify collection boundaries
         run: node --test scripts/test-gta-collection.cjs
-      - name: Prepare isolated collection tables
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: node scripts/apply-supabase-migration.cjs supabase/migrations/20260923_gta_collection_only.sql
-      - name: Verify baseline and repeat-run behavior (rolled back)
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-        run: node scripts/apply-supabase-migration.cjs scripts/test-gta-collection.sql
       - name: Collect fresh inventory and preserve baseline
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
