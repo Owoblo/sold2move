@@ -399,6 +399,7 @@ if (require.main === module) {
 
 module.exports = {
   run,
+  classifyProperty,
   normalizeClassification,
   parseClassificationAnswer,
   getInteriorPhotoUrls,

@@ -14,7 +14,7 @@ function statusDecision(detail, observedAt) {
   if (!detail) return { decision: 'held', reason: 'no_current_detail' };
   const status = String(detail.homeStatus || detail.hdpData?.homeInfo?.homeStatus || detail.listingStatus || detail.status || '').trim().replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[\s-]+/g, '_').toUpperCase();
   if (['FOR_SALE','PENDING','COMING_SOON','ACTIVE','FOR_RENT','CONTINGENT'].includes(status)) return { decision: 'excluded', reason: `currently_${status.toLowerCase()}`, status };
-  const events = (detail.priceHistory || []).filter(e => /^(sold|sale)$/i.test(String(e.event || '')))
+  const events = (detail.priceHistory || detail.listingPriceHistory || []).filter(e => /^(sold|sale)$/i.test(String(e.event || '')))
     .map(e => ({ event: e.event, date: e.date, time: Date.parse(e.date) || Number(e.time) })).filter(e => Number.isFinite(e.time));
   const sale = events.sort((a,b) => b.time-a.time)[0];
   const after = Date.parse(observedAt);
@@ -47,18 +47,7 @@ async function details(rows, key) {
   console.log(`Detail check ${key}: ${data.length} results`);
   return data;
 }
-async function main() {
-  fs.mkdirSync(out,{recursive:true});
-  const encoded = Array.from({length:6},(_,i)=>process.env[`GTA_CANDIDATES_${i+1}`]||'').join('');
-  const input = JSON.parse(zlib.gunzipSync(Buffer.from(encoded,'base64')));
-  const db = serviceClient(); if(!db) throw new Error('Service credentials required');
-  const downloaded = await db.storage.from('gta-inventory').download('latest.json'); if(downloaded.error)throw downloaded.error;
-  const snapshot = JSON.parse(await downloaded.data.text());
-  if(Date.now()-Date.parse(snapshot.collected_at)>48*3600000)throw new Error('Current inventory is older than 48 hours');
-  const active = snapshot.inventory.filter(r=>r.last_seen_at===snapshot.collected_at);
-  const activeIds = new Set(active.map(r=>String(r.zpid)));
-  const activeAddresses = new Set(active.map(r=>normalizeAddressKey({addressstreet:r.data.street,addresszipcode:r.data.postal_code})));
-  // Read every historical send, irrespective of legacy region labels or listing ID.
+async function readMailHistory(db) {
   const history = [];
   let lastId = null, scanned = 0;
   for(;;){
@@ -72,6 +61,21 @@ async function main() {
     if(data.length<1000)break;
     const next=data.at(-1).zpid;if(next===lastId)throw new Error('Mail history cursor did not advance');lastId=next;
   }
+  return history;
+}
+async function main() {
+  fs.mkdirSync(out,{recursive:true});
+  const encoded = Array.from({length:6},(_,i)=>process.env[`GTA_CANDIDATES_${i+1}`]||'').join('');
+  const input = JSON.parse(zlib.gunzipSync(Buffer.from(encoded,'base64')));
+  const db = serviceClient(); if(!db) throw new Error('Service credentials required');
+  const downloaded = await db.storage.from('gta-inventory').download('latest.json'); if(downloaded.error)throw downloaded.error;
+  const snapshot = JSON.parse(await downloaded.data.text());
+  if(Date.now()-Date.parse(snapshot.collected_at)>48*3600000)throw new Error('Current inventory is older than 48 hours');
+  const active = snapshot.inventory.filter(r=>r.last_seen_at===snapshot.collected_at);
+  const activeIds = new Set(active.map(r=>String(r.zpid)));
+  const activeAddresses = new Set(active.map(r=>normalizeAddressKey({addressstreet:r.data.street,addresszipcode:r.data.postal_code})));
+  // Read every historical send, irrespective of legacy region labels or listing ID.
+  const history = await readMailHistory(db);
   const rejected=[], prepared=[];
   for(const source of input){
     const r={...source};const address=normalizeAddressKey(r);
@@ -107,4 +111,4 @@ async function main() {
   const summary={checked_at:new Date().toISOString(),input_candidates:input.length,filtered_before_status_check:rejected.length,status_checked:byId.size,verified_sold_envelopes:selected.length,pdf_pages:pages,decisions:decisions.reduce((a,r)=>(a[r.reason]=(a[r.reason]||0)+1,a),{}),failures,mail_sent:0,recipient:'business@starmovers.ca',just_listed_note:'Separate event; prior just-listed mailing does not block sold. This run validates the missing August audience only.',address_check:'Existing local Canadian address format validation; not a postal deliverability guarantee.'};save('summary.json',summary);console.log(JSON.stringify(summary,null,2));
 }
 if(require.main===module)main().catch(e=>{console.error(e.message);process.exitCode=1;});
-module.exports={statusDecision};
+module.exports={statusDecision,readMailHistory};
