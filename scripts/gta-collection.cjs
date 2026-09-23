@@ -48,7 +48,7 @@ function mergeObservations(previous, rows, runId, collectedAt) {
 async function prepareStorage(db) {
   let { data: bucket, error } = await db.storage.getBucket(BUCKET);
   if (error) {
-    const result = await db.storage.createBucket(BUCKET, { public: false, fileSizeLimit: 104857600 });
+    const result = await db.storage.createBucket(BUCKET, { public: false });
     if (result.error) throw new Error(`Cannot prepare private GTA storage: ${result.error.message}`);
     bucket = { public: false };
   }
