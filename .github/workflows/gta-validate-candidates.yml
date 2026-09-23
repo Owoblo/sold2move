@@ -1,0 +1,39 @@
+name: GTA Candidate Status Validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gta-candidate-validation
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: node --test scripts/test-gta-candidate-status.cjs
+      - run: node scripts/gta-validate-candidates.cjs
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GTA_CANDIDATES_1: ${{ secrets.GTA_CANDIDATES_1 }}
+          GTA_CANDIDATES_2: ${{ secrets.GTA_CANDIDATES_2 }}
+          GTA_CANDIDATES_3: ${{ secrets.GTA_CANDIDATES_3 }}
+          GTA_CANDIDATES_4: ${{ secrets.GTA_CANDIDATES_4 }}
+          GTA_CANDIDATES_5: ${{ secrets.GTA_CANDIDATES_5 }}
+          GTA_CANDIDATES_6: ${{ secrets.GTA_CANDIDATES_6 }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gta-candidate-validation-${{ github.run_id }}
+          path: reports/gta-candidate-validation/
+          retention-days: 30
