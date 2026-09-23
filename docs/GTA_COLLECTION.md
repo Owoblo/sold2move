@@ -10,6 +10,10 @@ Inventory and quality reports are stored in the private Supabase Storage bucket
 successful run is the baseline. Updates preserve each property's first observation and baseline
 flag. Later observations are not automatically called newly listed or sold.
 Missing listings are never deleted or marked sold by this collector.
+Each later collection also stores `runs/<run-id>/changes.json`, comparing the
+previous observation with the current one by listing ID and street/municipality.
+It separates new candidates, disappeared candidates, and changed IDs at the same
+address. Listing dates and sold status still require verification before mailing.
 
 No postcard generation, print dispatch, mailing or email steps are present.
 This private bucket is separate from the existing postcard inventory.

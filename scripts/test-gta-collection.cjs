@@ -4,6 +4,22 @@ const { normalize, MUNICIPALITIES } = require('./gta-market-census.cjs');
 const { validateRows, mergeObservations, prepareStorage } = require('./gta-collection.cjs');
 const listing = (city, state = 'ON', id = 123) => normalize({ zpid: id, address: { city, state } });
 
+test('inventory diff distinguishes changed IDs, new properties and disappearances', () => {
+  const { compareInventories } = require('./gta-inventory-diff.cjs');
+  const old = [
+    { zpid: '1', street: '1 Main St', municipality: 'Toronto' },
+    { zpid: '2', street: '2 Main St', municipality: 'Toronto' },
+    { zpid: '3', street: '3 Main St', municipality: 'Toronto' },
+  ];
+  const result = compareInventories(old, [old[0], { ...old[1], zpid: '22' },
+    { zpid: '4', street: '4 Main St', municipality: 'Toronto' }]);
+  assert.equal(result.same_listing_id, 1);
+  assert.deepEqual(result.changed_id_same_address.map(r => r.zpid), ['2']);
+  assert.deepEqual(result.new_candidates.map(r => r.zpid), ['4']);
+  assert.deepEqual(result.sold_or_delisted_candidates.map(r => r.zpid), ['3']);
+  assert.equal(compareInventories([{ zpid: 'a' }], [{ zpid: 'b' }]).new_candidates.length, 1);
+});
+
 test('every GTA municipality shares the confirmed return address', () => {
   const { getRegionConfig } = require('./postcard-region-config.cjs');
   const config = getRegionConfig('toronto');

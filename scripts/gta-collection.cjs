@@ -6,6 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { MUNICIPALITIES, main: census } = require('./gta-market-census.cjs');
 const BUCKET = 'gta-inventory';
 const { getRegionConfig } = require('./postcard-region-config.cjs');
+const { compareInventories } = require('./gta-inventory-diff.cjs');
 
 function validateRows(rows) {
   const names = new Set(MUNICIPALITIES.map(m => m.name));
@@ -87,25 +88,35 @@ async function main() {
     : `local-${Date.now()}`;
   const { rows, report } = await census();
   const snapshot = mergeObservations(previous, rows, runId, collectedAt);
+  const changes = previous ? {
+    previous_observed_at: previous.collected_at, current_observed_at: collectedAt,
+    ...compareInventories(previous.inventory.filter(r => r.last_seen_at === previous.collected_at).map(r => r.data), rows),
+    verification_required: true,
+  } : { baseline: true, new_candidates: [], sold_or_delisted_candidates: [], verification_required: true };
   // Immutable run snapshots precede the latest pointer, so interrupted saves
   // cannot replace a valid baseline with a partial inventory.
   await putJson(storage, `runs/${runId}/inventory.json`, snapshot);
   await putJson(storage, `runs/${runId}/report.json`, report);
+  await putJson(storage, `runs/${runId}/changes.json`, changes);
   await putJson(storage, 'latest.json', snapshot, true);
   const summary = {
     run_id: runId, observed: snapshot.observed, inserted: snapshot.inserted,
     baseline: snapshot.baseline, baseline_run_id: snapshot.baseline_run_id,
     retained_inventory: snapshot.inventory.length, storage_bucket: BUCKET,
     return_address: getRegionConfig('toronto').returnAddressLines,
-    postcard_generation: 'held', reason: 'Historical comparison and listing verification pending',
+    new_candidates: changes.new_candidates.length,
+    sold_or_delisted_candidates: changes.sold_or_delisted_candidates.length,
+    postcard_generation: 'held', reason: 'Listing-date and sold-status verification pending',
   };
   fs.writeFileSync(path.join(__dirname, '.gta-census', 'collection-summary.json'), JSON.stringify(summary, null, 2));
+  fs.writeFileSync(path.join(__dirname, '.gta-census', 'changes.json'), JSON.stringify(changes, null, 2));
   console.log(JSON.stringify(summary, null, 2));
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
       `## GTA collection complete\n\n${summary.observed} listings observed; ${summary.inserted} first observations.\n\n` +
       `Initial baseline: ${summary.baseline}. Stored in private Supabase bucket: ${BUCKET}.\n\n` +
-      `Return address confirmed. Postcard generation held pending historical comparison and listing verification.\n\n` +
+      `${summary.new_candidates} newly observed candidates; ${summary.sold_or_delisted_candidates} sale/delisting candidates.\n\n` +
+      `Return address confirmed. Postcard generation held pending listing-date and sold-status verification.\n\n` +
       `Municipalities with no results: ${report.municipalities_with_zero_rows.join(', ') || 'none'}.\n`);
   }
 }
