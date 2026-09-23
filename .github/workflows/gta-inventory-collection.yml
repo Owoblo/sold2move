@@ -1,0 +1,54 @@
+name: GTA Inventory Collection — Printing Held
+
+on:
+  schedule:
+    - cron: '0 15 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gta-inventory-collection
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - name: Verify collection boundaries
+        run: node --test scripts/test-gta-collection.cjs
+      - name: Prepare isolated collection tables
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/apply-supabase-migration.cjs supabase/migrations/20260923_gta_collection_only.sql
+      - name: Verify baseline and repeat-run behavior (rolled back)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node scripts/apply-supabase-migration.cjs scripts/test-gta-collection.sql
+      - name: Collect fresh inventory and preserve baseline
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/gta-collection.cjs
+      - name: Save inventory and quality reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta-inventory-${{ github.run_id }}-${{ github.run_attempt }}
+          path: scripts/.gta-census/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 90
