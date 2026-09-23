@@ -12,7 +12,7 @@ function prepareRows(snapshot,raw){
  const source=new Map(raw.map(r=>[String(r.zpid||r.id),r]));const rows=[],excluded=[];
  for(const item of snapshot.inventory.filter(r=>r.last_seen_at===snapshot.collected_at)){
   const original=source.get(String(item.zpid));if(!original)throw Error(`Source missing inventory ID ${item.zpid}`);
-  const canonical={...original,listingAddress:{...original.listingAddress,city:item.municipality}};
+  const canonical={...original,listingAddress:{...original.listingAddress,street:item.data.street,city:item.municipality,state:item.data.state,zipCode:item.data.postal_code}};
   const row=normalizeResult(canonical,config,snapshot.collected_at);
   if(!row){excluded.push({zpid:item.zpid,reason:'no_usable_street_address'});continue;}
   row.search_days_on_zillow=item.data.days_on_zillow;
@@ -20,7 +20,7 @@ function prepareRows(snapshot,raw){
  }
  return {rows,excluded};
 }
-function makePlan(scraped,existing,observedAt,seed,cache=[]){
+function makePlan(scraped,existing,observedAt,seed,cache=[],observedIds=new Set(scraped.map(r=>r.zpid))){
  const prior=new Map(existing.map(r=>[String(r.zpid),r]));
  const protectedRows=scraped.filter(r=>prior.has(r.zpid)&&!legacyRegion(prior.get(r.zpid).region));
  const protectedIds=new Set(protectedRows.map(r=>r.zpid));
@@ -37,7 +37,7 @@ function makePlan(scraped,existing,observedAt,seed,cache=[]){
  for(const proposed of result.nextRows){
   const old=prior.get(proposed.zpid);
   if(!currentIds.has(proposed.zpid)){
-   if(seed)continue;
+   if(seed||observedIds.has(proposed.zpid))continue;
    if(old?.region!=='toronto')throw Error('Refusing to infer disappearance outside the GTA-owned inventory');
    const patch={zpid:proposed.zpid,status:proposed.status,lastseenat:proposed.lastseenat,missing_scrape_count:proposed.missing_scrape_count,glitch_suspected:proposed.glitch_suspected};
    const cached=cacheById.get(proposed.zpid);
@@ -52,7 +52,7 @@ function makePlan(scraped,existing,observedAt,seed,cache=[]){
   }
   if(old){for(const field of SEND_FIELDS)delete row[field];updates.push(row);}else inserts.push(row);
  }
- return {inserts,updates,statusUpdates,protectedIds:[...protectedIds],summary:{...result.summary,seed,insert_count:inserts.length,update_count:updates.length,sold_update_count:statusUpdates.length,protected_other_region_count:protectedIds.size}};
+ return {inserts,updates,statusUpdates,protectedIds:[...protectedIds],summary:{...result.summary,soldCount:statusUpdates.filter(r=>r.status==='sold').length,seed,insert_count:inserts.length,update_count:updates.length,sold_update_count:statusUpdates.length,protected_other_region_count:protectedIds.size}};
 }
 async function readOptional(storage,name){
  const split=name.lastIndexOf('/'),directory=split<0?'':name.slice(0,split),file=name.slice(split+1);
@@ -77,7 +77,7 @@ async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDG
  const existing=await fetchByIds(db,allIds);
  let cache=[];const dirs=await storage.list('qualification',{limit:100});if(dirs.error)throw dirs.error;
  for(const entry of (dirs.data||[]).filter(r=>r.name.startsWith('gta-full-qualified-20260923-'))){const classified=await readOptional(storage,`qualification/${entry.name}/classified.json`);if(classified)cache.push(...classified);}
- const plan=makePlan(prepared.rows,existing,snapshot.collected_at,seed,cache);
+ const plan=makePlan(prepared.rows,existing,snapshot.collected_at,seed,cache,new Set(snapshot.inventory.filter(r=>r.last_seen_at===snapshot.collected_at).map(r=>String(r.zpid))));
  const out=path.join(__dirname,'..','reports','gta-pipeline-bridge');fs.mkdirSync(out,{recursive:true});
  const summary={snapshot_run_id:snapshot.run_id,preserved_inventory:snapshot.observed,immutable_snapshot_matches:true,...plan.summary,unaddressable_records:prepared.excluded.length,classification_cache_rows:cache.length,applied:false,mail_sent:0};
  fs.writeFileSync(path.join(out,'plan.json'),JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));
