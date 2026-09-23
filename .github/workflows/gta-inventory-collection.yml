@@ -36,7 +36,7 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - name: Verify collection boundaries
-        run: node --test scripts/test-gta-collection.cjs
+        run: node --test scripts/test-gta-collection.cjs scripts/test-gta-listing-age.cjs
       - name: Recover preserved raw data without another scrape
         if: ${{ inputs.recover_github_run_id != '' }}
         uses: actions/download-artifact@v4

@@ -76,6 +76,8 @@ function photoCount(item) {
   return field(item, 'imgSrc', 'thumbnail', 'mainImage') ? 1 : 0;
 }
 
+const { listingAge } = require('./gta-listing-age.cjs');
+
 function normalize(item) {
   const address = addressOf(item);
   const rawCity = String(address.city || field(item, 'city') || '').trim();
@@ -97,7 +99,8 @@ function normalize(item) {
     baths: field(item, 'baths', 'bathrooms'),
     area: field(item, 'area', 'livingArea', 'sqft'),
     property_type: field(item, 'homeType', 'propertyType', 'contentType'),
-    days_on_zillow: field(item, 'daysOnZillow', 'timeOnZillow'),
+    days_on_zillow: listingAge(item).days,
+    listing_age_source: listingAge(item).source,
     detail_url: field(item, 'propertyUrl', 'detailUrl', 'url'),
     image_url: item.mainImage?.url || field(item, 'imgSrc', 'thumbnail', 'mainImage'),
     photo_count: photoCount(item),
@@ -196,7 +199,7 @@ async function main() {
       ...Object.fromEntries(fields.map(name => [`${name}_pct`, completeness(rows, name)])),
       with_photos_pct: rows.length ? Math.round(1000 * rows.filter(row => row.photo_count > 0).length / rows.length) / 10 : 0,
       plausible_sale_price_pct: rows.length ? Math.round(1000 * rows.filter(row => row.price >= 10000 && row.price <= 100000000).length / rows.length) / 10 : 0,
-      usable_days_on_zillow_pct: rows.length ? Math.round(1000 * rows.filter(row => Number(row.days_on_zillow) >= 0).length / rows.length) / 10 : 0,
+      usable_days_on_zillow_pct: rows.length ? Math.round(1000 * rows.filter(row => row.days_on_zillow != null && Number.isFinite(Number(row.days_on_zillow)) && Number(row.days_on_zillow) >= 0).length / rows.length) / 10 : 0,
     };
   });
 
@@ -225,7 +228,7 @@ async function main() {
     quality_gates: {
       plausible_sale_price_rows: gta.filter(row => row.price >= 10000 && row.price <= 100000000).length,
       implausible_sale_price_rows: gta.filter(row => !(row.price >= 10000 && row.price <= 100000000)).length,
-      usable_days_on_zillow_rows: gta.filter(row => Number(row.days_on_zillow) >= 0).length,
+      usable_days_on_zillow_rows: gta.filter(row => row.days_on_zillow != null && Number.isFinite(Number(row.days_on_zillow)) && Number(row.days_on_zillow) >= 0).length,
       note: 'Presence is not validity: Zillow commonly emits -1 for unknown days and low rental-like or price-on-request values in its Canadian for-sale feed.',
     },
     municipalities,

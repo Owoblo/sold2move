@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');const {listingAge}=require('./gta-listing-age.cjs');
+test('missing age is not zero days',()=>{for(const value of [null,undefined,'',-1,'unknown'])assert.equal(listingAge({daysOnZillow:value}).days,null);});
+test('explicit listing age label recovers unsupported numeric field',()=>{assert.equal(listingAge({daysOnZillow:-1,cardHighlight:'timeOnInfo',marketingTagline:'2 hours ago'}).days,2/24);assert.equal(listingAge({cardHighlight:'daysOnZillow',marketingTagline:'7 days on Zillow'}).days,7);});
+test('price-cut and open-house labels cannot become listing dates',()=>{assert.equal(listingAge({cardHighlight:'priceCut',marketingTagline:'2 hours ago'}).days,null);assert.equal(listingAge({cardHighlight:'timeOnInfo',marketingTagline:'Open: Sun 2-4pm'}).days,null);});
+test('known older numeric age wins over a recent label',()=>assert.equal(listingAge({daysOnZillow:90,cardHighlight:'timeOnInfo',marketingTagline:'2 hours ago'}).days,90));
