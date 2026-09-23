@@ -4,3 +4,8 @@ test('baseline seeds existing inventory without triggering either mailing event'
 test('normal changes use existing just-listed and disappearance lifecycle',()=>{const r=makePlan([row('2','20 Main St')],[{...row('1','10 Main St'),status:'active'}],now,false);assert.equal(r.inserts[0].status,'just_listed');assert.equal(r.statusUpdates[0].status,'sold');});
 test('listings owned by another region cannot be reassigned or inferred sold',()=>{const r=makePlan([row('1','10 Main St')],[{...row('1','10 Main St'),region:'wkg',status:'active'}],now,false);assert.equal(r.inserts.length+r.updates.length+r.statusUpdates.length,0);assert.deepEqual(r.protectedIds,['1']);});
 test('changed listing ID at the same known address is not newly listed',()=>{const r=makePlan([row('2','10 Main St')],[{...row('1','10 Main St'),status:'active'}],now,false);assert.equal(r.inserts[0].status,'active');assert.equal(r.statusUpdates.length,0);});
+
+test('missing connection marker is distinct from an unreadable existing marker',async()=>{
+ const {readOptional}=require('./gta-pipeline-bridge.cjs');assert.equal(await readOptional({list:async()=>({data:[]})},'pipeline/state.json'),null);
+ await assert.rejects(readOptional({list:async()=>({data:[{name:'state.json'}]}),download:async()=>({error:{message:'access denied'}})},'pipeline/state.json'),/existing/);
+});

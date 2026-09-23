@@ -50,7 +50,13 @@ function makePlan(scraped,existing,observedAt,seed,cache=[]){
  }
  return {inserts,updates,statusUpdates,protectedIds:[...protectedIds],summary:{...result.summary,seed,insert_count:inserts.length,update_count:updates.length,sold_update_count:statusUpdates.length,protected_other_region_count:protectedIds.size}};
 }
-async function readOptional(storage,name){const r=await storage.download(name);if(r.error){if(['404','400'].includes(String(r.error.statusCode))&&/not found|does not exist/i.test(r.error.message))return null;throw Error(`Cannot read ${name}: ${r.error.message}`);}return JSON.parse(await r.data.text());}
+async function readOptional(storage,name){
+ const split=name.lastIndexOf('/'),directory=split<0?'':name.slice(0,split),file=name.slice(split+1);
+ const listed=await storage.list(directory,{search:file,limit:100});if(listed.error)throw Error(`Cannot inspect ${name}: ${listed.error.message}`);
+ if(!listed.data.some(r=>r.name===file))return null;
+ const r=await storage.download(name);if(r.error)throw Error(`Cannot read existing ${name}: ${r.error.message}`);
+ return JSON.parse(await r.data.text());
+}
 async function put(storage,name,data){const r=await storage.upload(name,JSON.stringify(data),{contentType:'application/json',upsert:true});if(r.error)throw r.error;}
 async function fetchByIds(db,ids){const rows=[];for(let i=0;i<ids.length;i+=100){const r=await db.from('listings').select('*').in('zpid',ids.slice(i,i+100));if(r.error)throw Error(`GTA listing read: ${r.error.message}`);rows.push(...r.data);}return rows;}
 async function regionIds(db){const ids=[];for(let from=0;;from+=500){const r=await db.from('listings').select('zpid').eq('region','toronto').order('zpid').range(from,from+499);if(r.error)throw Error(`GTA ownership read: ${r.error.message}`);ids.push(...r.data.map(x=>String(x.zpid)));if(r.data.length<500)break;}return ids;}
@@ -90,4 +96,4 @@ async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDG
  summary.applied=true;summary.verified_database_rows=verified.size;summary.backup=key;fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));return {summary,plan};
 }
 if(require.main===module)synchronize({apply:process.argv.includes('--apply'),seed:process.argv.includes('--seed')}).catch(e=>{console.error(e.message);process.exitCode=1;});
-module.exports={prepareRows,makePlan,synchronize};
+module.exports={prepareRows,makePlan,synchronize,readOptional};
