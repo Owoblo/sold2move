@@ -1,0 +1,61 @@
+name: GTA Full Qualified Audience Comparison
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: gta-full-qualified-comparison-20260923
+  cancel-in-progress: false
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GTA_FULL_RAW_FILE: scripts/.gta-full-source/raw.json
+      GTA_VISION_MODEL: gpt-4o
+      GTA_AUGUST_AUDIENCE_1: ${{ secrets.GTA_AUGUST_AUDIENCE_1 }}
+      GTA_AUGUST_AUDIENCE_2: ${{ secrets.GTA_AUGUST_AUDIENCE_2 }}
+      GTA_AUGUST_AUDIENCE_3: ${{ secrets.GTA_AUGUST_AUDIENCE_3 }}
+      GTA_AUGUST_AUDIENCE_4: ${{ secrets.GTA_AUGUST_AUDIENCE_4 }}
+      GTA_AUGUST_AUDIENCE_5: ${{ secrets.GTA_AUGUST_AUDIENCE_5 }}
+      GTA_AUGUST_AUDIENCE_6: ${{ secrets.GTA_AUGUST_AUDIENCE_6 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: node --test scripts/test-gta-full-qualified-comparison.cjs
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '35897202958'
+          name: gta-inventory-35897202958-1
+          path: scripts/.gta-full-source/
+      - name: Submit or recover full-inventory August-policy qualification
+        run: node scripts/gta-full-qualified-comparison.cjs
+        env:
+          GTA_QUALIFICATION_MODE: submit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gta-full-qualification-submission-${{ github.run_id }}
+          path: reports/gta-full-qualified-comparison/*.json
+          retention-days: 90
+      - name: Collect classifications and compare qualified audiences
+        run: node scripts/gta-full-qualified-comparison.cjs
+        env:
+          GTA_QUALIFICATION_MODE: collect
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gta-full-qualified-comparison-${{ github.run_id }}
+          path: reports/gta-full-qualified-comparison/
+          retention-days: 90
