@@ -5,6 +5,7 @@ const path = require('node:path');
 const { createClient } = require('@supabase/supabase-js');
 const { MUNICIPALITIES, main: census } = require('./gta-market-census.cjs');
 const BUCKET = 'gta-inventory';
+const { getRegionConfig } = require('./postcard-region-config.cjs');
 
 function validateRows(rows) {
   const names = new Set(MUNICIPALITIES.map(m => m.name));
@@ -95,7 +96,8 @@ async function main() {
     run_id: runId, observed: snapshot.observed, inserted: snapshot.inserted,
     baseline: snapshot.baseline, baseline_run_id: snapshot.baseline_run_id,
     retained_inventory: snapshot.inventory.length, storage_bucket: BUCKET,
-    postcard_generation: 'held', reason: 'Return address pending',
+    return_address: getRegionConfig('toronto').returnAddressLines,
+    postcard_generation: 'held', reason: 'Historical comparison and listing verification pending',
   };
   fs.writeFileSync(path.join(__dirname, '.gta-census', 'collection-summary.json'), JSON.stringify(summary, null, 2));
   console.log(JSON.stringify(summary, null, 2));
@@ -103,7 +105,7 @@ async function main() {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
       `## GTA collection complete\n\n${summary.observed} listings observed; ${summary.inserted} first observations.\n\n` +
       `Initial baseline: ${summary.baseline}. Stored in private Supabase bucket: ${BUCKET}.\n\n` +
-      `Postcard generation held: return address pending.\n\n` +
+      `Return address confirmed. Postcard generation held pending historical comparison and listing verification.\n\n` +
       `Municipalities with no results: ${report.municipalities_with_zero_rows.join(', ') || 'none'}.\n`);
   }
 }

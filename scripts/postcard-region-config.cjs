@@ -1,4 +1,20 @@
+const { MUNICIPALITIES: GTA_MUNICIPALITIES } = require('./gta-coverage.cjs');
 const REGION_CONFIG = {
+  toronto: {
+    key: 'toronto',
+    label: 'Toronto / GTA / Hamilton',
+    outputPrefix: 'Toronto',
+    printRecipientLabel: 'Toronto / GTA print batch',
+    state: 'ON',
+    cities: GTA_MUNICIPALITIES.map(city => city.name),
+    returnAddressConfirmed: true,
+    collectionOnly: true,
+    returnAddressLines: [
+      'SSM | Saturn Star Movers',
+      '426-2285 The Collegeway',
+      'Mississauga, ON L5L 2M3',
+    ],
+  },
 
   // ─── ZONE 1: WINDSOR / ESSEX COUNTY ──────────────────────────────────────
   windsor: {
