@@ -2,7 +2,7 @@
 
 The `GTA Inventory Collection — Printing Held` workflow collects fresh inventory
 on Mondays at 15:00 UTC and supports manual dispatch. Coverage is the 25 GTA
-municipalities plus Hamilton defined in `scripts/gta-market-census.cjs`.
+municipalities plus Hamilton defined in `scripts/gta-coverage.cjs`.
 
 Inventory and quality reports are stored in the private Supabase Storage bucket
 `gta-inventory`. Each run has an immutable `runs/<run-id>/inventory.json` and
@@ -13,9 +13,23 @@ Missing listings are never deleted or marked sold by this collector.
 
 No postcard generation, print dispatch, mailing or email steps are present.
 This private bucket is separate from the existing postcard inventory.
-The return address remains unset. Enabling printing later requires an explicit
-connection to the postcard pipeline, a confirmed address, and revalidation of
+The shared return address is confirmed in `scripts/postcard-region-config.cjs`
+under `toronto` (also accepted as `gta`):
+
+    SSM | Saturn Star Movers
+    426-2285 The Collegeway
+    Mississauga, ON L5L 2M3
+
+The address applies to all covered GTA municipalities and Hamilton. No property
+management name is included. Enabling printing requires an explicit
+connection to the postcard pipeline and revalidation of
 listing eligibility; old baseline inventory must not become new-listing leads.
+
+`GTA Historical Inventory Comparison` reads the existing residential listing
+tables and compares their GTA records with the latest private inventory. Its
+artifact includes per-table dates/status counts, missing candidates, and newly
+observed candidates. A database record's absence alone does not prove a sale;
+different source dates or partial historical coverage can affect comparisons.
 
 Each run retains raw observations, a CSV, municipality counts, unmapped labels,
 and a persistence summary as a GitHub artifact for 90 days. Private Supabase

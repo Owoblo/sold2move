@@ -4,6 +4,15 @@ const { normalize, MUNICIPALITIES } = require('./gta-market-census.cjs');
 const { validateRows, mergeObservations, prepareStorage } = require('./gta-collection.cjs');
 const listing = (city, state = 'ON', id = 123) => normalize({ zpid: id, address: { city, state } });
 
+test('every GTA municipality shares the confirmed return address', () => {
+  const { getRegionConfig } = require('./postcard-region-config.cjs');
+  const config = getRegionConfig('toronto');
+  assert.equal(getRegionConfig('gta'), config);
+  assert.deepEqual(config.cities, MUNICIPALITIES.map(m => m.name));
+  assert.deepEqual(config.returnAddressLines.slice(1), ['426-2285 The Collegeway', 'Mississauga, ON L5L 2M3']);
+  assert.equal(config.returnAddressConfirmed, true);
+});
+
 test('current actor address, price, photo and URL fields are preserved', () => {
   const row = normalize({ zpid: '123', listingAddress: {
     street: '1 Test Street', city: 'Caledon', state: 'ON', zipCode: 'L7E2L6',

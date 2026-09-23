@@ -297,7 +297,8 @@ const REGION_CONFIG = {
 };
 
 function getRegionConfig(region) {
-  return REGION_CONFIG[(region || 'windsor').toLowerCase()] || REGION_CONFIG.windsor;
+  const key = (region || 'windsor').toLowerCase();
+  return REGION_CONFIG[key === 'gta' ? 'toronto' : key] || REGION_CONFIG.windsor;
 }
 
 function listRegionKeys() {

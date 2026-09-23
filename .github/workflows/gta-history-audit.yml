@@ -1,6 +1,11 @@
 name: GTA Historical Inventory Comparison
 on:
   workflow_dispatch:
+    inputs:
+      sources_only:
+        type: boolean
+        default: false
+        description: 'Recover prior full GTA census without repeating the database scan'
 permissions:
   contents: read
 jobs:
@@ -17,10 +22,17 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
       - name: Read earlier database listings and compare with GTA inventory
+        if: ${{ !inputs.sources_only }}
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/gta-history-audit.cjs
+      - name: Find and compare the earlier full GTA census
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/gta-previous-census.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
