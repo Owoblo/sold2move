@@ -1,0 +1,42 @@
+name: GTA Scrape Cost Audit
+on:
+  push:
+    branches: [agent/gta-cost-audit]
+    paths: [.github/workflows/gta-cost-audit.yml]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read existing Apify run billing metadata
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          (async () => {
+            const id = 'cfGY9J9l1japSe3ib';
+            const res = await fetch(`https://api.apify.com/v2/actor-runs/${id}`, {
+              headers: { Authorization: `Bearer ${process.env.APIFY_TOKEN}` }
+            });
+            if (!res.ok) throw new Error(`Apify billing read failed: HTTP ${res.status}`);
+            const { data: d } = await res.json();
+            const summary = {
+              checked_at: new Date().toISOString(),
+              id: d.id, status: d.status,
+              startedAt: d.startedAt, finishedAt: d.finishedAt,
+              usageTotalUsd: d.usageTotalUsd, usageUsd: d.usageUsd,
+              chargedEventCounts: d.chargedEventCounts,
+              pricingInfo: d.pricingInfo, stats: d.stats
+            };
+            fs.writeFileSync('gta-scrape-cost.json', JSON.stringify(summary, null, 2));
+            console.log(JSON.stringify(summary, null, 2));
+          })().catch(e => { console.error(e.message); process.exit(1); });
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gta-scrape-cost
+          path: gta-scrape-cost.json
+          retention-days: 30
