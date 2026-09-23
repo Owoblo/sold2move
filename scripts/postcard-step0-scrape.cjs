@@ -461,65 +461,25 @@ async function fetchExistingByZpids(supabase, zpids) {
 }
 
 async function fetchExistingRegionListings(supabase, regionConfig) {
-  // Split into two queries per city, cheapest first:
-  //   1. SLIM — `sold_archived` rows accumulate forever and are only checked
-  //      for status (glitch detection at line 276). Pulling 24 columns
-  //      including the heavy JSONB carouselphotos for thousands of these
-  //      rows is what triggered Postgres statement_timeout on Ottawa.
-  //   2. FULL — only live statuses need their lifecycle metadata
-  //      (postcard timestamps, photo fetch state, etc.).
-  //
-  // Both calls use explicit .limit() so Supabase's default 1000-row cap
-  // can't silently truncate as the table grows.
-  let rows = [];
-  for (const city of regionConfig.cities) {
-    const archived = await supabase
-      .from('listings')
-      .select(ARCHIVED_COLUMNS)
-      .eq('region', regionConfig.key)
-      .eq('city', city)
-      .eq('status', 'sold_archived')
-      .limit(50000);
-    if (archived.error) {
-      throw new Error(`Failed to fetch archived listings for ${city}: ${archived.error.message}`);
+  // Read the entire region in bounded pages. A large .limit() cannot override
+  // the API's row cap, and one city-sized query can time out on photo JSON.
+  // Region-wide reads also include unknown/null city labels without silently
+  // treating existing records as new listings on the next scrape.
+  const rows = [];
+  const pageSize = 500;
+  for (const [label, columns, statuses] of [
+    ['archived', ARCHIVED_COLUMNS, ['sold_archived']],
+    ['live', LIVE_COLUMNS, ['active', 'just_listed', 'sold']],
+  ]) {
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabase.from('listings').select(columns)
+        .eq('region', regionConfig.key).in('status', statuses)
+        .order('zpid', { ascending: true }).range(offset, offset + pageSize - 1);
+      if (error) throw new Error(`Failed to fetch ${label} listings for ${regionConfig.key} at offset ${offset}: ${error.message}`);
+      rows.push(...(data || []));
+      if (!data || data.length < pageSize) break;
     }
-
-    const live = await supabase
-      .from('listings')
-      .select(LIVE_COLUMNS)
-      .eq('region', regionConfig.key)
-      .eq('city', city)
-      .in('status', ['active', 'just_listed', 'sold'])
-      .limit(10000);
-    if (live.error) {
-      throw new Error(`Failed to fetch live listings for ${city}: ${live.error.message}`);
-    }
-
-    if (archived.data?.length) rows = rows.concat(archived.data);
-    if (live.data?.length) rows = rows.concat(live.data);
   }
-
-  // Also fetch any listings stored under cities not in our known list (e.g. "Essex County").
-  // Without this, unknown-city listings would never appear in existingRows and would be
-  // re-inserted as just_listed on every single run.
-  const knownCities = regionConfig.cities;
-  const unknownArchived = await supabase
-    .from('listings')
-    .select(ARCHIVED_COLUMNS)
-    .eq('region', regionConfig.key)
-    .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
-    .eq('status', 'sold_archived')
-    .limit(50000);
-  const unknownLive = await supabase
-    .from('listings')
-    .select(LIVE_COLUMNS)
-    .eq('region', regionConfig.key)
-    .not('city', 'in', `(${knownCities.map(c => `"${c}"`).join(',')})`)
-    .in('status', ['active', 'just_listed', 'sold'])
-    .limit(10000);
-  if (unknownArchived.data?.length) rows = rows.concat(unknownArchived.data);
-  if (unknownLive.data?.length) rows = rows.concat(unknownLive.data);
-
   return rows;
 }
 
@@ -944,4 +904,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, normalizeForUpsert, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };
+module.exports = { run, fetchExistingRegionListings, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, normalizeForUpsert, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };

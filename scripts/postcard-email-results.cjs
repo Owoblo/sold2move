@@ -24,7 +24,8 @@ const { getRegionConfig } = require('./postcard-lib.cjs');
 const OWNER_EMAIL = 'business@starmovers.ca';
 const SOLD_REPORT_EMAIL = 'business@starmovers.ca';
 const PRINT_EMAIL = 'loonieprints@gmail.com';
-const REGION_PRINT_EMAILS = { ottawa: 'hello@dexamovers.ca' };
+const { GTA_RECIPIENT, isGtaRegion, assertGtaRecipient } = require('./gta-delivery-policy.cjs');
+const REGION_PRINT_EMAILS = { ottawa: 'hello@dexamovers.ca', toronto: GTA_RECIPIENT, gta: GTA_RECIPIENT };
 const REGION_REPORT_EMAILS = {
   ottawa: ['hello@dexamovers.ca'],
 };
@@ -36,6 +37,7 @@ function reportRecipients(region, primaryEmail) {
 }
 
 function sendEmail(to, subject, html, attachments, region = 'windsor', idempotencyKey = null) {
+  assertGtaRecipient(region, to);
   return new Promise((resolve, reject) => {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -331,9 +333,12 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   const hash = file => require('node:crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   if (artifacts.batch_id !== manifest.batch_id || artifacts.csv_sha256 !== hash(csvPath) || artifacts.pdf_sha256 !== hash(pdfPath)) throw new Error('Print files differ from the generated batch');
   const printEmail = REGION_PRINT_EMAILS[region] || PRINT_EMAIL;
-  const claim = await db.rpc('claim_postcard_print_batch', { p_batch_id: manifest.batch_id, p_recipient: printEmail });
-  if (claim.error) throw new Error(claim.error.message);
-  if (claim.data.already_submitted) { console.log('Batch already submitted; no emails resent.'); return claim.data; }
+  const ownerOnly = isGtaRegion(region);
+  if (!ownerOnly) {
+    const claim = await db.rpc('claim_postcard_print_batch', { p_batch_id: manifest.batch_id, p_recipient: printEmail });
+    if (claim.error) throw new Error(claim.error.message);
+    if (claim.data.already_submitted) { console.log('Batch already submitted; no emails resent.'); return claim.data; }
+  }
 
   const csvContent = fs.readFileSync(csvPath).toString('base64');
   const pdfContent = fs.readFileSync(pdfPath).toString('base64');
@@ -471,6 +476,14 @@ async function sendPostcardEmail(region, csvPath, pdfPath) {
   console.log(`Sending full report to ${ownerRecipients.join(', ')}...`);
   const ownerResult = await sendEmail(ownerRecipients, subject, html, attachments, region, `postcard-owner-${manifest.batch_id}`);
   console.log(`  Owner email sent! ID: ${ownerResult.id}`);
+  if (ownerOnly) {
+    fs.writeFileSync(path.join(pipelineDir, 'owner-delivery-receipt.json'), JSON.stringify({
+      batch_id: manifest.batch_id, provider_id: ownerResult.id, recipient: GTA_RECIPIENT,
+      accepted_at: new Date().toISOString(), print_shop_submission: false,
+    }, null, 2));
+    console.log('GTA delivered to owner only; no printer submission or mailing status change.');
+    return ownerResult;
+  }
 
   // --- Print shop email: simple instruction, PDF only ---
   const printHtml = `

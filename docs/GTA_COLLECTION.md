@@ -15,7 +15,10 @@ previous observation with the current one by listing ID and street/municipality.
 It separates new candidates, disappeared candidates, and changed IDs at the same
 address. Listing dates and sold status still require verification before mailing.
 
-No postcard generation, print dispatch, mailing or email steps are present.
+The collection workflow emails inventory/change reports to the owner only.
+Those reports explicitly state zero qualified envelopes; sample proofs are not
+attached as production batches. No postcard generation, print dispatch or
+mailing step is present in the collection workflow.
 This private bucket is separate from the existing postcard inventory.
 The shared return address is confirmed in `scripts/postcard-region-config.cjs`
 under `toronto` (also accepted as `gta`):
@@ -28,6 +31,16 @@ The address applies to all covered GTA municipalities and Hamilton. No property
 management name is included. Enabling printing requires an explicit
 connection to the postcard pipeline and revalidation of
 listing eligibility; old baseline inventory must not become new-listing leads.
+
+GTA batches and replacement artwork are restricted to `business@starmovers.ca`.
+The email transport rejects any other recipient for `toronto`/`gta`. Delivering
+an owner-review batch does not claim printer submission or mark listings mailed.
+The envelope format is front-only A7, 522 × 378 points, with the existing
+paper-stock layout and return address under the wordmark. There is no back page.
+
+Every collection checks for missing municipalities and major inventory drops
+before replacing the previous snapshot. An incomplete collection fails visibly
+and retains its reports while preserving the earlier comparison baseline.
 
 `GTA Historical Inventory Comparison` reads the existing residential listing
 tables and compares their GTA records with the latest private inventory. Its

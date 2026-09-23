@@ -1,8 +1,26 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { normalize, MUNICIPALITIES } = require('./gta-market-census.cjs');
-const { validateRows, mergeObservations, prepareStorage } = require('./gta-collection.cjs');
+const { validateRows, mergeObservations, prepareStorage, assessCoverage } = require('./gta-collection.cjs');
 const listing = (city, state = 'ON', id = 123) => normalize({ zpid: id, address: { city, state } });
+
+test('GTA delivery cannot use the print shop or CC another recipient', () => {
+  const { assertGtaRecipient } = require('./gta-delivery-policy.cjs');
+  for (const region of ['toronto', 'gta', 'TORONTO']) {
+    assert.doesNotThrow(() => assertGtaRecipient(region, 'business@starmovers.ca'));
+    assert.throws(() => assertGtaRecipient(region, 'loonieprints@gmail.com'), /restricted/);
+    assert.throws(() => assertGtaRecipient(region, ['business@starmovers.ca', 'loonieprints@gmail.com']), /restricted/);
+  }
+  assert.doesNotThrow(() => assertGtaRecipient('windsor', 'loonieprints@gmail.com'));
+});
+
+test('partial municipal coverage cannot replace the complete baseline', () => {
+  const rows = MUNICIPALITIES.flatMap((m, index) => Array.from({ length: 40 }, (_, i) => listing(m.name, 'ON', index * 100 + i + 1)));
+  const previous = mergeObservations(null, rows, 'baseline', '2026-09-23T00:00:00Z');
+  assert.equal(assessCoverage(previous, rows).passed, true);
+  assert.equal(assessCoverage(previous, rows.filter(r => r.municipality !== 'Toronto')).passed, false);
+  assert.equal(assessCoverage(previous, rows.filter(r => r.municipality !== 'Toronto' || Number(r.zpid) < 10)).passed, false);
+});
 
 test('inventory diff distinguishes changed IDs, new properties and disappearances', () => {
   const { compareInventories } = require('./gta-inventory-diff.cjs');

@@ -8,6 +8,8 @@ const REGION_CONFIG = {
     state: 'ON',
     cities: GTA_MUNICIPALITIES.map(city => city.name),
     returnAddressConfirmed: true,
+    deliveryEmail: 'business@starmovers.ca',
+    printShopDeliveryEnabled: false,
     collectionOnly: true,
     returnAddressLines: [
       'SSM | Saturn Star Movers',

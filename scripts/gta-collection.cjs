@@ -47,6 +47,29 @@ function mergeObservations(previous, rows, runId, collectedAt) {
   };
 }
 
+function assessCoverage(previous, rows) {
+  const currentCounts = rows.reduce((counts, row) => {
+    counts[row.municipality] = (counts[row.municipality] || 0) + 1;
+    return counts;
+  }, {});
+  const previousRows = previous ? previous.inventory.filter(r => r.last_seen_at === previous.collected_at) : [];
+  const previousCounts = previousRows.reduce((counts, row) => {
+    counts[row.municipality] = (counts[row.municipality] || 0) + 1;
+    return counts;
+  }, {});
+  const problems = [];
+  for (const municipality of MUNICIPALITIES) {
+    const now = currentCounts[municipality.name] || 0;
+    const before = previousCounts[municipality.name] || 0;
+    if (!now) problems.push(`${municipality.name}: no listings returned`);
+    else if (before >= 20 && now < before * 0.5) problems.push(`${municipality.name}: ${before} to ${now} listings (below 50%)`);
+  }
+  if (previousRows.length && rows.length < previousRows.length * 0.7) {
+    problems.push(`Total inventory fell below 70% of the previous collection`);
+  }
+  return { passed: !problems.length, problems, previous_counts: previousCounts, current_counts: currentCounts };
+}
+
 async function prepareStorage(db) {
   let { data: bucket, error } = await db.storage.getBucket(BUCKET);
   if (error) {
@@ -87,6 +110,9 @@ async function main() {
     ? `github-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT || '1'}`
     : `local-${Date.now()}`;
   const { rows, report } = await census();
+  const coverage = assessCoverage(previous, rows);
+  fs.writeFileSync(path.join(__dirname, '.gta-census', 'coverage.json'), JSON.stringify(coverage, null, 2));
+  if (!coverage.passed) throw new Error(`GTA collection appears incomplete; previous baseline preserved: ${coverage.problems.join('; ')}`);
   const snapshot = mergeObservations(previous, rows, runId, collectedAt);
   const changes = previous ? {
     previous_observed_at: previous.collected_at, current_observed_at: collectedAt,
@@ -122,4 +148,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
-module.exports = { validateRows, mergeObservations, prepareStorage };
+module.exports = { validateRows, mergeObservations, prepareStorage, assessCoverage };

@@ -5,6 +5,10 @@ on:
     - cron: '0 15 * * 1'
   workflow_dispatch:
     inputs:
+      send_report:
+        description: 'Send the inventory/change report to business@starmovers.ca only'
+        type: boolean
+        default: true
       recover_github_run_id:
         description: 'Optional failed GTA collection run to reuse (dataset must be under 24 hours old)'
         required: false
@@ -49,6 +53,11 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GTA_RECOVER_RAW_FILE: ${{ inputs.recover_github_run_id != '' && 'scripts/.gta-recovery/raw.json' || '' }}
         run: node scripts/gta-collection.cjs
+      - name: Email owner-only inventory and change report
+        if: ${{ github.event_name == 'schedule' || inputs.send_report }}
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/gta-email-results.cjs
       - name: Save inventory and quality reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,0 +1,34 @@
+name: Monday Inventory Readiness Check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - name: Run inventory regression checks
+        run: |
+          node --test scripts/test-region-inventory-pagination.cjs scripts/test-gta-collection.cjs
+          node scripts/test-postcard-lifecycle.cjs
+      - name: Check live inventory reads and render front-only GTA envelope
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/monday-inventory-readiness.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monday-readiness-${{ github.run_id }}
+          path: reports/monday-readiness/
+          retention-days: 90
