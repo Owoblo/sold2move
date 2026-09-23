@@ -1,0 +1,51 @@
+name: GTA Existing Pipeline Connection
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Seed the preserved September baseline after the read-only plan has been checked'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: gta-inventory-collection
+  cancel-in-progress: false
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GTA_BRIDGE_RAW_FILE: scripts/.gta-bridge-source/raw.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - run: node --test scripts/test-gta-pipeline-bridge.cjs scripts/test-gta-collection.cjs scripts/test-gta-candidate-status.cjs
+      - run: node scripts/test-postcard-lifecycle.cjs
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: '35897202958'
+          name: gta-inventory-35897202958-1
+          path: scripts/.gta-bridge-source/
+      - name: Check baseline and preview database changes
+        if: ${{ !inputs.apply }}
+        run: node scripts/gta-pipeline-bridge.cjs --seed
+      - name: Seed the baseline without mail or new-listing events
+        if: ${{ inputs.apply }}
+        run: node scripts/gta-pipeline-bridge.cjs --seed --apply
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gta-pipeline-connection-${{ github.run_id }}
+          path: reports/gta-pipeline-bridge/
+          retention-days: 90
