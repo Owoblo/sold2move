@@ -60,9 +60,17 @@ async function main() {
   const activeAddresses = new Set(active.map(r=>normalizeAddressKey({addressstreet:r.data.street,addresszipcode:r.data.postal_code})));
   // Read every historical send, irrespective of legacy region labels or listing ID.
   const history = [];
-  for(let from=0;;from+=500){
-    const {data,error}=await db.from('listings').select('zpid,addressstreet,addresszipcode,just_listed_postcard_sent_at,sold_postcard_sent_at,postcard_send_count,last_postcard_sent_at').or('just_listed_postcard_sent_at.not.is.null,sold_postcard_sent_at.not.is.null,postcard_send_count.gt.0').order('zpid').range(from,from+499);
-    if(error)throw new Error(`Mail history unavailable: ${error.message}`); history.push(...data); if(data.length<500)break;
+  let lastId = null, scanned = 0;
+  for(;;){
+    let query=db.from('listings').select('zpid,addressstreet,addresszipcode,just_listed_postcard_sent_at,sold_postcard_sent_at,postcard_send_count,last_postcard_sent_at').order('zpid').limit(1000);
+    if(lastId!==null)query=query.gt('zpid',lastId);
+    const {data,error}=await query;
+    if(error)throw new Error(`Mail history unavailable: ${error.message}`);
+    history.push(...data.filter(r=>r.just_listed_postcard_sent_at||r.sold_postcard_sent_at||Number(r.postcard_send_count)>0));
+    scanned+=data.length;
+    if(scanned%25000===0)console.log(`Mail history: checked ${scanned} records`);
+    if(data.length<1000)break;
+    const next=data.at(-1).zpid;if(next===lastId)throw new Error('Mail history cursor did not advance');lastId=next;
   }
   const rejected=[], prepared=[];
   for(const source of input){
