@@ -27,7 +27,8 @@ function makePlan(scraped,existing,observedAt,seed,cache=[]){
  const owned=scraped.filter(r=>!protectedIds.has(r.zpid));
  // Baseline initialization deliberately invokes seed mode and never promotes
  // old inventory. Mail history is retained, including legacy Ontario rows.
- const inputs=existing.filter(r=>legacyRegion(r.region)&&(r.region==='toronto'||owned.some(x=>x.zpid===String(r.zpid))))
+ const ownedIds=new Set(owned.map(r=>r.zpid));
+ const inputs=existing.filter(r=>legacyRegion(r.region)&&(r.region==='toronto'||ownedIds.has(String(r.zpid))))
   .map(r=>({...r,zpid:String(r.zpid),region:'toronto',...(seed?{status:'active'}:{})}));
  const result=buildLifecycleRows(owned,inputs,config,observedAt,{seedMode:seed});
  const currentIds=new Set(owned.map(r=>r.zpid));
@@ -38,7 +39,10 @@ function makePlan(scraped,existing,observedAt,seed,cache=[]){
   if(!currentIds.has(proposed.zpid)){
    if(seed)continue;
    if(old?.region!=='toronto')throw Error('Refusing to infer disappearance outside the GTA-owned inventory');
-   statusUpdates.push({zpid:proposed.zpid,status:proposed.status,lastseenat:proposed.lastseenat,missing_scrape_count:proposed.missing_scrape_count,glitch_suspected:proposed.glitch_suspected});continue;
+   const patch={zpid:proposed.zpid,status:proposed.status,lastseenat:proposed.lastseenat,missing_scrape_count:proposed.missing_scrape_count,glitch_suspected:proposed.glitch_suspected};
+   const cached=cacheById.get(proposed.zpid);
+   if(cached&&!old.property_classified_at){const c=normalizeClassification(cached.classification,old);Object.assign(patch,{market_segment:c.market_segment,listing_categories:c.listing_categories,occupancy_state:c.occupancy_state,outreach_target:c.outreach_target,property_signals:c.property_signals,classification_confidence:c.confidence,classification_reasons:c.reasons,property_classified_at:'2026-09-23T17:40:59.298Z',is_furnished:['furnished','partially_furnished'].includes(c.occupancy_state),furniture_confidence:c.confidence,furniture_needs_retry:false});}
+   statusUpdates.push(patch);continue;
   }
   let row=normalizeForUpsert({...proposed,region:'toronto',...(seed?{status:'active'}:{})});
   const cached=cacheById.get(row.zpid);
@@ -82,7 +86,9 @@ async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDG
  // Preserve the complete old GTA/legacy rows before any write; other-region
  // records are never included in the mutation plan.
  const changedIds=new Set([...plan.updates,...plan.statusUpdates].map(r=>r.zpid));
- await put(storage,key+'/previous-records.json',existing.filter(r=>changedIds.has(String(r.zpid))));
+ const originals=existing.filter(r=>changedIds.has(String(r.zpid)));
+ for(let i=0;i<originals.length;i+=100)await put(storage,`${key}/previous-records-${i/100}.json`,originals.slice(i,i+100));
+ await put(storage,key+'/backup-manifest.json',{records:originals.length,parts:Math.ceil(originals.length/100),snapshot_run_id:snapshot.run_id});
  await put(storage,key+'/inserted-ids.json',plan.inserts.map(r=>r.zpid));
  for(let i=0;i<plan.inserts.length;i+=100){const r=await db.from('listings').upsert(plan.inserts.slice(i,i+100),{onConflict:'zpid',ignoreDuplicates:true});if(r.error)throw Error(`GTA seed insert: ${r.error.message}`);}
  // Group identical column sets: omit mailing fields altogether on updates,
@@ -90,8 +96,9 @@ async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDG
  const groups=new Map();for(const row of plan.updates){const clean=Object.fromEntries(Object.entries(row).filter(([,v])=>v!==undefined));const key=Object.keys(clean).sort().join(',');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(clean);}
  for(const rows of groups.values())for(let i=0;i<rows.length;i+=100){const r=await db.from('listings').upsert(rows.slice(i,i+100),{onConflict:'zpid'});if(r.error)throw Error(`GTA inventory update: ${r.error.message}`);}
  for(const row of plan.statusUpdates){const {zpid,...patch}=row;const r=await db.from('listings').update(patch).eq('zpid',zpid).eq('region','toronto');if(r.error)throw Error(`GTA lifecycle update: ${r.error.message}`);}
+ const existingById=new Map(existing.map(r=>[String(r.zpid),r]));
  const verify=await fetchByIds(db,[...new Set([...plan.inserts,...plan.updates].map(r=>r.zpid))]);const verified=new Map(verify.map(r=>[String(r.zpid),r]));
- for(const row of [...plan.inserts,...plan.updates]){const saved=verified.get(row.zpid);if(!saved||saved.region!=='toronto'||saved.status!==row.status)throw Error(`GTA write verification failed for ${row.zpid}`);const old=existing.find(r=>String(r.zpid)===row.zpid);if(old)for(const field of SEND_FIELDS)if(JSON.stringify(saved[field]??null)!==JSON.stringify(old[field]??null))throw Error(`Mail history changed during sync: ${row.zpid}/${field}`);}
+ for(const row of [...plan.inserts,...plan.updates]){const saved=verified.get(row.zpid);if(!saved||saved.region!=='toronto'||saved.status!==row.status)throw Error(`GTA write verification failed for ${row.zpid}`);const old=existingById.get(row.zpid);if(old)for(const field of SEND_FIELDS)if(JSON.stringify(saved[field]??null)!==JSON.stringify(old[field]??null))throw Error(`Mail history changed during sync: ${row.zpid}/${field}`);}
  await put(storage,'pipeline/state.json',{baseline_run_id:marker?.baseline_run_id||snapshot.run_id,last_applied_run_id:snapshot.run_id,last_observed_at:snapshot.collected_at,baseline_seeded:true,backup:key,owned_current_count:verified.size});
  summary.applied=true;summary.verified_database_rows=verified.size;summary.backup=key;fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));return {summary,plan};
 }

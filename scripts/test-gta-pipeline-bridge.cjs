@@ -9,3 +9,9 @@ test('missing connection marker is distinct from an unreadable existing marker',
  const {readOptional}=require('./gta-pipeline-bridge.cjs');assert.equal(await readOptional({list:async()=>({data:[]})},'pipeline/state.json'),null);
  await assert.rejects(readOptional({list:async()=>({data:[{name:'state.json'}]}),download:async()=>({error:{message:'access denied'}})},'pipeline/state.json'),/existing/);
 });
+
+test('baseline photo qualification is retained when the next scrape first misses a property',()=>{
+ const cache=[{zpid:'1',classification:{market_segment:'owner_occupied',occupancy_state:'furnished',outreach_target:'homeowner',confidence:0.95}}];
+ const r=makePlan([],[{...row('1','10 Main St'),status:'active'}],now,false,cache);
+ assert.equal(r.statusUpdates[0].status,'sold');assert.equal(r.statusUpdates[0].is_furnished,true);assert.equal(r.statusUpdates[0].outreach_target,'homeowner');
+});

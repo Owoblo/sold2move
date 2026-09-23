@@ -43,6 +43,9 @@ jobs:
       - name: Seed the baseline without mail or new-listing events
         if: ${{ inputs.apply }}
         run: node scripts/gta-pipeline-bridge.cjs --seed --apply
+      - name: Verify normal pipeline database reads without processing mail
+        if: ${{ inputs.apply }}
+        run: node scripts/gta-connection-readiness.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
