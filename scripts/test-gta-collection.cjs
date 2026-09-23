@@ -4,6 +4,21 @@ const { normalize, MUNICIPALITIES } = require('./gta-market-census.cjs');
 const { validateRows, mergeObservations, prepareStorage } = require('./gta-collection.cjs');
 const listing = (city, state = 'ON', id = 123) => normalize({ zpid: id, address: { city, state } });
 
+test('current actor address, price, photo and URL fields are preserved', () => {
+  const row = normalize({ zpid: '123', listingAddress: {
+    street: '1 Test Street', city: 'Caledon', state: 'ON', zipCode: 'L7E2L6',
+  }, listingPrice: { amount: 799000 }, propertyUrl: 'https://example.com/123_zpid/',
+  photoCount: 12, mainImage: { url: 'https://example.com/image.jpg' }, bedrooms: 3, bathrooms: 2 });
+  assert.equal(row.municipality, 'Caledon');
+  assert.equal(row.street, '1 Test Street');
+  assert.equal(row.postal_code, 'L7E2L6');
+  assert.equal(row.price, 799000);
+  assert.equal(row.photo_count, 12);
+  assert.equal(row.beds, 3);
+  assert.equal(row.detail_url, 'https://example.com/123_zpid/');
+  assert.equal(row.image_url, 'https://example.com/image.jpg');
+});
+
 test('Toronto boroughs and GTA communities map to their municipalities', () => {
   for (const [city, owner] of [['York', 'Toronto'], ['Scarborough', 'Toronto'],
     ['Georgetown', 'Halton Hills'], ['Bowmanville', 'Clarington'], ['King City', 'King']]) {

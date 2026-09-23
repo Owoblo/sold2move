@@ -68,6 +68,10 @@ for (const municipality of MUNICIPALITIES) {
 }
 
 function addressOf(item) {
+  if (item.listingAddress && typeof item.listingAddress === 'object') {
+    const a = item.listingAddress;
+    return { streetAddress: a.street, city: a.city, state: a.state, zipcode: a.zipCode };
+  }
   if (item.address && typeof item.address === 'object') return item.address;
   const home = item.hdpData?.homeInfo || {};
   if (typeof item.address === 'string') {
@@ -92,7 +96,8 @@ function field(item, ...names) {
 }
 
 function photoCount(item) {
-  for (const name of ['responsivePhotos', 'originalPhotos', 'photos', 'images', 'big']) {
+  if (Number.isFinite(item.photoCount)) return item.photoCount;
+  for (const name of ['listingPhotos', 'responsivePhotos', 'originalPhotos', 'photos', 'images', 'big']) {
     if (Array.isArray(item[name])) return item[name].length;
   }
   return field(item, 'imgSrc', 'thumbnail', 'mainImage') ? 1 : 0;
@@ -102,8 +107,8 @@ function normalize(item) {
   const address = addressOf(item);
   const rawCity = String(address.city || field(item, 'city') || '').trim();
   const owners = labelOwners.get(key(rawCity)) || [];
-  const zpid = String(field(item, 'zpid', 'id') || (field(item, 'detailUrl', 'url') || '').match(/(\d+)_zpid/)?.[1] || '');
-  const rawPrice = field(item, 'unformattedPrice', 'price', 'listPrice');
+  const zpid = String(field(item, 'zpid', 'id') || (field(item, 'propertyUrl', 'detailUrl', 'url') || '').match(/(\d+)_zpid/)?.[1] || '');
+  const rawPrice = item.listingPrice?.amount ?? field(item, 'unformattedPrice', 'price', 'listPrice', 'listingPrice');
   const price = typeof rawPrice === 'number' ? rawPrice : Number(String(rawPrice || '').replace(/[^0-9.]/g, '')) || null;
   const state = String(address.state || 'ON').toUpperCase();
   return {
@@ -120,8 +125,8 @@ function normalize(item) {
     area: field(item, 'area', 'livingArea', 'sqft'),
     property_type: field(item, 'homeType', 'propertyType', 'contentType'),
     days_on_zillow: field(item, 'daysOnZillow', 'timeOnZillow'),
-    detail_url: field(item, 'detailUrl', 'url'),
-    image_url: field(item, 'imgSrc', 'thumbnail', 'mainImage'),
+    detail_url: field(item, 'propertyUrl', 'detailUrl', 'url'),
+    image_url: item.mainImage?.url || field(item, 'imgSrc', 'thumbnail', 'mainImage'),
     photo_count: photoCount(item),
     description: field(item, 'description', 'homeDescription'),
   };
@@ -167,7 +172,7 @@ async function recoverLatestSuccessfulDataset(token) {
 }
 
 async function main() {
-  if (!process.env.APIFY_TOKEN) throw new Error('APIFY_TOKEN is required');
+  if (!process.env.APIFY_TOKEN && !process.env.GTA_RECOVER_RAW_FILE) throw new Error('APIFY_TOKEN is required');
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
   const urls = [];
@@ -179,9 +184,21 @@ async function main() {
   }
   console.log(`GTA census: ${MUNICIPALITIES.length} municipalities, ${urls.length} search cells`);
 
-  const raw = process.env.RECOVER_LATEST === 'true'
-    ? await recoverLatestSuccessfulDataset(process.env.APIFY_TOKEN)
-    : await runSearchScraper(process.env.APIFY_TOKEN, urls);
+  let raw;
+  if (process.env.GTA_RECOVER_RAW_FILE) {
+    raw = JSON.parse(fs.readFileSync(process.env.GTA_RECOVER_RAW_FILE, 'utf8'));
+    const expected = new Set(urls);
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    if (!Array.isArray(raw) || !raw.length || raw.some(row =>
+      !expected.has(row.sourceSearchUrl) || !(Date.parse(row.scrapedAt) >= cutoff))) {
+      throw new Error('Recovery requires a GTA dataset from these search cells, scraped within 24 hours');
+    }
+    console.log(`Reusing ${raw.length} preserved GTA observations; no new Apify run`);
+  } else {
+    raw = process.env.RECOVER_LATEST === 'true'
+      ? await recoverLatestSuccessfulDataset(process.env.APIFY_TOKEN)
+      : await runSearchScraper(process.env.APIFY_TOKEN, urls);
+  }
   fs.writeFileSync(path.join(OUT_DIR, 'raw.json'), JSON.stringify(raw, null, 2));
 
   const normalizedAll = raw.map(normalize);
