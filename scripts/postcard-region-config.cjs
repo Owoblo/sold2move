@@ -10,7 +10,7 @@ const REGION_CONFIG = {
     returnAddressConfirmed: true,
     deliveryEmail: 'business@starmovers.ca',
     printShopDeliveryEnabled: false,
-    collectionOnly: true,
+    collectionOnly: false,
     returnAddressLines: [
       'SSM | Saturn Star Movers',
       '426-2285 The Collegeway',

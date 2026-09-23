@@ -29,7 +29,7 @@ async function main() {
     <p><strong>Newly observed candidates:</strong> ${changes.new_candidates.length}</p>
     <p><strong>Sale/delisting candidates:</strong> ${changes.sold_or_delisted_candidates.length}</p>
     <p><strong>Qualified envelopes attached: 0.</strong> These are inventory comparison reports;
-    candidate properties have not yet completed mailing qualification. Missing listings are not confirmed sales.</p>
+    these candidate lists are before the final mailing filters. Any qualified envelope PDF is delivered in a separate owner-only batch email. Missing listings use the existing inferred-sold rule, not independent sale confirmation.</p>
     <p>GTA delivery goes only to business@starmovers.ca. No print-shop submission occurred.</p>`;
   const result = await sendEmail(GTA_RECIPIENT, 'GTA inventory report — candidate lists, no qualified envelopes',
     html, attachments, 'toronto', `gta-inventory-${summary.run_id}`);

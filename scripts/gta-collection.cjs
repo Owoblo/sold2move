@@ -132,7 +132,7 @@ async function main() {
     return_address: getRegionConfig('toronto').returnAddressLines,
     new_candidates: changes.new_candidates.length,
     sold_or_delisted_candidates: changes.sold_or_delisted_candidates.length,
-    postcard_generation: 'held', reason: 'Listing-date and sold-status verification pending',
+    postcard_generation: 'pending_existing_pipeline', reason: 'Existing regional pipeline performs qualification and envelope generation after collection',
   };
   fs.writeFileSync(path.join(__dirname, '.gta-census', 'collection-summary.json'), JSON.stringify(summary, null, 2));
   fs.writeFileSync(path.join(__dirname, '.gta-census', 'changes.json'), JSON.stringify(changes, null, 2));
@@ -142,7 +142,7 @@ async function main() {
       `## GTA collection complete\n\n${summary.observed} listings observed; ${summary.inserted} first observations.\n\n` +
       `Initial baseline: ${summary.baseline}. Stored in private Supabase bucket: ${BUCKET}.\n\n` +
       `${summary.new_candidates} newly observed candidates; ${summary.sold_or_delisted_candidates} sale/delisting candidates.\n\n` +
-      `Return address confirmed. Postcard generation held pending listing-date and sold-status verification.\n\n` +
+      `Return address confirmed. Existing regional pipeline performs qualification and envelope generation after collection.\n\n` +
       `Municipalities with no results: ${report.municipalities_with_zero_rows.join(', ') || 'none'}.\n`);
   }
 }

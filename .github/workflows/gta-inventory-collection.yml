@@ -1,4 +1,4 @@
-name: GTA Inventory Collection — Printing Held
+name: GTA Collection and Existing Postcard Pipeline
 
 on:
   schedule:
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,6 +53,20 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GTA_RECOVER_RAW_FILE: ${{ inputs.recover_github_run_id != '' && 'scripts/.gta-recovery/raw.json' || '' }}
         run: node scripts/gta-collection.cjs
+      - name: Run existing qualification, lifecycle and envelope stages for GTA
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          # Server-side pipeline only. The shared helper's historical variable
+          # name is ANON_KEY, but GTA uses the service role for these DB reads.
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          GOOGLE_GEOCODING_API_KEY: ${{ secrets.GOOGLE_GEOCODING_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GTA_BRIDGE_RAW_FILE: scripts/.gta-census/raw.json
+          GTA_OWNER_DELIVERY: ${{ (github.event_name == 'schedule' || inputs.send_report) && 'true' || 'false' }}
+        run: node scripts/gta-existing-pipeline.cjs
       - name: Email owner-only inventory and change report
         if: ${{ github.event_name == 'schedule' || inputs.send_report }}
         env:
@@ -64,6 +78,19 @@ jobs:
         with:
           name: gta-inventory-${{ github.run_id }}-${{ github.run_attempt }}
           path: scripts/.gta-census/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Save existing-pipeline output and connection audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gta-postcards-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            scripts/.pipeline-toronto/
+            reports/gta-pipeline-bridge/
+            Toronto_Postcards_*.pdf
+            Toronto_Postcards_*.csv
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 90

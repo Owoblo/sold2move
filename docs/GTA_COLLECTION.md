@@ -1,56 +1,93 @@
-# Toronto / GTA collection
+# Toronto / GTA pipeline
 
-The `GTA Inventory Collection — Printing Held` workflow collects fresh inventory
-on Mondays at 15:00 UTC and supports manual dispatch. Coverage is the 25 GTA
-municipalities plus Hamilton defined in `scripts/gta-coverage.cjs`.
+## Scheduled and manual runs
 
-Inventory and quality reports are stored in the private Supabase Storage bucket
-`gta-inventory`. Each run has an immutable `runs/<run-id>/inventory.json` and
-`report.json`; `latest.json` holds the latest cumulative inventory. The first
-successful run is the baseline. Updates preserve each property's first observation and baseline
-flag. Later observations are not automatically called newly listed or sold.
-Missing listings are never deleted or marked sold by this collector.
-Each later collection also stores `runs/<run-id>/changes.json`, comparing the
-previous observation with the current one by listing ID and street/municipality.
-It separates new candidates, disappeared candidates, and changed IDs at the same
-address. Listing dates and sold status still require verification before mailing.
+`GTA Collection and Existing Postcard Pipeline` runs on Mondays at 15:00 UTC.
+It also supports manual dispatch. It covers the 25 GTA municipalities plus
+Hamilton in `scripts/gta-coverage.cjs`.
 
-The collection workflow emails inventory/change reports to the owner only.
-Those reports explicitly state zero qualified envelopes; sample proofs are not
-attached as production batches. No postcard generation, print dispatch or
-mailing step is present in the collection workflow.
-This private bucket is separate from the existing postcard inventory.
-The shared return address is confirmed in `scripts/postcard-region-config.cjs`
-under `toronto` (also accepted as `gta`):
+1. Collect the full inventory once, checking municipality coverage and large
+   count drops before replacing the saved snapshot.
+2. Preserve the current and immutable per-run inventories in the private
+   Supabase Storage bucket `gta-inventory`.
+3. `gta-pipeline-bridge.cjs` adapts that census into `listings`, using the existing
+   `buildLifecycleRows` function from `postcard-step0-scrape.cjs`.
+4. `gta-existing-pipeline.cjs` runs the existing regional pipeline with
+   `--region toronto --skip-scrape`. It uses the same filtering, photo fetching,
+   classification, address checks, output rules, and staging as the other regions.
+   It does not run a second market scrape.
+5. Qualified outputs go to the owner only. The inventory/change report is a
+   separate report, not a claim that every inventory candidate is mail-ready.
+
+The ordinary lifecycle remains in force: new IDs at new addresses enter the
+just-listed path; a known address under another ID is not a new lead; first
+absence enters the existing inferred-sold path. Inferred sold can include
+withdrawn listings and is not independent confirmation of a sale. Existing
+freshness and quality filters still apply. Mailing history allows the separate
+just-listed and sold events and prevents duplicate events and excess sends.
+
+## September baseline and protection of existing regions
+
+The immutable September 23 census is `runs/github-35897202958-1/inventory.json`:
+25,520 observed properties. `latest.json` preserves the cumulative inventory.
+Each subsequent run also retains its report and observation differences.
+
+The September baseline was connected as **existing active inventory**, creating
+no new-listing or sold events: 25,496 GTA-owned records, with 24 records already
+owned by other regions excluded from GTA mutations. Legacy `Ontario, Canada`
+records that belong to this census retain their mailing history while being
+assigned to the GTA pipeline. Other regional ownership is protected.
+
+`pipeline/state.json` records the applied snapshot. Before any listing write,
+the bridge saves the old records and inserted IDs under `pipeline/backups/`.
+Updates omit all mailing-history columns and verify preserved values afterward.
+The original storage snapshots are not rewritten by baseline connection.
+
+A missing or unreadable baseline stops processing. Failed writes do not advance
+the applied-state marker. Replaying the baseline is tested to produce no new
+lifecycle events. `GTA Existing Pipeline Connection` supports read-only checks;
+its `check_only` input never seeds or processes mail.
+
+## Qualification recovery
+
+The August comparison is separate from the normal scheduled lifecycle. August
+contained a qualified audience, not a full market census. The full September
+recovery uses the original August photo prompt and export criteria: furnished,
+ordinary homeowner resale, homeowner outreach, confidence at least 0.9, plus
+its original deterministic checks.
+
+Of 24,013 submitted September classifications, 20,275 returned parsed results;
+3,738 remained unresolved. The complete historical comparison is therefore
+held, not presented as finished. Recovered classification evidence is stored
+privately and imported into baseline records; missing evidence remains subject
+to the normal pipeline's qualification/retry rules. The earlier 125-envelope
+review was an age-limited, explicit-sale-only subset and is not the complete
+August/September comparison or a batch that was sent.
+
+## Owner delivery and envelope format
+
+GTA output and replacement artwork are restricted to `business@starmovers.ca`.
+The email transport rejects other recipients, including Loonie Prints.
+Owner delivery does not claim printer submission or mark records mailed.
+Actual mailing is recorded through the existing confirmation process.
+
+Envelopes use the existing front-only A7 layout, 522 × 378 points, with this
+return address for all GTA municipalities and Hamilton:
 
     SSM | Saturn Star Movers
     426-2285 The Collegeway
     Mississauga, ON L5L 2M3
 
-The address applies to all covered GTA municipalities and Hamilton. No property
-management name is included. Enabling printing requires an explicit
-connection to the postcard pipeline and revalidation of
-listing eligibility; old baseline inventory must not become new-listing leads.
+There is no back page or property-management name.
 
-GTA batches and replacement artwork are restricted to `business@starmovers.ca`.
-The email transport rejects any other recipient for `toronto`/`gta`. Delivering
-an owner-review batch does not claim printer submission or mark listings mailed.
-The envelope format is front-only A7, 522 × 378 points, with the existing
-paper-stock layout and return address under the wordmark. There is no back page.
+## Retained evidence
 
-Every collection checks for missing municipalities and major inventory drops
-before replacing the previous snapshot. An incomplete collection fails visibly
-and retains its reports while preserving the earlier comparison baseline.
+GitHub artifacts retain raw observations, municipality counts, unmapped labels,
+change reports, generated outputs, and pipeline audit files for 90 days. Private
+Supabase storage retains successful inventory snapshots and connection backups.
+Ambiguous source labels remain reported instead of being assigned arbitrarily.
 
-`GTA Historical Inventory Comparison` reads the existing residential listing
-tables and compares their GTA records with the latest private inventory. Its
-artifact includes per-table dates/status counts, missing candidates, and newly
-observed candidates. A database record's absence alone does not prove a sale;
-different source dates or partial historical coverage can affect comparisons.
-
-Each run retains raw observations, a CSV, municipality counts, unmapped labels,
-and a persistence summary as a GitHub artifact for 90 days. Private Supabase
-storage retains every successful inventory snapshot without an expiration.
-Ambiguous labels (including
-Thornhill, shared by Markham and Vaughan) remain in the review report rather
-than being assigned arbitrarily. Zero-result municipalities are reported.
+Activation was checked using the live saved baseline, database read-back,
+normal pipeline reads, same-snapshot replay, simulated new/missing events,
+and the existing regional lifecycle regression suite. No paid scrape or mailing
+is part of the read-only connection checks.
