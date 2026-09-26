@@ -1,0 +1,32 @@
+name: Recover saved postcard inventory
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Saved successful Apify inventory run ID
+        required: true
+        type: string
+      previous_run_id:
+        description: Optional previous inventory run for comparison
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download saved datasets
+        env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          RECOVERY_RUN_ID: ${{ inputs.run_id }}
+          RECOVERY_PREVIOUS_RUN_ID: ${{ inputs.previous_run_id }}
+        run: node scripts/recover-postcard-inventory.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovered-postcard-inventory-${{ github.run_id }}
+          path: reports/postcard-inventory-recovery/
+          retention-days: 90
