@@ -132,11 +132,19 @@ jobs:
             --region ottawa
 
       - name: Email Ottawa freshness audit fallback
-        if: always() && steps.ottawa_files.outputs.found != 'true'
+        if: always() && steps.ottawa_run.outcome == 'success' && steps.ottawa_files.outputs.found != 'true'
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           node scripts/postcard-email-results.cjs --region ottawa --freshness-audit-only
+
+      - name: Email Ottawa pipeline failure notice
+        if: always() && steps.ottawa_run.outcome != 'success'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          node scripts/postcard-email-results.cjs --region ottawa --pipeline-failure \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Report actual scrape costs to owner
         if: always()

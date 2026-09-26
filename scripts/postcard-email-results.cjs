@@ -308,6 +308,23 @@ async function sendFreshnessAuditFromPipeline(region) {
   return auditRows;
 }
 
+async function sendPipelineFailureEmail(region, runUrl) {
+  region = (region || 'windsor').toLowerCase();
+  const label = getRegionConfig(region).label;
+  const recipients = reportRecipients(region, OWNER_EMAIL);
+  const safeUrl = String(runUrl || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const html = `<div style="font-family:Arial,sans-serif;max-width:650px">
+    <h2>${label} postcard pipeline failed</h2>
+    <p>The run did not complete, so no postcard listings CSV or print PDF was generated. Any separate scrape-cost email reports actor charges only; it does not mean the postcard pipeline succeeded.</p>
+    <p><a href="${safeUrl}">Open this run's logs and artifacts</a></p>
+    <p>Do not use an earlier batch as a substitute for this run.</p>
+  </div>`;
+  const id = String(runUrl || '').match(/\/runs\/(\d+)/)?.[1];
+  const result = await sendEmail(recipients, `${label} postcard pipeline FAILED — no listings generated`, html, undefined, region, id ? `postcard-failure-${id}` : null);
+  console.log(`Pipeline failure notice sent to ${recipients.join(', ')}. ID: ${result.id}`);
+  return result;
+}
+
 async function sendPostcardEmail(region, csvPath, pdfPath) {
   region = (region || 'windsor').toLowerCase();
   const regionConfig = getRegionConfig(region);
@@ -561,12 +578,17 @@ if (require.main === module) {
   let pdfPath = null;
   let region = 'windsor';
   let freshnessAuditOnly = false;
+  let pipelineFailure = false;
+  let runUrl = '';
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--region') {
       region = args[++i];
     } else if (args[i] === '--freshness-audit-only') {
       freshnessAuditOnly = true;
+    } else if (args[i] === '--pipeline-failure') {
+      pipelineFailure = true;
+      runUrl = args[++i] || '';
     } else if (!csvPath) {
       csvPath = args[i];
     } else if (!pdfPath) {
@@ -577,6 +599,14 @@ if (require.main === module) {
   if (freshnessAuditOnly) {
     sendFreshnessAuditFromPipeline(region).catch(err => {
       console.error('Freshness audit email failed:', err.message);
+      process.exit(1);
+    });
+    return;
+  }
+
+  if (pipelineFailure) {
+    sendPipelineFailureEmail(region, runUrl).catch(err => {
+      console.error('Pipeline failure email failed:', err.message);
       process.exit(1);
     });
     return;
@@ -594,7 +624,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = { sendEmail, sendPostcardEmail, sendFreshnessAuditFromPipeline, sendPostcardCorrection };
+module.exports = { sendEmail, sendPostcardEmail, sendFreshnessAuditFromPipeline, sendPipelineFailureEmail, sendPostcardCorrection };
 function resolvePipelineDir(region) {
   const base = path.join(__dirname, `.pipeline-${region}`);
   const pointer = path.join(base, 'latest-run.txt');

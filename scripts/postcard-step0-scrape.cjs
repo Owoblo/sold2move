@@ -466,18 +466,41 @@ async function fetchExistingRegionListings(supabase, regionConfig) {
   // Region-wide reads also include unknown/null city labels without silently
   // treating existing records as new listings on the next scrape.
   const rows = [];
-  const pageSize = 500;
+  // Split by status so the region/status/zpid index can serve each ordered
+  // page directly. Smaller pages keep Ottawa's wide rows below Postgres' API
+  // statement timeout; on a timeout, shrink the page and retry the same offset.
   for (const [label, columns, statuses] of [
     ['archived', ARCHIVED_COLUMNS, ['sold_archived']],
     ['live', LIVE_COLUMNS, ['active', 'just_listed', 'sold']],
   ]) {
-    for (let offset = 0; ; offset += pageSize) {
-      const { data, error } = await supabase.from('listings').select(columns)
-        .eq('region', regionConfig.key).in('status', statuses)
-        .order('zpid', { ascending: true }).range(offset, offset + pageSize - 1);
-      if (error) throw new Error(`Failed to fetch ${label} listings for ${regionConfig.key} at offset ${offset}: ${error.message}`);
-      rows.push(...(data || []));
-      if (!data || data.length < pageSize) break;
+    for (const status of statuses) {
+      let offset = 0;
+      let pageSize = 100;
+      while (true) {
+        let result;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          result = await supabase.from('listings').select(columns)
+            .eq('region', regionConfig.key).eq('status', status)
+            .order('zpid', { ascending: true }).range(offset, offset + pageSize - 1);
+          if (!result.error) break;
+          const timedOut = /statement timeout|canceling statement/i.test(result.error.message || '');
+          if (timedOut && pageSize > 25) {
+            pageSize = Math.max(25, Math.floor(pageSize / 2));
+          } else if (!timedOut && attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+          } else {
+            throw new Error(`Failed to fetch ${label} listings for ${regionConfig.key} (${status}) at offset ${offset}: ${result.error.message}`);
+          }
+          console.warn(`  ${label} ${status} page at ${offset} failed; retry ${attempt}/3 with page size ${pageSize}: ${result.error.message}`);
+        }
+        if (result.error) {
+          throw new Error(`Failed to fetch ${label} listings for ${regionConfig.key} (${status}) at offset ${offset}: ${result.error.message}`);
+        }
+        const data = result.data || [];
+        rows.push(...data);
+        offset += data.length;
+        if (data.length < pageSize) break;
+      }
     }
   }
   return rows;
