@@ -63,7 +63,22 @@ async function readOptional(storage,name){
 }
 async function put(storage,name,data){const r=await storage.upload(name,JSON.stringify(data),{contentType:'application/json',upsert:true});if(r.error)throw r.error;}
 async function fetchByIds(db,ids){const rows=[];for(let i=0;i<ids.length;i+=100){const r=await db.from('listings').select('*').in('zpid',ids.slice(i,i+100));if(r.error)throw Error(`GTA listing read: ${r.error.message}`);rows.push(...r.data);}return rows;}
-async function regionIds(db){const ids=[];for(let from=0;;from+=500){const r=await db.from('listings').select('zpid').eq('region','toronto').order('zpid').range(from,from+499);if(r.error)throw Error(`GTA ownership read: ${r.error.message}`);ids.push(...r.data.map(x=>String(x.zpid)));if(r.data.length<500)break;}return ids;}
+async function regionIds(db){
+ // Match the existing (region,status,zpid) index. Ordering only by zpid
+ // forces a region-wide sort and timed out on the production GTA baseline.
+ const ids=[];let from=0,pageSize=500;
+ while(true){
+  const r=await db.from('listings').select('zpid').eq('region','toronto')
+   .order('status').order('zpid').range(from,from+pageSize-1);
+  if(r.error){
+   if(/statement timeout|canceling statement/i.test(r.error.message)&&pageSize>25){pageSize=Math.max(25,Math.floor(pageSize/2));continue;}
+   throw Error(`GTA ownership read at ${from}: ${r.error.message}`);
+  }
+  ids.push(...r.data.map(x=>String(x.zpid)));from+=r.data.length;
+  if(r.data.length<pageSize)break;
+ }
+ return ids;
+}
 async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDGE_RAW_FILE}={}){
  const db=createClient(process.env.VITE_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}}),storage=db.storage.from('gta-inventory');
  const snapshot=await readOptional(storage,'latest.json');if(!snapshot?.inventory?.length)throw Error('Preserved GTA inventory missing');
@@ -103,4 +118,4 @@ async function synchronize({apply=false,seed=false,rawFile=process.env.GTA_BRIDG
  summary.applied=true;summary.verified_database_rows=verified.size;summary.backup=key;fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));return {summary,plan};
 }
 if(require.main===module)synchronize({apply:process.argv.includes('--apply'),seed:process.argv.includes('--seed')}).catch(e=>{console.error(e.message);process.exitCode=1;});
-module.exports={prepareRows,makePlan,synchronize,readOptional};
+module.exports={prepareRows,makePlan,synchronize,readOptional,regionIds};

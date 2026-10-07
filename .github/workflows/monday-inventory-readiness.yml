@@ -20,12 +20,14 @@ jobs:
         run: |
           node --test scripts/test-region-inventory-pagination.cjs scripts/test-gta-collection.cjs
           node scripts/test-postcard-lifecycle.cjs
-      - name: Check live inventory reads and render front-only GTA envelope
+      - name: Audit live database date-window losses without mutations
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node scripts/monday-inventory-readiness.cjs
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/audit-postcard-recovery.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
