@@ -16,7 +16,12 @@ async function main(){
  if(databaseOnly){
   const db=createClient(process.env.VITE_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
   const storage=db.storage.from('gta-inventory');
-  const [snapshot,state]=await Promise.all([readOptional(storage,'latest.json'),readOptional(storage,'pipeline/state.json')]);
+  // Collection may have advanced its pointer before a synchronization retry
+  // applied the preceding equivalent snapshot. The applied marker is the
+  // authority for database-only qualification, not the latest collection.
+  const state=await readOptional(storage,'pipeline/state.json');
+  const snapshot=state?.last_applied_run_id
+   ? await readOptional(storage,`runs/${state.last_applied_run_id}/inventory.json`) : null;
   assertSavedInventoryReady(snapshot,state);
   console.log(`Qualifying synchronized GTA inventory ${snapshot.run_id} with saved photos; no Apify jobs`);
  }else{

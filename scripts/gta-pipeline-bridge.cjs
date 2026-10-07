@@ -58,10 +58,12 @@ async function readOptional(storage,name){
  const split=name.lastIndexOf('/'),directory=split<0?'':name.slice(0,split),file=name.slice(split+1);
  const listed=await storage.list(directory,{search:file,limit:100});if(listed.error)throw Error(`Cannot inspect ${name}: ${listed.error.message}`);
  if(!listed.data.some(r=>r.name===file))return null;
- const r=await storage.download(name);if(r.error)throw Error(`Cannot read existing ${name}: ${r.error.message}`);
+ // Mutable pointers must not be served from Storage's default one-hour cache.
+ const downloadName=['latest.json','pipeline/state.json'].includes(name)?`${name}?read_at=${Date.now()}`:name;
+ const r=await storage.download(downloadName);if(r.error)throw Error(`Cannot read existing ${name}: ${r.error.message}`);
  return JSON.parse(await r.data.text());
 }
-async function put(storage,name,data){const r=await storage.upload(name,JSON.stringify(data),{contentType:'application/json',upsert:true});if(r.error)throw r.error;}
+async function put(storage,name,data){const r=await storage.upload(name,JSON.stringify(data),{contentType:'application/json',upsert:true,...(['latest.json','pipeline/state.json'].includes(name)?{cacheControl:'0'}:{})});if(r.error)throw r.error;}
 async function fetchByIds(db,ids){const rows=[];for(let i=0;i<ids.length;i+=100){const r=await db.from('listings').select('*').in('zpid',ids.slice(i,i+100));if(r.error)throw Error(`GTA listing read: ${r.error.message}`);rows.push(...r.data);}return rows;}
 async function regionIds(db){
  // Match the existing (region,status,zpid) index. Ordering only by zpid
