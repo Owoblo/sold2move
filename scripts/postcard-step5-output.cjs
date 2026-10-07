@@ -772,7 +772,7 @@ async function run(options) {
   console.log(`\n  Final postcard count: ${finalListings.length}`);
 
   if (finalListings.length === 0) {
-    console.log('  No new listings since last run. Nothing to generate.');
+    console.log('  No listings passed the final mailing filters. See step5-health-summary.json and step5-rejected.json for exclusions; this does not mean no new listings were found.');
     return [];
   }
 

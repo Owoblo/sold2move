@@ -170,6 +170,14 @@ async function runSearchScraper(token, searchUrls) {
     throw new Error(`Apify run ${status}.\nLast log:\n${log}`);
   }
 
+  // Pay-per-result actors may report SUCCEEDED after billing truncates their
+  // output. Such a dataset cannot support disappearance-based sold detection.
+  const completedLog = await httpRequest(`https://api.apify.com/v2/actor-runs/${runId}/log?token=${token}`);
+  if (completedLog.status !== 200 || typeof completedLog.data !== 'string') {
+    throw new Error(`Cannot verify completion log for Apify run ${runId}; refusing unverified inventory`);
+  }
+  assertCompleteSearchLog(completedLog.data, runId);
+
   const dataResp = await httpRequest(
     `https://api.apify.com/v2/datasets/${datasetId}/items?token=${token}&format=json`
   );
@@ -723,6 +731,12 @@ function buildLifecycleRows(scrapedRows, existingRows, regionConfig, nowIso, lif
   };
 }
 
+function assertCompleteSearchLog(log, runId = '') {
+  if (/limited to \d+ items due to results limit/i.test(log)) {
+    throw new Error(`Apify run ${runId} returned truncated inventory despite SUCCEEDED status (results limit). Previous lifecycle must be preserved; a complete scrape is required.`);
+  }
+}
+
 function normalizeForUpsert(row) {
   const normalized = {
     ...row,
@@ -741,6 +755,15 @@ function normalizeForUpsert(row) {
   // photos instead of overwriting them with null.
   if (normalized.carouselphotos == null) {
     delete normalized.carouselphotos;
+  }
+  // Listing-age badges can be fractional days (e.g. five hours = 0.2083).
+  // These DB columns are INTEGER. Preserve missing values, store whole days,
+  // and omit absent fields on partial lifecycle updates to retain old values.
+  for (const field of ['search_days_on_zillow', 'detail_days_on_zillow']) {
+    if (normalized[field] === undefined) continue;
+    const value = normalized[field];
+    normalized[field] = value != null && value !== '' && typeof value !== 'boolean' && Number.isFinite(Number(value)) && Number(value) >= 0
+      ? Math.floor(Number(value)) : null;
   }
   return normalized;
 }
@@ -927,4 +950,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, fetchExistingRegionListings, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, normalizeForUpsert, resolveRegionCity, buildZillowSearchUrl, runSearchScraper };
+module.exports = { run, fetchExistingRegionListings, buildLifecycleRows, splitBoundsIntoGrid, normalizeAddressKey, normalizeResult, normalizeForUpsert, resolveRegionCity, buildZillowSearchUrl, runSearchScraper, assertCompleteSearchLog };

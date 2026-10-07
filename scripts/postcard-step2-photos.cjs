@@ -97,6 +97,14 @@ function isValidPhotoUrl(url) {
 }
 
 function extractPhotosFromApify(result) {
+  // The current detail actor returns listingPhotos rather than photos.
+  // Preserve the older schema fallbacks below for previously saved datasets.
+  if (Array.isArray(result.listingPhotos)) {
+    const photos = result.listingPhotos.map(p => ({
+      url: typeof p === 'string' ? p : (p?.url || p?.src || p?.href),
+    })).filter(p => isValidPhotoUrl(p.url));
+    if (photos.length) return photos;
+  }
   if (Array.isArray(result.responsivePhotos) && result.responsivePhotos.length > 0) {
     return result.responsivePhotos.map(p => ({ url: p.url || p })).filter(p => isValidPhotoUrl(p.url));
   }
@@ -134,7 +142,8 @@ function extractPhotosFromApify(result) {
 
 function extractDetailFreshness(result) {
   const rawDays = result.daysOnZillow ?? result.hdpData?.homeInfo?.daysOnZillow ?? null;
-  const days = Number.isFinite(Number(rawDays)) ? Number(rawDays) : null;
+  const days = rawDays != null && rawDays !== '' && Number.isFinite(Number(rawDays)) && Number(rawDays) >= 0
+    ? Math.floor(Number(rawDays)) : null;
   return {
     detail_days_on_zillow: days,
     detail_time_on_zillow: result.timeOnZillow || result.hdpData?.homeInfo?.timeOnZillow || null,
@@ -609,6 +618,7 @@ if (require.main === module) {
 module.exports = {
   run,
   extractDetailFreshness,
+  extractPhotosFromApify,
   extractDescription,
   extractListingAttribution,
   cleanRepresentativeName,

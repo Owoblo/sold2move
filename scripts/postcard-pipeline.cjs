@@ -9,8 +9,17 @@ const {
   getRegionConfig,
 } = require('./postcard-lib.cjs');
 
+function assertLiveDateWindow(options, now = new Date()) {
+  if (options.skipScrape || options.dryRun) return;
+  const utcDay = now.toISOString().slice(0, 10);
+  if (options.from > utcDay || options.to < utcDay) {
+    throw new Error(`Live scrape observations use UTC (${utcDay}) but the requested window is ${options.from} to ${options.to}. Include the UTC scrape date with --to; use --skip-scrape only to process saved inventory. No paid scrape was started.`);
+  }
+}
+
 async function runPipeline(rawArgs) {
   const options = parseCliArgs(rawArgs);
+  assertLiveDateWindow(options);
   const regionConfig = getRegionConfig(options.region);
   options.batchId = options.batchId || `${regionConfig.key}-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}`;
 
@@ -130,4 +139,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { runPipeline };
+module.exports = { runPipeline, assertLiveDateWindow };

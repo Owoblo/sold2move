@@ -178,8 +178,7 @@ async function run(options) {
       .order('lastseenat', { ascending: false }));
 
     if (error) {
-      console.error(`  Error querying ${city}:`, error.message);
-      continue;
+      throw new Error(`Campaign candidate query failed for ${city}: ${error.message}`);
     }
 
     if (data && data.length > 0) {
@@ -249,7 +248,7 @@ async function run(options) {
     .order('lastseenat', { ascending: false }));
 
   if (unmappedCityError) {
-    console.error(`  Error querying unmapped ${targetState} city labels:`, unmappedCityError.message);
+    throw new Error(`Campaign candidate query failed for unmapped ${targetState} city labels: ${unmappedCityError.message}`);
   } else if (unmappedCityRows && unmappedCityRows.length > 0) {
     allListings = allListings.concat(unmappedCityRows);
     const labels = [...new Set(unmappedCityRows.map(l => l.city || l.addresscity || 'Unknown'))].sort();
