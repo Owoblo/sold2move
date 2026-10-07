@@ -32,6 +32,10 @@ on:
         description: 'Which regions to run (comma-separated: windsor,chatham,sarnia,london,woodstock,wkg)'
         required: false
         default: 'windsor,chatham,sarnia,london,woodstock,wkg'
+      hold_sold_regions:
+        description: 'Regions with unreliable disappearance evidence; qualify just-listed only'
+        required: false
+        default: ''
 
 concurrency:
   group: postcard-pipeline-${{ github.ref }}
@@ -102,6 +106,7 @@ jobs:
           fi
 
       - name: Check Apify actor updates
+        if: ${{ !inputs.skip_scrape || !inputs.skip_photos }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RUN_ID: ${{ github.run_id }}
@@ -195,6 +200,9 @@ jobs:
 
       - name: Build pipeline flags
         id: flags
+        env:
+          HOLD_SOLD_REGIONS: ${{ inputs.hold_sold_regions }}
+          PIPELINE_REGION: ${{ matrix.region }}
         run: |
           FLAGS=""
           if [ "${{ github.event.inputs.skip_photos }}" = "true" ]; then
@@ -208,6 +216,9 @@ jobs:
           fi
           if [ "${{ github.event.inputs.skip_scrape }}" = "true" ]; then
             FLAGS="$FLAGS --skip-scrape"
+          fi
+          if [[ ",${HOLD_SOLD_REGIONS}," == *",${PIPELINE_REGION},"* ]]; then
+            FLAGS="$FLAGS --status just_listed"
           fi
           echo "flags=$FLAGS" >> $GITHUB_OUTPUT
 
