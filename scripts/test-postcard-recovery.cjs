@@ -3,6 +3,20 @@ const assert = require('node:assert/strict');
 const { assertLiveDateWindow } = require('./postcard-pipeline.cjs');
 const { regionIds } = require('./gta-pipeline-bridge.cjs');
 const { extractPhotosFromApify, extractDetailFreshness } = require('./postcard-step2-photos.cjs');
+const { normalizeForUpsert, assertCompleteSearchLog } = require('./postcard-step0-scrape.cjs');
+
+test('fractional GTA badge ages fit integer columns without making missing ages fresh', () => {
+  assert.equal(normalizeForUpsert({search_days_on_zillow:5/24}).search_days_on_zillow,0);
+  assert.equal(normalizeForUpsert({search_days_on_zillow:null}).search_days_on_zillow,null);
+  assert.equal(normalizeForUpsert({search_days_on_zillow:-1}).search_days_on_zillow,null);
+  assert.equal(normalizeForUpsert({status:'sold'}).search_days_on_zillow,undefined);
+  assert.equal(extractDetailFreshness({daysOnZillow:5/24}).detail_days_on_zillow,0);
+});
+
+test('billing-truncated success cannot mutate inventory or infer sold listings', () => {
+  assert.throws(()=>assertCompleteSearchLog('Scraped 34 new items (limited to 13 items due to results limit)','sarnia'),/truncated inventory/);
+  assert.doesNotThrow(()=>assertCompleteSearchLog('ACTOR: LIMITED_PERMISSIONS. Finished! 177 succeeded, 0 failed.'));
+});
 
 test('current actor detail photos reach classification, excluding Street View placeholders', () => {
   const photos=extractPhotosFromApify({listingPhotos:[

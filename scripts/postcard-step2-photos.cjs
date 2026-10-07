@@ -143,7 +143,7 @@ function extractPhotosFromApify(result) {
 function extractDetailFreshness(result) {
   const rawDays = result.daysOnZillow ?? result.hdpData?.homeInfo?.daysOnZillow ?? null;
   const days = rawDays != null && rawDays !== '' && Number.isFinite(Number(rawDays)) && Number(rawDays) >= 0
-    ? Number(rawDays) : null;
+    ? Math.floor(Number(rawDays)) : null;
   return {
     detail_days_on_zillow: days,
     detail_time_on_zillow: result.timeOnZillow || result.hdpData?.homeInfo?.timeOnZillow || null,
