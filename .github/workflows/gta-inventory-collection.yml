@@ -5,6 +5,10 @@ on:
     - cron: '0 15 * * 1'
   workflow_dispatch:
     inputs:
+      database_only:
+        description: 'Qualify the recently synchronized database using saved photos, without Apify'
+        type: boolean
+        default: false
       synchronize_only:
         description: 'Recover inventory synchronization without qualification or email'
         type: boolean
@@ -42,7 +46,7 @@ jobs:
       - name: Verify collection boundaries
         run: node --test scripts/test-gta-collection.cjs scripts/test-gta-listing-age.cjs
       - name: Recover preserved raw data without another scrape
-        if: ${{ inputs.recover_github_run_id != '' }}
+        if: ${{ !inputs.database_only && inputs.recover_github_run_id != '' }}
         uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
@@ -51,6 +55,7 @@ jobs:
           merge-multiple: true
           path: scripts/.gta-recovery/
       - name: Collect fresh inventory and preserve baseline
+        if: ${{ !inputs.database_only }}
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
@@ -58,14 +63,14 @@ jobs:
           GTA_RECOVER_RAW_FILE: ${{ inputs.recover_github_run_id != '' && 'scripts/.gta-recovery/raw.json' || '' }}
         run: node scripts/gta-collection.cjs
       - name: Synchronize recovered inventory only
-        if: ${{ inputs.synchronize_only }}
+        if: ${{ inputs.synchronize_only && !inputs.database_only }}
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GTA_BRIDGE_RAW_FILE: scripts/.gta-census/raw.json
         run: node scripts/gta-pipeline-bridge.cjs --apply
       - name: Run existing qualification, lifecycle and envelope stages for GTA
-        if: ${{ !inputs.synchronize_only }}
+        if: ${{ !inputs.synchronize_only || inputs.database_only }}
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           # Server-side pipeline only. The shared helper's historical variable
@@ -78,9 +83,10 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           GTA_BRIDGE_RAW_FILE: scripts/.gta-census/raw.json
           GTA_OWNER_DELIVERY: ${{ (github.event_name == 'schedule' || inputs.send_report) && 'true' || 'false' }}
+          GTA_DATABASE_ONLY: ${{ inputs.database_only && 'true' || 'false' }}
         run: node scripts/gta-existing-pipeline.cjs
       - name: Email owner-only inventory and change report
-        if: ${{ !inputs.synchronize_only && (github.event_name == 'schedule' || inputs.send_report) }}
+        if: ${{ !inputs.database_only && !inputs.synchronize_only && (github.event_name == 'schedule' || inputs.send_report) }}
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: node scripts/gta-email-results.cjs

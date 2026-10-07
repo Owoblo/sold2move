@@ -4,6 +4,17 @@ const { assertLiveDateWindow } = require('./postcard-pipeline.cjs');
 const { regionIds } = require('./gta-pipeline-bridge.cjs');
 const { extractPhotosFromApify, extractDetailFreshness } = require('./postcard-step2-photos.cjs');
 const { normalizeForUpsert, assertCompleteSearchLog } = require('./postcard-step0-scrape.cjs');
+const { assertSavedInventoryReady } = require('./gta-existing-pipeline.cjs');
+
+test('database-only GTA requires a recent successfully synchronized snapshot', () => {
+  const now=Date.parse('2026-10-07T04:30:00Z');
+  const snapshot={run_id:'complete',collected_at:'2026-10-07T03:50:00Z'};
+  const state={baseline_seeded:true,last_applied_run_id:'complete'};
+  assert.doesNotThrow(()=>assertSavedInventoryReady(snapshot,state,now));
+  assert.throws(()=>assertSavedInventoryReady(snapshot,{...state,last_applied_run_id:'old'},now),/successfully synchronized/);
+  assert.throws(()=>assertSavedInventoryReady({...snapshot,collected_at:'2026-10-05T03:50:00Z'},state,now),/less than 24 hours/);
+  assert.throws(()=>assertSavedInventoryReady(null,state,now));
+});
 
 test('fractional GTA badge ages fit integer columns without making missing ages fresh', () => {
   assert.equal(normalizeForUpsert({search_days_on_zillow:5/24}).search_days_on_zillow,0);
