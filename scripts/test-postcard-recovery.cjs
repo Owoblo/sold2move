@@ -2,6 +2,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { assertLiveDateWindow } = require('./postcard-pipeline.cjs');
 const { regionIds } = require('./gta-pipeline-bridge.cjs');
+const { extractPhotosFromApify, extractDetailFreshness } = require('./postcard-step2-photos.cjs');
+
+test('current actor detail photos reach classification, excluding Street View placeholders', () => {
+  const photos=extractPhotosFromApify({listingPhotos:[
+    {url:'https://photos.zillowstatic.com/fp/interior.jpg'},
+    {src:'https://photos.zillowstatic.com/fp/kitchen.jpg'},
+    {url:'https://maps.googleapis.com/maps/api/streetview?location=test'},
+  ]});
+  assert.equal(photos.length,2);
+  assert.ok(photos.every(p=>p.url.includes('zillowstatic.com')));
+});
+
+test('missing or invalid listing age never becomes a zero-day fresh listing', () => {
+  for (const days of [null,undefined,'',-1,'unknown']) {
+    assert.equal(extractDetailFreshness({daysOnZillow:days}).detail_days_on_zillow,null);
+  }
+  assert.equal(extractDetailFreshness({daysOnZillow:0}).detail_days_on_zillow,0);
+  assert.equal(extractDetailFreshness({daysOnZillow:'12'}).detail_days_on_zillow,12);
+});
 
 test('late Toronto evening cannot silently exclude the new UTC-day scrape', () => {
   const now = new Date('2026-10-07T03:34:00Z');
