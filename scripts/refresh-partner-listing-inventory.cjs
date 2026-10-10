@@ -13,7 +13,7 @@ async function run(){
   let after=null;
   for(;;){let q=db.from('listings').select('zpid,region,addressstreet,addresscity,addressstate,addresszipcode,status,detailurl,listing_representatives,listing_agent_names,listing_mls_id,listing_attribution_captured_at,lastseenat,postcard_skip_reason,is_furnished,unformattedprice,listing_categories,market_segment,occupancy_state,outreach_target,last_postcard_batch_id,last_postcard_type_sent').eq('region',region).eq('status',status).order('zpid').limit(250);if(after!==null)q=q.gt('zpid',after);
    const {data,error}=await q;if(error)throw Error(region+': '+error.message);
-   rows.push(...data.filter(r=>Date.parse(r.lastseenat)>=Date.parse(since)));
+   rows.push(...data.filter(r=>['active','just_listed'].includes(r.status)||Date.parse(r.lastseenat)>=Date.parse(since)));
    if(data.length<250)break;after=data.at(-1).zpid;
   }
  }
