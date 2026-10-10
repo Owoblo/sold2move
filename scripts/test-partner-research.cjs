@@ -1,0 +1,9 @@
+const {test}=require('node:test'),a=require('node:assert/strict');const {researchFocus}=require('./partner-research-focus.cjs');const {parseEvidence}=require('./partnership-listing-research.cjs');
+test('name without usable contact becomes focused identity research',()=>{const f=researchFocus([{name:'Mary Smith',brokerage:'Acme',role:'listing_agent'}],[]);a.equal(f[0].kind,'verify_professional_contact');a.equal(f[0].name,'Mary Smith')});
+test('shared number triggers deeper research instead of duplicate creation',()=>{const f=researchFocus([{name:'Mary Smith',phone:'4165551234'}],[{id:'1',name:'Mary Smith',phone:'4165551234'},{id:'2',name:'Other',phone:'4165551234'}]);a.equal(f[0].reason,'shared_or_conflicting_identifier')});
+test('already attributed usable direct contact does not consume research',()=>a.equal(researchFocus([{name:'Mary Smith',phone:'4165551234',provenance:'listing_source'}],[]).length,0));
+const base={name:'Mary Smith',source_url:'https://broker.example/listing',address_evidence:'123 Main',role_evidence:'Listing agent',phone:'4165551234',email:'mary@broker.example'};
+const response=r=>({output_text:JSON.stringify({representatives:[r]}),output:[{action:{sources:[{url:base.source_url},{url:'https://broker.example/mary'}]}}]});
+test('property citation alone cannot verify phone/email',()=>{const r=parseEvidence(response(base))[0];a.equal(r.phone,null);a.equal(r.email,null)});
+test('direct professional methods require separate returned source evidence',()=>{const r=parseEvidence(response({...base,phone_scope:'direct_professional',phone_source_url:'https://broker.example/mary',phone_evidence:'Direct 4165551234'}))[0];a.equal(r.phone,base.phone);a.equal(r.email,null)});
+test('office switchboard never qualifies as direct contact',()=>a.equal(parseEvidence(response({...base,phone_scope:'office',phone_source_url:'https://broker.example/mary',phone_evidence:'4165551234'}))[0].phone,null));
