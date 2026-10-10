@@ -40,7 +40,7 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
     const key=propertyKey(row), reps=representatives(row), address=row.addressstreet||row.mailing_street||row.street_address||row.source_address||row.canonical_address||row.address||row.address_key;
     if(!address) continue;
     // Every property enters the separate research queue, including partially attributed ones.
-    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:payload.region,_run_id:payload.run_id,_observed_at:payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key'});
+    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:row.region||payload.region,_run_id:payload.run_id,_observed_at:row.lastseenat||payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key'});
     if(queued.error) throw new Error(queued.error.message);
     if(!reps.length) totals.missing_representatives++;
     for(const rep of reps) {
