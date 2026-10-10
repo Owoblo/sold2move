@@ -26,7 +26,8 @@ async function run() {
   const pools=[];
   for(const lane of lanes) {
     const result=await db.from('partner_listing_research').select('*').in('status',['pending','error']).lt('attempts',3)
-      .eq('listing->>_lane',lane).or(`checked_at.is.null,checked_at.lt.${new Date(Date.now()-7*86400000).toISOString()}`)
+      // Filter before the page cap so already-attributed properties cannot crowd out research.
+      .eq('listing->>_lane',lane).or(`and(or(checked_at.is.null,checked_at.lt.${new Date(Date.now()-7*86400000).toISOString()}),or(listing->_research_focus.is.null,listing->_research_focus.neq.[]))`)
       .order('created_at',{ascending:false}).limit(Math.min(250,Math.ceil(limit/lanes.length)*20));
     if(result.error) throw new Error(result.error.message);pools.push(result.data.filter(j=>!Array.isArray(j.listing?._research_focus)||j.listing._research_focus.length>0));
   }
