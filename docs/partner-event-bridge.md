@@ -11,3 +11,9 @@ Identity: exact normalized person name plus one unique direct phone/email can ma
 Inferred sale means disappearance, not confirmed sale. Latest observation is not the transaction date. Repeated inventory snapshots are not new property events. The CRM Partner Event Desk groups properties by person and reads Sales/Partnership calls, messages, card evidence and commitments before suggesting any approach. This release is connection/planning only; event-based outreach remains off.
 
 Other categories and event sources can use the CRM's normalized MarketEvent/planPartnerEvents interface. Open-house/industry-event connectors are not part of this listing bridge.
+
+## Name-led contact enrichment
+
+A listing event with a named agent but no usable direct number/email becomes focused professional-contact research. Shared numbers and conflicting identities also enter this path. The research brief contains the person, brokerage, property, role and source; it does not search for private client details. Published direct methods require their own cited source and evidence. Inferred email patterns and brokerage switchboards are not accepted as direct identity.
+
+Results retain `web_research_review` provenance. They are candidates for confirmation, not automatic outreach or automatic updates to an existing partner's number. When a source-backed association already exists, new research is retained as `representative.enrichment_candidate` instead of overwriting it. Existing paid-research limits remain unchanged; the bridge itself does not call paid research. The operator can inspect the stored candidate/source and use the normal reviewed contact-link/create workflow.

@@ -24,6 +24,7 @@ function representatives(row) {
   return [...people.values()];
 }
 const { matchContact } = require('./partner-identity.cjs');
+const { researchFocus } = require('./partner-research-focus.cjs');
 async function allRows(db, table, select) {
   const rows=[];
   for(let from=0;;from+=1000) {
@@ -40,7 +41,7 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
     const key=propertyKey(row), reps=representatives(row), address=row.addressstreet||row.mailing_street||row.street_address||row.source_address||row.canonical_address||row.address||row.address_key;
     if(!address) continue;
     // Every property enters the separate research queue, including partially attributed ones.
-    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:row.region||payload.region,_run_id:payload.run_id,_observed_at:row.lastseenat||payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key'});
+    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_research_focus:researchFocus(reps,contacts),_lane:payload.lane,_region:row.region||payload.region,_run_id:payload.run_id,_observed_at:row.lastseenat||payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key'});
     if(queued.error) throw new Error(queued.error.message);
     if(!reps.length) totals.missing_representatives++;
     for(const rep of reps) {
@@ -76,7 +77,7 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
       if(existing.data && !payload.postcard_batch_id){record.postcard_batch_id=existing.data.postcard_batch_id;record.postcard_status=existing.data.postcard_status;}
       // Only an explicit reviewed link survives an ambiguous identity re-evaluation.
       if(existing.data?.match_status === 'reviewed') { record.contact_id=existing.data.contact_id; record.match_status='reviewed'; }
-      if(existing.data?.representative?.provenance !== 'web_research_review' && existing.data?.representative && rep.provenance === 'web_research_review') record.representative=existing.data.representative;
+      if(existing.data?.representative?.provenance !== 'web_research_review' && existing.data?.representative && rep.provenance === 'web_research_review') record.representative={...existing.data.representative,enrichment_candidate:rep};
       const result=await db.from('partner_listing_activity').upsert(record);
       if(result.error) throw new Error(result.error.message);totals.connections++;
     }
