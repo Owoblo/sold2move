@@ -1,0 +1,36 @@
+name: Refresh partner market coverage
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Postcard inventory scrape — all areas
+      - GTA Collection and Existing Postcard Pipeline
+      - Postcard Pipeline — Ottawa Only
+      - Postcard Pipeline — Core Regions (Windsor · Chatham · Sarnia · London · Woodstock · WKG)
+      - Rental Market Pipeline
+      - Commercial Market Pipeline
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: partner-market-coverage
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Summarize stored inventory and relationship coverage
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/refresh-partner-market-coverage.cjs --apply

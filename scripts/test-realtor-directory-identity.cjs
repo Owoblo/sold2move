@@ -1,0 +1,5 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {directoryIdentity,directoryIdentities}=require('./realtor-directory-identity.cjs');
+test('stable source identity preserved without promoting brokerage listings to personal inventory',()=>{const r=directoryIdentity({individual_id:'123',name:'Jane',profile_url:'https://www.realtor.ca/agent/123/jane',brokerage_snapshot_listing_count:'50'});assert.equal(r.source_agent_id,'123');assert.equal(r.individual_listing_status,'not_collected');assert.equal(r.brokerage_context_only,true)});
+test('wrong profile identity and host are not accepted',()=>{assert.equal(directoryIdentity({individual_id:'123',name:'Jane',profile_url:'https://www.realtor.ca/agent/456/jane'}).profile_url,null);assert.equal(directoryIdentity({individual_id:'123',name:'Jane',profile_url:'https://realtor.ca.evil.test/agent/123/jane'}).profile_url,null)});
+test('duplicate city directory records keep one source identity',()=>{assert.equal(directoryIdentities([{individual_id:'123',name:'Jane'},{individual_id:'123',name:'Jane',profile_url:'https://www.realtor.ca/agent/123/jane'}]).length,1)});
