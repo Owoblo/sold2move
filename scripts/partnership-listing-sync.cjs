@@ -23,15 +23,7 @@ function representatives(row) {
   }
   return [...people.values()];
 }
-function matchContact(rep, contacts) {
-  const name = nameKey(rep.name), p = phoneKey(rep.phone), email = String(rep.email || '').trim().toLowerCase();
-  const exact = contacts.filter(c => nameKey(c.name) === name && (
-    (p && phoneKey(c.phone) === p) || (email && String(c.email || '').toLowerCase() === email) ||
-    (rep.brokerage && clean(c.company) === clean(rep.brokerage))));
-  if (exact.length === 1) return { contact: exact[0], status: 'matched' };
-  if (exact.length > 1 || contacts.some(c => nameKey(c.name) === name)) return { contact: null, status: 'ambiguous' };
-  return { contact: null, status: 'new' };
-}
+const { matchContact } = require('./partner-identity.cjs');
 async function allRows(db, table, select) {
   const rows=[];
   for(let from=0;;from+=1000) {
@@ -48,14 +40,14 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
     const key=propertyKey(row), reps=representatives(row), address=row.addressstreet||row.mailing_street||row.street_address||row.source_address||row.canonical_address||row.address||row.address_key;
     if(!address) continue;
     // Every property enters the separate research queue, including partially attributed ones.
-    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:payload.region,_run_id:payload.run_id,_observed_at:payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key',ignoreDuplicates:true});
+    const queued=await db.from('partner_listing_research').upsert({property_key:key,listing:{...row,_lane:payload.lane,_region:row.region||payload.region,_run_id:payload.run_id,_observed_at:row.lastseenat||payload.observed_at,_batch_id:payload.postcard_batch_id}}, {onConflict:'property_key'});
     if(queued.error) throw new Error(queued.error.message);
     if(!reps.length) totals.missing_representatives++;
     for(const rep of reps) {
       const repKey=digest([nameKey(rep.name),clean(rep.brokerage)||clean(row.city||row.addresscity)]);
       let {contact,status}=matchContact(rep,contacts);
       // Source-backed discoveries become paused CRM records. Research-only identities stay in review.
-      if(status==='new' && rep.source_url && rep.provenance!=='web_research_review') {
+      if(status==='new' && rep.source_url && rep.provenance==='listing_source' && (phoneKey(rep.phone) || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rep.email || '')) && /listing|seller/i.test(rep.role || '')) {
         const candidate={ name:rep.name,company:rep.brokerage||'',title:rep.role,email:rep.email||null,phone:rep.phone||null,
           city:row.city||row.addresscity||null,industry:'Real Estate',stage:'target',
           source_csv:'postcard_listing_discovery',listing_discovery_key:repKey,
@@ -74,14 +66,15 @@ async function sync(payload, {db=serviceClient(), contacts=null}={}) {
         listing_id:String(row.zpid||row.source_listing_id||row.id||''),lane:payload.lane,
         region:row.region||payload.region,city:row.city||row.addresscity||null,address,
         listing_status:row.status||row.transaction_type||'available',
-        status_evidence:payload.lane==='residential' && ['sold','sold_archived'].includes(row.status)?'inferred_first_disappearance':'source_reported',
+        status_evidence:row.status_evidence || (payload.lane==='residential' && ['sold','sold_archived'].includes(row.status)?'inferred_first_disappearance':'source_reported'),
         representative_key:repKey,representative:rep,contact_id:contact?.id||null,
-        match_status:status,source_url:rep.source_url,observed_at:payload.observed_at,run_id:payload.run_id,
+        match_status:status,source_url:rep.source_url,observed_at:row.lastseenat || payload.observed_at,run_id:payload.run_id,
         postcard_batch_id:payload.postcard_batch_id||null,postcard_status:payload.postcard_status || (payload.postcard_batch_id?'selected':null)};
-      const existing=await db.from('partner_listing_activity').select('observed_at,contact_id,match_status,representative').eq('activity_key',record.activity_key).maybeSingle();
+      const existing=await db.from('partner_listing_activity').select('observed_at,contact_id,match_status,representative,postcard_batch_id,postcard_status,region').eq('activity_key',record.activity_key).maybeSingle();
       if(existing.error) throw new Error(existing.error.message);
       if(existing.data?.observed_at > record.observed_at) continue;
-      if(existing.data?.contact_id && !record.contact_id) record.contact_id=existing.data.contact_id;
+      if(existing.data && !payload.postcard_batch_id){record.postcard_batch_id=existing.data.postcard_batch_id;record.postcard_status=existing.data.postcard_status;}
+      // Only an explicit reviewed link survives an ambiguous identity re-evaluation.
       if(existing.data?.match_status === 'reviewed') { record.contact_id=existing.data.contact_id; record.match_status='reviewed'; }
       if(existing.data?.representative?.provenance !== 'web_research_review' && existing.data?.representative && rep.provenance === 'web_research_review') record.representative=existing.data.representative;
       const result=await db.from('partner_listing_activity').upsert(record);
@@ -94,4 +87,4 @@ if(require.main===module) {
   const input=path.resolve(process.argv[2]);
   sync(JSON.parse(fs.readFileSync(input,'utf8'))).then(t=>{fs.writeFileSync(path.join(path.dirname(input),'partnership-sync-summary.json'),JSON.stringify(t,null,2));console.log(t);}).catch(e=>{console.error(e.message);process.exitCode=1;});
 }
-module.exports={representatives,matchContact,nameKey,phoneKey,sync};
+module.exports={representatives,matchContact,nameKey,phoneKey,sync,allRows};

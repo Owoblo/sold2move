@@ -16,8 +16,8 @@ const changed=assess({...input,runId:'c',observedAt:'2026-09-07T00:00:00Z',scope
 assert.equal(changed.report.comparable_history_count,0);assert.equal(changed.report.comparisons.length,1);assert.equal(changed.report.comparisons[0].comparable_scope,false);
 assert.equal(assess({...input,candidates:[],selected:[]}).report.selection_percent,null);
 const contacts=[{id:'a',name:'Alex Smith',company:'Brokerage',phone:'5195550100'},{id:'b',name:'Jamie Jones',company:'Brokerage',phone:'5195550100'}];
-assert.equal(matchContact({name:'Alex Smith',phone:'+1 519-555-0100'},contacts).contact.id,'a');
-assert.equal(matchContact({name:'Other Person',phone:'5195550100'},contacts).status,'new');
+assert.equal(matchContact({name:'Alex Smith',phone:'+1 519-555-0100'},contacts).status,'ambiguous');
+assert.equal(matchContact({name:'Other Person',phone:'5195550100'},contacts).status,'ambiguous');
 assert.equal(matchContact({name:'Alex Smith'},contacts).status,'ambiguous');
 assert.equal(matchContact({name:'Alex Smith',brokerage:'Brokerage'},[...contacts,{...contacts[0],id:'c'}]).status,'ambiguous');
 assert.equal(representatives({listing_representatives:[{name:'Alex',role:'listing_agent'},{name:'Jamie',role:'buying_agent'}]}).length,2);
